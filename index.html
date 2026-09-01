@@ -206,6 +206,14 @@ body:not(.pro) .pro-only{display:none}
   font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
   color:var(--ink-2);margin:0 0 10px;text-transform:none;
 }
+.grouphint{
+  font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.55;
+  color:var(--ink-2);margin:-4px 0 16px;
+}
+.hint{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;
+  color:var(--ink-2);margin:-2px 0 8px;
+}
 </style>
 </head>
 <body>
@@ -265,6 +273,7 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="group">
       <h3>Carrera</h3>
+      <p class="grouphint">Cuánto ganas y cuándo asciendes no son fechas fijas: se simulan como probabilidades, no como certezas.</p>
       <div class="ctrl">
         <div class="row"><label for="fx">Tipo AED → EUR</label><output id="fx_o"></output></div>
         <input type="range" id="fx" min="0.19" max="0.29" step="0.005">
@@ -283,10 +292,12 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl">
         <div class="row"><label for="captDelay">Dispersión del ascenso (años, σ)</label><output id="captDelay_o"></output></div>
+        <p class="hint">σ (sigma) es la dispersión típica alrededor del año central: no es un rango garantizado, es cuánto suele variar en la práctica. En 0 no hay incertidumbre, el ascenso ocurre justo en el año elegido.</p>
         <input type="range" id="captDelay" min="0" max="5" step="0.5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="startDelay">Riesgo de retraso de entrada (meses, σ)</label><output id="startDelay_o"></output></div>
+        <p class="hint">Misma idea que la σ del ascenso, aplicada a cuándo empiezas realmente a volar en Emirates.</p>
         <input type="range" id="startDelay" min="0" max="18" step="1">
       </div>
       <div class="ctrl">
@@ -298,12 +309,14 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="group">
       <h3>Mercado</h3>
+      <p class="grouphint">Estos dos números definen cómo se comporta la bolsa mes a mes en la simulación: cuánto sube de media y cuánto oscila alrededor de esa media.</p>
       <div class="ctrl">
         <div class="row"><label for="ret">Rentabilidad real media</label><output id="ret_o"></output></div>
         <input type="range" id="ret" min="2" max="9" step="0.1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="vol">Volatilidad anual</label><output id="vol_o"></output></div>
+        <p class="hint">Cuánto se desvía un año típico de la media. Con 17 %, en torno a 1 de cada 3 años el resultado se aleja de la rentabilidad media en más de ese porcentaje, para bien o para mal.</p>
         <input type="range" id="vol" min="0" max="26" step="0.5">
       </div>
       <p class="note">Renta variable global: ~5,5 % real con ~17 % de volatilidad. Bajar la volatilidad no reduce el riesgo, solo lo esconde.</p>
@@ -361,6 +374,7 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="group">
       <h3>Cartera hoy</h3>
+      <p class="grouphint">Lo que ya tienes ahorrado, repartido en dos cestas con comportamiento distinto: renta variable tradicional y Bitcoin.</p>
       <div class="ctrl">
         <div class="row"><label for="startEq">Cash + renta variable (€)</label><output id="startEq_o"></output></div>
         <input type="range" id="startEq" min="0" max="400000" step="2500">
@@ -379,6 +393,7 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o"></output></div>
+        <p class="hint">Va de -1 a 1: 0 significa que se mueven sin relación entre sí, 1 que suben y bajan siempre juntos, -1 que cuando uno sube el otro baja. Con 0,40 (el valor por defecto), tienden a moverse en la misma dirección pero sin ir pegados.</p>
         <input type="range" id="btcRho" min="-20" max="90" step="5">
       </div>
       <div class="ctrl">
@@ -411,16 +426,19 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="group pro-only">
       <h3>PRO · Fiscalidad España</h3>
+      <p class="grouphint">En Emirates no pagas impuestos sobre la renta. Si vuelves a vivir a España, eso cambia: al dejar de ser no-residente, Hacienda puede gravar tanto lo que retiras de tu cartera como el patrimonio que acumulas.</p>
       <div class="toggle">
         <input type="checkbox" id="taxOn">
         <label for="taxOn">Tributar plusvalías al repatriar capital</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="taxRate">Tipo medio efectivo sobre plusvalías</label><output id="taxRate_o"></output></div>
+        <p class="hint">Para que te quede X € netos en el bolsillo, hay que vender más de X € en bruto: la simulación "engorda" cada retirada para compensar lo que se queda Hacienda.</p>
         <input type="range" id="taxRate" min="0" max="30" step="0.5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="taxRepatDelay">Años tras el FIRE hasta residencia fiscal en España</label><output id="taxRepatDelay_o"></output></div>
+        <p class="hint">Se cuenta desde la fecha en que cada ruta alcanza el FIRE, no desde un año de calendario fijo: como el FIRE varía de una ruta a otra, no tendría sentido fijarlo en el tiempo.</p>
         <input type="range" id="taxRepatDelay" min="0" max="20" step="1">
       </div>
       <div class="toggle" style="margin-top:14px">
@@ -429,6 +447,7 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="wealthExempt">Mínimo exento (€)</label><output id="wealthExempt_o"></output></div>
+        <p class="hint">El impuesto de patrimonio es un pago anual sobre lo que posees (no sobre lo que ganas), por encima de un mínimo exento. Se cobra cada diciembre mientras seas residente fiscal en España.</p>
         <input type="range" id="wealthExempt" min="500000" max="3000000" step="50000">
       </div>
       <div class="ctrl">
@@ -440,6 +459,7 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="group pro-only">
       <h3>PRO · Inflación y FX estocásticos</h3>
+      <p class="grouphint">El resto del simulador usa tasas reales fijas para simplificar. Aquí, en cambio, el tipo de cambio y la inflación se dejan fluctuar mes a mes como en la vida real, en vez de asumir que se mantienen constantes.</p>
       <div class="toggle">
         <input type="checkbox" id="fxVolOn">
         <label for="fxVolOn">Tipo AED→EUR aleatorio (en vez de fijo)</label>
@@ -450,6 +470,7 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl">
         <div class="row"><label for="fxMeanRevert">Reversión anual hacia el tipo base</label><output id="fxMeanRevert_o"></output></div>
+        <p class="hint">"Reversión a la media" significa que, aunque el tipo de cambio se desvíe algún mes, tiende a volver hacia el valor base que fijaste arriba (Tipo AED → EUR) en vez de alejarse sin límite. Cuanto más alto el %, más rápido vuelve.</p>
         <input type="range" id="fxMeanRevert" min="0" max="100" step="5">
       </div>
       <div class="toggle" style="margin-top:14px">
@@ -465,11 +486,13 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="group pro-only">
       <h3>PRO · Estrategia de retirada</h3>
+      <p class="grouphint">En el modo simple, una vez jubilado retiras siempre la misma cantidad cada año. Aquí puedes probar alternativas que ajustan el gasto según cómo le va a la cartera o según la edad.</p>
       <div class="ctrl">
         <div class="row"><label for="wdStrategy">Estrategia</label><output id="wdStrategy_o"></output></div>
         <input type="range" id="wdStrategy" min="0" max="2" step="1">
       </div>
       <p class="subhead">Guyton-Klinger (guardrails)</p>
+      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más.</p>
       <div class="ctrl">
         <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o"></output></div>
         <input type="range" id="gkGuard" min="10" max="30" step="1">
@@ -487,6 +510,7 @@ body:not(.pro) .pro-only{display:none}
         <input type="range" id="gkFreq" min="6" max="24" step="6">
       </div>
       <p class="subhead">Fases go-go / slow-go / no-go</p>
+      <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go).</p>
       <div class="ctrl">
         <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o"></output></div>
         <input type="range" id="goGoMult" min="80" max="150" step="5">
@@ -512,6 +536,7 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="group pro-only">
       <h3>PRO · Activos y allocation adicionales</h3>
+      <p class="grouphint">Además de acciones y BTC, puedes añadir más clases de activo con su propio comportamiento, y decidir si la cartera se vuelve más conservadora a medida que se acerca el FIRE.</p>
       <p class="subhead">Oro</p>
       <div class="ctrl">
         <div class="row"><label for="startGold">Oro hoy (€)</label><output id="startGold_o"></output></div>
@@ -527,6 +552,7 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl">
         <div class="row"><label for="goldRho">Correlación oro ↔ bolsa</label><output id="goldRho_o"></output></div>
+        <p class="hint">Igual que con BTC: de -1 a 1. Un valor negativo (como el -0,10 por defecto) significa que el oro tiende ligeramente a moverse en dirección contraria a la bolsa — el motivo clásico para tenerlo como amortiguador.</p>
         <input type="range" id="goldRho" min="-50" max="50" step="5">
       </div>
       <div class="ctrl">
@@ -555,6 +581,7 @@ body:not(.pro) .pro-only{display:none}
         <label for="reCountsFire">Contar el inmueble como capital FIRE</label>
       </div>
       <p class="subhead">Glide path (des-arriesgar al acercarte al FIRE)</p>
+      <p class="hint">Un "glide path" traslada progresivamente parte de la cartera de activos de riesgo (acciones, BTC, oro) a una cartera conservadora a medida que se acerca la fecha de jubilación, para reducir el impacto de un mal año de mercado justo antes de retirarte.</p>
       <div class="toggle">
         <input type="checkbox" id="glideOn">
         <label for="glideOn">Activar glide path</label>
@@ -590,6 +617,7 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl">
         <div class="row"><label for="swr">Tasa de retiro segura</label><output id="swr_o"></output></div>
+        <p class="hint">SWR ("safe withdrawal rate"): el % de tu capital que puedes gastar cada año con baja probabilidad de quedarte sin fondos. La referencia más conocida es la "regla del 4 %".</p>
         <input type="range" id="swr" min="2.4" max="4.6" step="0.05">
       </div>
       <p class="note">El objetivo es una primera criba. La simulación además cambia cada ruta a fase de retirada al cruzarlo y comprueba si sobrevive hasta el horizonte. Esparreguera no cuenta como capital FIRE mientras sea vivienda de uso propio.</p>
