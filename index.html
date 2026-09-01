@@ -1147,8 +1147,8 @@ function renderChart(canvas, s, target, view, hoverIdx){
   const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
   const L=52,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
 
-  const lo=Math.max(0,Math.min(view.lo, s.length-2));
-  const hi=Math.max(lo+1,Math.min(view.hi, s.length-1));
+  const lo=Math.round(Math.max(0,Math.min(view.lo, s.length-2)));
+  const hi=Math.round(Math.max(lo+1,Math.min(view.hi, s.length-1)));
   const vis=s.slice(lo,hi+1);
 
   let max=Math.max(target*1.15,1);
@@ -1201,7 +1201,6 @@ function renderChart(canvas, s, target, view, hoverIdx){
 // view/hover state so the inline chart and the "ampliar" modal chart act independently.
 function makeChartController(canvas, tipEl, resetLinkEl){
   const state = { series:null, target:0, view:null, hoverIdx:null, geom:null };
-  let dragging=false, dragClientX=0, dragView=null;
 
   function fullView(){ return {lo:0, hi:state.series.length-1}; }
 
@@ -1243,49 +1242,119 @@ function makeChartController(canvas, tipEl, resetLinkEl){
   }
   function hideTip(){ if(tipEl) tipEl.style.display='none'; }
 
+  // Zooms state.view around a center data-index by `factor` (<1 zooms in, >1 zooms out),
+  // shared by the desktop wheel handler and the touch pinch handler below.
+  function zoomAt(centerIdx, factor){
+    const {lo,hi}=state.view, span=hi-lo;
+    const maxHi=state.series.length-1;
+    let newSpan=Math.max(4, Math.min(maxHi, span*factor));
+    const t = span>0 ? (centerIdx-lo)/span : 0.5;
+    let newLo=centerIdx-t*newSpan, newHi=newLo+newSpan;
+    if(newLo<0){ newHi-=newLo; newLo=0; }
+    if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
+    state.view={lo:Math.round(Math.max(0,newLo)), hi:Math.round(Math.min(maxHi,newHi))};
+  }
+
+  // Multi-touch tracking: a single pointer below the drag threshold just hovers
+  // (so a tap/hold on touch shows the tooltip like a mouse hover does); past the
+  // threshold it pans. Two simultaneous pointers pinch-zoom instead of panning —
+  // wheel-zoom on desktop never fires from touch gestures, so this is the only
+  // way to zoom on a phone/tablet.
+  const DRAG_THRESHOLD = 6;
+  const pointers = new Map(); // pointerId -> {x,y}
+  let panning=false, panStartClientX=0, panStartView=null;
+  let pinching=false, pinchStartDist=0, pinchStartView=null;
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function midpointClientX(){
+    const pts=[...pointers.values()];
+    return pts.reduce((s,p)=>s+p.x,0)/pts.length;
+  }
+
+  canvas.addEventListener('pointerdown', e=>{
+    if(!state.series) return;
+    e.preventDefault();
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+    if(pointers.size===2){
+      panning=false;
+      const [a,b]=[...pointers.values()];
+      pinching=true; pinchStartDist=Math.max(1,dist(a,b)); pinchStartView={...state.view};
+      hideTip();
+    } else if(pointers.size===1){
+      pinching=false;
+      panStartClientX=e.clientX; panStartView={...state.view};
+      // panning=false until the threshold is crossed — see pointermove. Show the
+      // tooltip right away so a plain tap (no move at all) still reads a value.
+      const idx=indexFromClientX(e.clientX);
+      if(idx!=null){ state.hoverIdx=idx; redraw(); showTip(e.clientX, e.clientY, idx); }
+    }
+  });
+
   canvas.addEventListener('pointermove', e=>{
-    if(dragging){
-      const rect=canvas.getBoundingClientRect();
-      const dx=e.clientX-dragClientX;
-      const {lo,hi}=dragView, span=hi-lo;
-      const shift=-(dx/(state.geom?state.geom.w:rect.width))*span;
-      let newLo=lo+shift, newHi=hi+shift;
-      const maxHi=state.series.length-1;
-      if(newLo<0){ newHi-=newLo; newLo=0; }
-      if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
-      state.view={lo:Math.max(0,newLo), hi:Math.min(maxHi,newHi)};
+    if(!pointers.has(e.pointerId) && e.pointerType!=='mouse') return;
+    if(pointers.has(e.pointerId)) pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+    if(pinching && pointers.size===2){
+      e.preventDefault();
+      const [a,b]=[...pointers.values()];
+      const d=Math.max(1,dist(a,b));
+      const factor = pinchStartDist/d; // fingers moving apart -> factor<1 -> zoom in
+      const idx = indexFromClientX(midpointClientX());
+      const center = idx==null ? Math.round((pinchStartView.lo+pinchStartView.hi)/2) : idx;
+      state.view=pinchStartView;
+      zoomAt(center, factor);
       redraw();
       return;
     }
+
+    if(pointers.size===1 && pointers.has(e.pointerId)){
+      const movedPx=Math.abs(e.clientX-panStartClientX);
+      if(!panning && movedPx>DRAG_THRESHOLD){ panning=true; hideTip(); }
+      if(panning){
+        e.preventDefault();
+        const rect=canvas.getBoundingClientRect();
+        const dx=e.clientX-panStartClientX;
+        const {lo,hi}=panStartView, span=hi-lo;
+        const shift=-(dx/(state.geom?state.geom.w:rect.width))*span;
+        let newLo=lo+shift, newHi=hi+shift;
+        const maxHi=state.series.length-1;
+        if(newLo<0){ newHi-=newLo; newLo=0; }
+        if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
+        state.view={lo:Math.round(Math.max(0,newLo)), hi:Math.round(Math.min(maxHi,newHi))};
+        redraw();
+        return;
+      }
+    }
+
+    // No active drag/pinch (or a plain mouse hover): just show the value under the pointer.
     const idx=indexFromClientX(e.clientX);
     if(idx==null) return;
     state.hoverIdx=idx;
     redraw();
     showTip(e.clientX, e.clientY, idx);
   });
-  canvas.addEventListener('pointerleave', ()=>{ state.hoverIdx=null; redraw(); hideTip(); });
-  canvas.addEventListener('pointerdown', e=>{
-    if(!state.series) return;
-    dragging=true; dragClientX=e.clientX; dragView={...state.view};
-    canvas.setPointerCapture(e.pointerId);
-    hideTip();
+
+  canvas.addEventListener('pointerleave', e=>{
+    if(pointers.size) return; // still touching, e.g. finger moved slightly outside then back
+    state.hoverIdx=null; redraw(); hideTip();
   });
-  canvas.addEventListener('pointerup', e=>{ dragging=false; try{canvas.releasePointerCapture(e.pointerId);}catch(err){} });
-  canvas.addEventListener('pointercancel', ()=>{ dragging=false; });
+
+  function endPointer(e){
+    pointers.delete(e.pointerId);
+    try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
+    if(pointers.size<2) pinching=false;
+    if(pointers.size===0) panning=false;
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+
   canvas.addEventListener('wheel', e=>{
     if(!state.series) return;
     e.preventDefault();
     const idx = indexFromClientX(e.clientX);
     const center = idx==null ? Math.round((state.view.lo+state.view.hi)/2) : idx;
-    const {lo,hi}=state.view, span=hi-lo;
-    const factor = e.deltaY<0 ? 0.85 : 1/0.85;
-    const maxHi=state.series.length-1;
-    let newSpan=Math.max(4, Math.min(maxHi, span*factor));
-    const t = span>0 ? (center-lo)/span : 0.5;
-    let newLo=center-t*newSpan, newHi=newLo+newSpan;
-    if(newLo<0){ newHi-=newLo; newLo=0; }
-    if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
-    state.view={lo:Math.round(Math.max(0,newLo)), hi:Math.round(Math.min(maxHi,newHi))};
+    zoomAt(center, e.deltaY<0 ? 0.85 : 1/0.85);
     redraw();
   }, {passive:false});
 
