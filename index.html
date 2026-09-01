@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navlog — Plan FIRE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F3F2;
+  --paper-2:#E6E9E8;
+  --ink:#14181B;
+  --ink-2:#4A5257;
+  --rule:#14181B;
+  --hair:rgba(20,24,27,.22);
+  --route:#C6187E;      /* magenta de ruta activa, como en un EFIS */
+  --band:#8FA6B2;       /* dispersión */
+  --caution:#B8791B;
+  --ok:#1F7A4D;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 64px}
+
+/* ---------- cabecera tipo faja de plan de vuelo ---------- */
+.masthead{
+  border-bottom:2px solid var(--rule);
+  padding:20px 0 10px;
+  margin-bottom:0;
+}
+.masthead .kicker{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink-2);margin:0 0 2px;
+}
+.masthead h1{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:38px;line-height:1;letter-spacing:-.01em;
+  margin:0;text-transform:uppercase;
+}
+.masthead .sub{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;color:var(--ink-2);margin:8px 0 0;letter-spacing:.04em;
+}
+
+/* ---------- lectura principal ---------- */
+.readout{
+  display:flex;gap:0;border-bottom:1px solid var(--hair);
+  margin-bottom:0;
+}
+.readout .cell{
+  flex:1;padding:18px 0 16px;
+}
+.readout .cell + .cell{border-left:1px solid var(--hair);padding-left:16px}
+.readout .lbl{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);
+  margin-bottom:2px;
+}
+.readout .big{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:56px;line-height:.9;color:var(--route);
+  font-variant-numeric:tabular-nums;
+}
+.readout .big.dim{color:var(--ink-2)}
+.readout .unit{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-2);
+  margin-top:6px;
+}
+
+/* ---------- navlog de waypoints ---------- */
+section{padding:26px 0 4px}
+h2{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:14px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;
+  margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid var(--rule);
+}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+thead th{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-2);text-align:right;font-weight:500;
+  padding:0 0 6px;border-bottom:1px solid var(--hair);
+}
+thead th:first-child{text-align:left}
+tbody td{
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+  padding:9px 0;text-align:right;border-bottom:1px solid var(--hair);
+}
+tbody td:first-child{
+  text-align:left;font-family:'Barlow Condensed',sans-serif;
+  font-size:17px;font-weight:600;letter-spacing:.02em;
+}
+tbody tr.hit td:first-child{color:var(--route)}
+td .age{color:var(--ink-2);font-size:11px}
+td.na{color:var(--caution)}
+
+/* ---------- gráfico ---------- */
+.chartbox{position:relative;margin-top:4px}
+canvas{width:100%;height:auto;display:block}
+.legend{
+  display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-2);
+}
+.legend i{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:5px}
+.legend .b{height:9px;opacity:.32;background:var(--band)}
+.legend .r{background:var(--route)}
+.legend .t{background:var(--caution);height:0;border-top:2px dashed var(--caution)}
+
+/* ---------- panel de parámetros ---------- */
+.group{margin-bottom:22px}
+.group > h3{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-2);font-weight:600;margin:0 0 10px;
+}
+.ctrl{margin-bottom:15px}
+.ctrl .row{
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  margin-bottom:5px;
+}
+.ctrl label{font-size:13.5px;color:var(--ink)}
+.ctrl output{
+  display:inline-block;
+  min-width:84px;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;
+  color:var(--route);font-variant-numeric:tabular-nums;white-space:nowrap;
+  text-align:right;
+}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:26px;
+  background:transparent;margin:0;cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--route);outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{
+  height:2px;background:var(--rule);
+}
+input[type=range]::-moz-range-track{height:2px;background:var(--rule)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;margin-top:-9px;
+  background:var(--paper);border:2px solid var(--route);border-radius:50%;
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;background:var(--paper);
+  border:2px solid var(--route);border-radius:50%;
+}
+.toggle{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 0;border-bottom:1px solid var(--hair);
+}
+.toggle input{width:19px;height:19px;accent-color:var(--route);margin:0}
+.toggle label{font-size:13.5px}
+
+.note{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.65;
+  color:var(--ink-2);border-left:2px solid var(--caution);
+  padding:2px 0 2px 12px;margin:14px 0 0;
+}
+.actions{margin-top:22px;padding-top:16px;border-top:2px solid var(--rule)}
+button.reset{
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;
+  background:none;border:1px solid var(--rule);color:var(--ink);
+  padding:10px 20px;cursor:pointer;
+}
+button.reset:hover{background:var(--ink);color:var(--paper)}
+button.reset:focus-visible{outline:2px solid var(--route);outline-offset:2px}
+.calc{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-2);
+  margin-top:10px;
+}
+@media (max-width:520px){
+  .masthead h1{font-size:30px}
+  .readout .big{font-size:44px}
+  .readout{flex-wrap:wrap}
+  .readout .cell{min-width:45%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- modo PRO ---------- */
+.proRow{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 0;border-bottom:2px solid var(--rule);margin-bottom:22px;
+}
+.proRow input{width:19px;height:19px;accent-color:var(--route);margin:0}
+.proRow label{
+  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;
+  letter-spacing:.04em;color:var(--ink);
+}
+.proRow .tag{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;
+  color:var(--route);border:1px solid var(--route);padding:1px 6px;margin-left:2px;
+}
+body:not(.pro) .pro-only{display:none}
+.subhead{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
+  color:var(--ink-2);margin:0 0 10px;text-transform:none;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="kicker">Plan de vuelo financiero</p>
+    <h1>Navlog FIRE</h1>
+    <p class="sub">INICIO JUN-2027 DXB · EUROS REALES DE 2026 · MONTE CARLO MENSUAL · FIRST-PASSAGE FIRE + RETIRADA</p>
+  </header>
+
+  <div class="readout">
+    <div class="cell">
+      <div class="lbl">Edad FIRE</div>
+      <div class="big" id="ageMed">—</div>
+      <div class="unit" id="yearMed">mediana</div>
+    </div>
+    <div class="cell">
+      <div class="lbl">FIRE conservador</div>
+      <div class="big dim" id="ageP10">—</div>
+      <div class="unit" id="yearP10">P10 de fechas FIRE exitosas</div>
+    </div>
+    <div class="cell">
+      <div class="lbl">Capital objetivo</div>
+      <div class="big dim" id="targetCap" style="font-size:34px">—</div>
+      <div class="unit" id="targetNote">gasto ÷ tasa de retiro</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Waypoints de patrimonio</h2>
+    <table>
+      <thead>
+        <tr><th>Hito</th><th>Mediana</th><th>P10</th><th>P90</th></tr>
+      </thead>
+      <tbody id="wpts"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Trayectoria</h2>
+    <div class="chartbox"><canvas id="chart" width="1400" height="800"></canvas></div>
+    <div class="legend">
+      <span><i class="b"></i>P10–P90</span>
+      <span><i class="r"></i>Mediana</span>
+      <span><i class="t"></i>Objetivo</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Parámetros</h2>
+
+    <div class="proRow">
+      <input type="checkbox" id="proMode">
+      <label for="proMode">Modo PRO <span class="tag">fiscalidad · FX/inflación estocásticos · guardrails · activos y glide path</span></label>
+    </div>
+
+    <div class="group">
+      <h3>Carrera</h3>
+      <div class="ctrl">
+        <div class="row"><label for="fx">Tipo AED → EUR</label><output id="fx_o"></output></div>
+        <input type="range" id="fx" min="0.19" max="0.29" step="0.005">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="salFO">Salario copiloto (AED/año)</label><output id="salFO_o"></output></div>
+        <input type="range" id="salFO" min="280000" max="500000" step="5000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="salCA">Salario comandante (AED/año)</label><output id="salCA_o"></output></div>
+        <input type="range" id="salCA" min="420000" max="750000" step="5000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="captY">Año de ascenso a comandante</label><output id="captY_o"></output></div>
+        <input type="range" id="captY" min="2030" max="2042" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="captDelay">Dispersión del ascenso (años, σ)</label><output id="captDelay_o"></output></div>
+        <input type="range" id="captDelay" min="0" max="5" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="startDelay">Riesgo de retraso de entrada (meses, σ)</label><output id="startDelay_o"></output></div>
+        <input type="range" id="startDelay" min="0" max="18" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="salG">Subida salarial real anual</label><output id="salG_o"></output></div>
+        <input type="range" id="salG" min="-1" max="2.5" step="0.1">
+      </div>
+      <p class="note">El ascenso se modela como una distribución alrededor del año central: una sola fecha fija crea falsa precisión. Las horas mínimas no sustituyen la incertidumbre de antigüedad, necesidades de compañía y timing real.</p>
+    </div>
+
+    <div class="group">
+      <h3>Mercado</h3>
+      <div class="ctrl">
+        <div class="row"><label for="ret">Rentabilidad real media</label><output id="ret_o"></output></div>
+        <input type="range" id="ret" min="2" max="9" step="0.1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="vol">Volatilidad anual</label><output id="vol_o"></output></div>
+        <input type="range" id="vol" min="0" max="26" step="0.5">
+      </div>
+      <p class="note">Renta variable global: ~5,5 % real con ~17 % de volatilidad. Bajar la volatilidad no reduce el riesgo, solo lo esconde.</p>
+    </div>
+
+    <div class="group">
+      <h3>Gastos</h3>
+      <div class="ctrl">
+        <div class="row"><label for="vida">Vida en Dubái (€/mes, sin vivienda)</label><output id="vida_o"></output></div>
+        <input type="range" id="vida" min="1800" max="7000" step="50">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="vidaG">Crecimiento real del gasto</label><output id="vidaG_o"></output></div>
+        <input type="range" id="vidaG" min="0" max="3" step="0.1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="hip">Hipoteca Esparreguera (€/mes)</label><output id="hip_o"></output></div>
+        <input type="range" id="hip" min="0" max="1400" step="10">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="hipEnd">Fin de hipoteca</label><output id="hipEnd_o"></output></div>
+        <input type="range" id="hipEnd" min="2027" max="2065" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="nur">Guardería por hijo (€/año)</label><output id="nur_o"></output></div>
+        <input type="range" id="nur" min="0" max="20000" step="250">
+      </div>
+      <p class="note">La simulación es mensual y el gasto se aplica durante los meses reales de carrera. Revisa manualmente la cronología de colegio/guardería: sin fechas de nacimiento exactas no conviene fingir precisión.</p>
+    </div>
+
+    <div class="group">
+      <h3>Liquidaciones</h3>
+      <div class="ctrl">
+        <div class="row"><label for="burr">Burriana, tu 50 % neto (€)</label><output id="burr_o"></output></div>
+        <input type="range" id="burr" min="0" max="130000" step="1000">
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="brOn">
+        <label for="brOn">Brasil se puede vender</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="brNet">Brasil, tu 50 % neto de impuestos (€)</label><output id="brNet_o"></output></div>
+        <input type="range" id="brNet" min="0" max="450000" step="5000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="brStart">Primera venta en Brasil</label><output id="brStart_o"></output></div>
+        <input type="range" id="brStart" min="2027" max="2045" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="brYears">Años para liquidarlo todo</label><output id="brYears_o"></output></div>
+        <input type="range" id="brYears" min="1" max="18" step="1">
+      </div>
+      <p class="note">Si las fincas siguen a nombre de tu padre, no puedes vender hasta la herencia. Desactiva el interruptor para ver ese escenario.</p>
+    </div>
+
+    <div class="group">
+      <h3>Cartera hoy</h3>
+      <div class="ctrl">
+        <div class="row"><label for="startEq">Cash + renta variable (€)</label><output id="startEq_o"></output></div>
+        <input type="range" id="startEq" min="0" max="400000" step="2500">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="startBtc">Bitcoin (€)</label><output id="startBtc_o"></output></div>
+        <input type="range" id="startBtc" min="0" max="150000" step="500">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcRet">Rentabilidad real media de BTC</label><output id="btcRet_o"></output></div>
+        <input type="range" id="btcRet" min="-10" max="20" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcVol">Volatilidad de BTC</label><output id="btcVol_o"></output></div>
+        <input type="range" id="btcVol" min="20" max="110" step="2">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o"></output></div>
+        <input type="range" id="btcRho" min="-20" max="90" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcAporte">Del ahorro nuevo, a BTC</label><output id="btcAporte_o"></output></div>
+        <input type="range" id="btcAporte" min="0" max="40" step="1">
+      </div>
+      <p class="note">La rentabilidad futura de BTC no la sabe nadie: el 5 % que viene por defecto es una suposición, no un dato. Prueba a ponerlo en 0 % y en negativo — si el plan solo funciona con BTC subiendo, no es un plan.</p>
+    </div>
+
+    <div class="group">
+      <h3>Fondo de previsión</h3>
+      <div class="toggle">
+        <input type="checkbox" id="provOn">
+        <label for="provOn">Contar el Provident Scheme</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="basicFO">Básico copiloto (AED/mes)</label><output id="basicFO_o"></output></div>
+        <input type="range" id="basicFO" min="18000" max="40000" step="250">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="basicCA">Básico comandante (AED/mes)</label><output id="basicCA_o"></output></div>
+        <input type="range" id="basicCA" min="28000" max="60000" step="250">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="provCo">Aportación de Emirates</label><output id="provCo_o"></output></div>
+        <input type="range" id="provCo" min="0" max="20" step="0.5">
+      </div>
+      <p class="note">Emirates aporta el 12 % del básico (15 % a partir de 10 años de servicio) y tú el 5 %, que sale de tu nómina. Solo se cobra al dejar la compañía — y como dejarla es justo lo que significa jubilarse, cuenta para el objetivo. Antes de 5 años solo te llevas parte de lo que puso Emirates.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Fiscalidad España</h3>
+      <div class="toggle">
+        <input type="checkbox" id="taxOn">
+        <label for="taxOn">Tributar plusvalías al repatriar capital</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="taxRate">Tipo medio efectivo sobre plusvalías</label><output id="taxRate_o"></output></div>
+        <input type="range" id="taxRate" min="0" max="30" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="taxRepatDelay">Años tras el FIRE hasta residencia fiscal en España</label><output id="taxRepatDelay_o"></output></div>
+        <input type="range" id="taxRepatDelay" min="0" max="20" step="1">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="wealthTaxOn">
+        <label for="wealthTaxOn">Aplicar impuesto de patrimonio</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="wealthExempt">Mínimo exento (€)</label><output id="wealthExempt_o"></output></div>
+        <input type="range" id="wealthExempt" min="500000" max="3000000" step="50000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="wealthRate">Tipo medio anual sobre el exceso</label><output id="wealthRate_o"></output></div>
+        <input type="range" id="wealthRate" min="0" max="3.5" step="0.05">
+      </div>
+      <p class="note">El "año de repatriación" se cuenta desde la fecha FIRE de cada ruta, no como un año fijo: el FIRE es first-passage y varía ruta a ruta. Los impuestos se detraen directamente de la cartera, así que todas las cifras que ves arriba ya quedan netas.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Inflación y FX estocásticos</h3>
+      <div class="toggle">
+        <input type="checkbox" id="fxVolOn">
+        <label for="fxVolOn">Tipo AED→EUR aleatorio (en vez de fijo)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="fxVol">Volatilidad anual del tipo de cambio</label><output id="fxVol_o"></output></div>
+        <input type="range" id="fxVol" min="0" max="15" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="fxMeanRevert">Reversión anual hacia el tipo base</label><output id="fxMeanRevert_o"></output></div>
+        <input type="range" id="fxMeanRevert" min="0" max="100" step="5">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="inflOn">
+        <label for="inflOn">Sorpresas de inflación EUR (en vez de tasas reales fijas)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="inflVol">Volatilidad anual de la sorpresa de inflación</label><output id="inflVol_o"></output></div>
+        <input type="range" id="inflVol" min="0" max="4" step="0.1">
+      </div>
+      <p class="note">El modelo ya trabaja en euros reales de 2026. Esto no reintroduce una base nominal completa: añade ruido alrededor de esa base real, erosionando algo el retorno de mercado y abaratando en términos reales la hipoteca nominal fija cuando la inflación sorprende al alza.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Estrategia de retirada</h3>
+      <div class="ctrl">
+        <div class="row"><label for="wdStrategy">Estrategia</label><output id="wdStrategy_o"></output></div>
+        <input type="range" id="wdStrategy" min="0" max="2" step="1">
+      </div>
+      <p class="subhead">Guyton-Klinger (guardrails)</p>
+      <div class="ctrl">
+        <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o"></output></div>
+        <input type="range" id="gkGuard" min="10" max="30" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="gkCut">Recorte de gasto al tocar el techo</label><output id="gkCut_o"></output></div>
+        <input type="range" id="gkCut" min="5" max="15" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="gkRaise">Subida de gasto al tocar el suelo</label><output id="gkRaise_o"></output></div>
+        <input type="range" id="gkRaise" min="5" max="15" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="gkFreq">Frecuencia de revisión (meses)</label><output id="gkFreq_o"></output></div>
+        <input type="range" id="gkFreq" min="6" max="24" step="6">
+      </div>
+      <p class="subhead">Fases go-go / slow-go / no-go</p>
+      <div class="ctrl">
+        <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o"></output></div>
+        <input type="range" id="goGoMult" min="80" max="150" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goGoYears">Duración go-go (años)</label><output id="goGoYears_o"></output></div>
+        <input type="range" id="goGoYears" min="0" max="20" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="slowGoMult">Gasto fase slow-go (% del base)</label><output id="slowGoMult_o"></output></div>
+        <input type="range" id="slowGoMult" min="60" max="120" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="slowGoYears">Duración slow-go (años)</label><output id="slowGoYears_o"></output></div>
+        <input type="range" id="slowGoYears" min="0" max="20" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="noGoMult">Gasto fase no-go (% del base)</label><output id="noGoMult_o"></output></div>
+        <input type="range" id="noGoMult" min="50" max="110" step="5">
+      </div>
+      <p class="note">Con "SWR fijo" el gasto es idéntico al modo simple. Guyton-Klinger ajusta el gasto anual cuando la tasa de retiro efectiva se sale de la banda alrededor del SWR objetivo. Las fases aplican un multiplicador al gasto base según los años transcurridos desde el FIRE de cada ruta.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Activos y allocation adicionales</h3>
+      <p class="subhead">Oro</p>
+      <div class="ctrl">
+        <div class="row"><label for="startGold">Oro hoy (€)</label><output id="startGold_o"></output></div>
+        <input type="range" id="startGold" min="0" max="100000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldRet">Rentabilidad real media</label><output id="goldRet_o"></output></div>
+        <input type="range" id="goldRet" min="-5" max="10" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldVol">Volatilidad anual</label><output id="goldVol_o"></output></div>
+        <input type="range" id="goldVol" min="5" max="30" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldRho">Correlación oro ↔ bolsa</label><output id="goldRho_o"></output></div>
+        <input type="range" id="goldRho" min="-50" max="50" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldAporte">Del ahorro nuevo, a oro</label><output id="goldAporte_o"></output></div>
+        <input type="range" id="goldAporte" min="0" max="30" step="1">
+      </div>
+      <p class="subhead">Inmueble en alquiler</p>
+      <div class="toggle">
+        <input type="checkbox" id="reOn">
+        <label for="reOn">Contar un inmueble en alquiler</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="reValue">Valor del inmueble (€)</label><output id="reValue_o"></output></div>
+        <input type="range" id="reValue" min="0" max="500000" step="5000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="reYield">Rentabilidad neta de alquiler</label><output id="reYield_o"></output></div>
+        <input type="range" id="reYield" min="0" max="8" step="0.25">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="reAppr">Revalorización real anual</label><output id="reAppr_o"></output></div>
+        <input type="range" id="reAppr" min="-2" max="5" step="0.25">
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="reCountsFire">
+        <label for="reCountsFire">Contar el inmueble como capital FIRE</label>
+      </div>
+      <p class="subhead">Glide path (des-arriesgar al acercarte al FIRE)</p>
+      <div class="toggle">
+        <input type="checkbox" id="glideOn">
+        <label for="glideOn">Activar glide path</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o"></output></div>
+        <input type="range" id="glideTargetYear" min="2027" max="2092" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="glideStartYears">Años antes de empezar a des-arriesgar</label><output id="glideStartYears_o"></output></div>
+        <input type="range" id="glideStartYears" min="1" max="15" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="glideEqFloor">Mínimo en riesgo al llegar la fecha</label><output id="glideEqFloor_o"></output></div>
+        <input type="range" id="glideEqFloor" min="20" max="90" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="consRet">Cartera conservadora, rentabilidad real</label><output id="consRet_o"></output></div>
+        <input type="range" id="consRet" min="0" max="4" step="0.25">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="consVol">Cartera conservadora, volatilidad</label><output id="consVol_o"></output></div>
+        <input type="range" id="consVol" min="0" max="8" step="0.5">
+      </div>
+      <p class="note">"Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
+    </div>
+
+    <div class="group">
+      <h3>Objetivo</h3>
+      <div class="ctrl">
+        <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o"></output></div>
+        <input type="range" id="gasto" min="25000" max="130000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="swr">Tasa de retiro segura</label><output id="swr_o"></output></div>
+        <input type="range" id="swr" min="2.4" max="4.6" step="0.05">
+      </div>
+      <p class="note">El objetivo es una primera criba. La simulación además cambia cada ruta a fase de retirada al cruzarlo y comprueba si sobrevive hasta el horizonte. Esparreguera no cuenta como capital FIRE mientras sea vivienda de uso propio.</p>
+    </div>
+
+    <div class="actions">
+      <button class="reset" id="reset">Restaurar valores base</button>
+      <p class="calc" id="calc"></p>
+    </div>
+  </section>
+</div>
+
+
+<script>
+const DEFAULTS = {
+  ageNow:28,
+  fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5,
+  ret:5.5, vol:17, vida:3600, vidaG:1.0, hip:850, hipEnd:2056, nur:10000,
+  burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
+  gasto:60000, swr:3.25,
+  startEq:3000, startBtc:15000,
+  btcRet:5, btcVol:70, btcRho:40, btcAporte:0,
+  basicFO:26485, basicCA:40100, provCo:12, provOn:true,
+
+  // ---- Modo PRO ----
+  proMode:false,
+  // fiscalidad España
+  taxOn:false, taxRate:19, taxRepatDelay:2,
+  wealthTaxOn:false, wealthExempt:700000, wealthRate:0.5,
+  // inflación / FX estocásticos
+  fxVolOn:false, fxVol:4, fxMeanRevert:20,
+  inflOn:false, inflVol:1.2,
+  // estrategia de retirada
+  wdStrategy:0,
+  gkGuard:20, gkCut:10, gkRaise:10, gkFreq:12,
+  goGoMult:115, goGoYears:10, slowGoMult:90, slowGoYears:10, noGoMult:100,
+  // activos y allocation adicionales
+  startGold:0, goldRet:1.5, goldVol:15, goldRho:-10, goldAporte:0,
+  reOn:false, reValue:0, reYield:3.5, reAppr:1, reCountsFire:false,
+  glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4
+};
+
+const PATHS = 2000;
+const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
+const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
+const END_YEAR = 2092, END_MONTH = 12;          // long retirement horizon
+const FS1_GAP = 10400;
+
+const ids = Object.keys(DEFAULTS);
+const el = {}, out = {};
+ids.forEach(k => { el[k] = document.getElementById(k); out[k] = document.getElementById(k+'_o'); });
+
+const eur = n => '€'+Math.round(n).toLocaleString('es-ES');
+const eurK = n => n >= 1e6 ? '€'+(n/1e6).toFixed(2)+'M' : '€'+Math.round(n/1000)+'k';
+const monthIndex = (y,m) => (y-START_YEAR)*12 + (m-START_MONTH);
+const dateFromIndex = i => {
+  const d = new Date(START_YEAR, START_MONTH-1+i, 1);
+  return {y:d.getFullYear(), m:d.getMonth()+1};
+};
+const yearFrac = i => {
+  const d=dateFromIndex(i);
+  return (d.y-START_YEAR)+(d.m-START_MONTH)/12;
+};
+const ageAt = i => DEFAULTS.ageNow + yearFrac(i);
+const ageOfDate = (y,m=12) => Math.floor(DEFAULTS.ageNow + ((y-START_YEAR)+(m-START_MONTH)/12));
+
+function readParams(){
+  const p={};
+  ids.forEach(k => { const n=el[k]; p[k]=n?(n.type==='checkbox'?n.checked:parseFloat(n.value)):DEFAULTS[k]; });
+  return p;
+}
+
+function initVisibleLabels(){
+  try { paintLabels(readParams()); }
+  catch(e) {
+    ids.forEach(k => {
+      if(out[k] && !out[k].textContent) {
+        const n=el[k];
+        out[k].textContent = n && n.type==='checkbox' ? (n.checked?'Sí':'No') : (n ? String(n.value) : '—');
+      }
+    });
+  }
+}
+
+function paintLabels(p){
+  const set=(k,t)=>{ if(out[k]) out[k].textContent=t; };
+  set('ageNow', p.ageNow+' años');
+  set('fx',p.fx.toFixed(3));
+  set('salFO','AED '+(p.salFO/1000).toFixed(0)+'k · '+eur(p.salFO*p.fx));
+  set('salCA','AED '+(p.salCA/1000).toFixed(0)+'k · '+eur(p.salCA*p.fx));
+  set('captY',p.captY+' · edad '+(p.ageNow+p.captY-START_YEAR));
+  set('captDelay',p.captDelay.toFixed(1)+' años');
+  set('startDelay',p.startDelay.toFixed(0)+' meses');
+  set('salG',p.salG.toFixed(1)+' %');
+  set('ret',p.ret.toFixed(1)+' %');
+  set('vol',p.vol.toFixed(1)+' %');
+  set('vida',eur(p.vida)+'/mes');
+  set('vidaG',p.vidaG.toFixed(1)+' %');
+  set('hip',eur(p.hip)+'/mes');
+  set('hipEnd',String(p.hipEnd));
+  set('nur',eur(p.nur)+'/año');
+  set('burr',eur(p.burr));
+  set('brNet',eur(p.brNet));
+  set('brStart',String(p.brStart));
+  set('brYears',p.brYears+(p.brYears===1?' año':' años'));
+  set('gasto',eur(p.gasto)+'/año');
+  set('swr',p.swr.toFixed(2)+' %');
+  const tot=p.startEq+p.startBtc;
+  set('startEq',eur(p.startEq));
+  set('startBtc',eur(p.startBtc)+(tot?' · '+Math.round(p.startBtc/tot*100)+' % de la cartera':''));
+  set('btcRet',p.btcRet.toFixed(1)+' %');
+  set('btcVol',p.btcVol.toFixed(0)+' %');
+  set('btcRho',(p.btcRho/100).toFixed(2));
+  set('btcAporte',p.btcAporte.toFixed(0)+' %');
+  set('basicFO','AED '+p.basicFO.toLocaleString('es-ES')+' · '+eur(p.basicFO*12*p.fx)+'/año');
+  set('basicCA','AED '+p.basicCA.toLocaleString('es-ES')+' · '+eur(p.basicCA*12*p.fx)+'/año');
+  set('provCo',p.provCo.toFixed(1)+' % (15 % desde 10 años)');
+
+  // ---- Modo PRO ----
+  set('taxRate',p.taxRate.toFixed(1)+' %');
+  set('taxRepatDelay',p.taxRepatDelay+(p.taxRepatDelay===1?' año':' años'));
+  set('wealthExempt',eur(p.wealthExempt));
+  set('wealthRate',p.wealthRate.toFixed(2)+' %/año');
+  set('fxVol',p.fxVol.toFixed(1)+' %/año');
+  set('fxMeanRevert',p.fxMeanRevert.toFixed(0)+' %/año');
+  set('inflVol',p.inflVol.toFixed(1)+' %/año');
+  set('wdStrategy',['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'][Math.round(p.wdStrategy)]);
+  set('gkGuard','±'+p.gkGuard.toFixed(0)+' %');
+  set('gkCut',p.gkCut.toFixed(0)+' %');
+  set('gkRaise',p.gkRaise.toFixed(0)+' %');
+  set('gkFreq',p.gkFreq.toFixed(0)+' meses');
+  set('goGoMult',p.goGoMult.toFixed(0)+' %');
+  set('goGoYears',p.goGoYears+(p.goGoYears===1?' año':' años'));
+  set('slowGoMult',p.slowGoMult.toFixed(0)+' %');
+  set('slowGoYears',p.slowGoYears+(p.slowGoYears===1?' año':' años'));
+  set('noGoMult',p.noGoMult.toFixed(0)+' %');
+  set('startGold',eur(p.startGold));
+  set('goldRet',p.goldRet.toFixed(1)+' %');
+  set('goldVol',p.goldVol.toFixed(0)+' %');
+  set('goldRho',(p.goldRho/100).toFixed(2));
+  set('goldAporte',p.goldAporte.toFixed(0)+' %');
+  set('reValue',eur(p.reValue));
+  set('reYield',p.reYield.toFixed(2)+' %/año');
+  set('reAppr',p.reAppr.toFixed(2)+' %/año');
+  set('glideTargetYear',String(p.glideTargetYear));
+  set('glideStartYears',p.glideStartYears+(p.glideStartYears===1?' año':' años'));
+  set('glideEqFloor',p.glideEqFloor.toFixed(0)+' %');
+  set('consRet',p.consRet.toFixed(2)+' %');
+  set('consVol',p.consVol.toFixed(1)+' %');
+}
+
+let spare=null;
+function gauss(){
+  if(spare!==null){ const s=spare; spare=null; return s; }
+  let u,v,q;
+  do{u=Math.random()*2-1;v=Math.random()*2-1;q=u*u+v*v;}while(q===0||q>=1);
+  const f=Math.sqrt(-2*Math.log(q)/q); spare=v*f; return u*f;
+}
+function normal(mu,sd){ return mu+sd*gauss(); }
+function logParams(mean,vol){
+  const m=1+mean;
+  const s2=Math.log(1+(vol*vol)/(m*m));
+  return {mu:Math.log(m)-s2/2,sd:Math.sqrt(s2)};
+}
+function quantile(a,q){
+  const n=a.length;
+  if(!n) return null;
+  const b=Float64Array.from(a).sort();
+  return b[Math.max(0,Math.min(n-1,Math.floor((n-1)*q)))];
+}
+function ymdLabel(i){
+  const d=dateFromIndex(i);
+  return d.m===12?String(d.y):String(d.y)+'-'+String(d.m).padStart(2,'0');
+}
+
+/*
+ Each path is monthly. FIRE date is a path-level first-passage event.
+ Once the path crosses target, it enters withdrawal mode immediately.
+ A FIRE date is counted only if that route survives to END_YEAR.
+ This avoids mistaking "touching the number" for "financially viable retirement".
+*/
+function simulate(p){
+  const months=(END_YEAR-START_YEAR)*12+(END_MONTH-START_MONTH)+1;
+  const eq=logParams(Math.pow(1+p.ret/100,1/12)-1, p.vol/100/Math.sqrt(12));
+  const btc=logParams(Math.pow(1+p.btcRet/100,1/12)-1, p.btcVol/100/Math.sqrt(12));
+  const rho=p.btcRho/100, rhoC=Math.sqrt(Math.max(0,1-rho*rho));
+  const annualRetGrowth=Math.pow(1+p.salG/100,1/12)-1;
+  const annualSpendGrowth=Math.pow(1+p.vidaG/100,1/12)-1;
+  const target=p.gasto/(p.swr/100);
+
+  // ---- Modo PRO: activación por sub-feature (siempre condicionada a p.proMode) ----
+  const goldActive=p.proMode && (p.startGold>0 || p.goldAporte>0);
+  const reActive=p.proMode && p.reOn;
+  const glideActive=p.proMode && p.glideOn;
+  const taxActive=p.proMode && p.taxOn;
+  const wealthTaxActive=p.proMode && p.wealthTaxOn;
+  const fxVolActive=p.proMode && p.fxVolOn;
+  const inflActive=p.proMode && p.inflOn;
+  const strat=p.proMode ? Math.round(p.wdStrategy) : 0;
+
+  const gold=goldActive ? logParams(Math.pow(1+p.goldRet/100,1/12)-1, p.goldVol/100/Math.sqrt(12)) : null;
+  const goldRho=p.goldRho/100, goldRhoC=Math.sqrt(Math.max(0,1-goldRho*goldRho));
+  const consMonthlyRet=Math.pow(1+p.consRet/100,1/12)-1;
+  const consVolM=p.consVol/100/Math.sqrt(12);
+  const reApprM=Math.pow(1+p.reAppr/100,1/12)-1;
+  const fxVolM=p.fxVol/100/Math.sqrt(12);
+  const fxRevM=p.fxMeanRevert/100/12;
+  const inflVolM=p.inflVol/100/Math.sqrt(12);
+  const eqInflBeta=0.3; // fracción del shock de inflación que el mercado absorbe el mismo mes
+
+  const annualSnapshots=[];
+  for(let i=0;i<months;i++){
+    const d=dateFromIndex(i);
+    if(d.m===12 || i===months-1) annualSnapshots.push(i);
+  }
+  const snapVals=annualSnapshots.map(()=>new Float64Array(PATHS));
+  const fireMonth=new Int32Array(PATHS); fireMonth.fill(-1);
+  const ruined=new Uint8Array(PATHS);
+  const finalVal=new Float64Array(PATHS);
+
+  for(let k=0;k<PATHS;k++){
+    let vEq=p.startEq, vBtc=p.startBtc, vProv=0;
+    let vGold=goldActive?p.startGold:0, vCons=0, vRE=reActive?p.reValue:0;
+    let retired=false, ruinedPath=false;
+    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false;
+    const startBase=monthIndex(CAREER_YEAR,CAREER_MONTH);
+    // non-negative truncated delays; central date remains the user's selected value
+    const startDelay=Math.max(0,Math.round(normal(0,p.startDelay)));
+    const careerStart=startBase+startDelay;
+    const captCentral=monthIndex(p.captY,1);
+    const captMonth=Math.max(careerStart, Math.round(normal(captCentral, p.captDelay*12)));
+
+    let snap=0;
+    for(let i=0;i<months;i++){
+      const d=dateFromIndex(i);
+      const z1=gauss(), z2=gauss();
+      const rEq=Math.exp(eq.mu+eq.sd*z1)-1;
+      const rBtc=Math.exp(btc.mu+btc.sd*(rho*z1+rhoC*z2))-1;
+
+      let inflShockM=0;
+      if(inflActive){ inflShockM=normal(0,inflVolM); cumInfl+=inflShockM; }
+      const rEqEff=inflActive ? rEq-inflShockM*(1-eqInflBeta) : rEq;
+      const rBtcEff=inflActive ? rBtc-inflShockM*(1-eqInflBeta) : rBtc;
+
+      vEq*=1+rEqEff; vBtc*=1+rBtcEff; vProv*=1+rEqEff;
+      if(goldActive){
+        const z3=gauss();
+        const rGold=Math.exp(gold.mu+gold.sd*(goldRho*z1+goldRhoC*z3))-1;
+        vGold*=1+rGold;
+      }
+      if(glideActive) vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
+      if(reActive) vRE*=1+reApprM;
+
+      if(fxVolActive){
+        fxCur+=fxRevM*(p.fx-fxCur)+fxCur*normal(0,fxVolM);
+        if(fxCur<0.05) fxCur=0.05;
+      }
+      const fxEff=fxVolActive ? fxCur : p.fx;
+
+      const isWorking=!retired && i>=careerStart;
+      let net=0, aporProv=0;
+
+      if(isWorking){
+        const monthsSinceCareer=i-careerStart;
+        const captain=i>=captMonth;
+        const salaryAED=(captain?p.salCA:p.salFO)/12*Math.pow(1+annualRetGrowth,Math.max(0,monthsSinceCareer));
+        const salaryEUR=salaryAED*fxEff;
+
+        const monthsSinceStart=monthsSinceCareer;
+        const basicAED=(captain?p.basicCA:p.basicFO);
+        // 6-month waiting period; 12%/15% company + 5% employee thereafter
+        if(p.provOn && monthsSinceStart>=6){
+          const yearsService=monthsSinceStart/12;
+          const coRate=yearsService>=10?0.15:p.provCo/100;
+          const basicEUR=basicAED*fxEff;
+          aporProv=basicEUR*(coRate+0.05);
+          vProv+=aporProv;
+          net-=basicEUR*0.05;
+        }
+        net+=salaryEUR;
+      }
+
+      // Real estate: net rental income enters cash flow every month it's held.
+      if(reActive) net+=vRE*(p.reYield/100)/12;
+
+      // Living costs only begin with the Dubai career phase in this model.
+      // Pre-career Spanish cash flow is intentionally NOT invented.
+      if(i>=careerStart && !retired){
+        const monthsSinceCareer=i-careerStart;
+        const living=p.vida*Math.pow(1+annualSpendGrowth,Math.max(0,monthsSinceCareer));
+        net-=living;
+        const hipReal=inflActive ? p.hip*Math.exp(-cumInfl) : p.hip;
+        if(d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12)) net-=hipReal;
+
+        // Legacy childcare assumptions retained but explicitly not treated as exact birthdays.
+        if(d.y===2027 || d.y===2028) net-=p.nur/12;
+        if(d.y===2029) net-=FS1_GAP/12;
+        if(d.y===2029 || d.y===2030) net-=p.nur/12;
+        if(d.y===2031) net-=FS1_GAP/12;
+      }
+
+      // Burriana: midpoint timing instead of giving a full 2027 return before entry.
+      if(d.y===2027 && d.m===12) net+=p.burr;
+
+      // Brazil: monthly receipts across the chosen liquidation window, not an annual lump.
+      if(p.brOn && d.y>=p.brStart && d.y<p.brStart+p.brYears) net+=p.brNet/(p.brYears*12);
+
+      if(!retired){
+        if(net>=0){
+          const wBtc=p.btcAporte/100;
+          const wGold=goldActive?p.goldAporte/100:0;
+          const wEq=Math.max(0,1-wBtc-wGold);
+          vEq+=net*wEq;
+          vBtc+=net*wBtc;
+          if(goldActive) vGold+=net*wGold;
+        } else {
+          // Deficits use liquid assets; never create negative ETF wealth.
+          let deficit=-net;
+          const fromEq=Math.min(vEq,deficit); vEq-=fromEq; deficit-=fromEq;
+          const fromBtc=Math.min(vBtc,deficit); vBtc-=fromBtc; deficit-=fromBtc;
+          if(deficit>0) ruinedPath=true;
+        }
+
+        const total=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        if(total>=target && !ruinedPath){
+          retired=true;
+          fireMonth[k]=i;
+          curSpendAnnual=p.gasto;
+        }
+      } else {
+        // Retirement phase: real annual retirement spend, inflation already stripped.
+        let wd;
+        if(strat===0){
+          wd=p.gasto/12; // idéntico al comportamiento original
+        } else if(strat===1){
+          const monthsSinceRetire=i-fireMonth[k];
+          const totalNow=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+          if(totalNow>0 && monthsSinceRetire>0 && monthsSinceRetire%p.gkFreq===0){
+            const currentWR=curSpendAnnual/totalNow, anchorWR=p.swr/100;
+            const upper=anchorWR*(1+p.gkGuard/100), lower=anchorWR*(1-p.gkGuard/100);
+            if(currentWR>upper) curSpendAnnual*=(1-p.gkCut/100);
+            else if(currentWR<lower) curSpendAnnual*=(1+p.gkRaise/100);
+          }
+          wd=curSpendAnnual/12;
+        } else {
+          const yearsSinceFire=(i-fireMonth[k])/12;
+          let mult;
+          if(yearsSinceFire<p.goGoYears) mult=p.goGoMult/100;
+          else if(yearsSinceFire<p.goGoYears+p.slowGoYears) mult=p.slowGoMult/100;
+          else mult=p.noGoMult/100;
+          wd=(p.gasto/12)*mult;
+        }
+
+        if(taxActive){
+          if(!spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12) spanishResident=true;
+          if(spanishResident) wd=wd/(1-p.taxRate/100);
+        }
+
+        let deficit=wd;
+        const fromCons=Math.min(vCons,deficit); vCons-=fromCons; deficit-=fromCons;
+        if(deficit>0){ const fromEq=Math.min(vEq,deficit); vEq-=fromEq; deficit-=fromEq; }
+        if(deficit>0){ const fromProv=Math.min(vProv,deficit); vProv-=fromProv; deficit-=fromProv; }
+        if(deficit>0 && goldActive){ const fromGold=Math.min(vGold,deficit); vGold-=fromGold; deficit-=fromGold; }
+        if(deficit>0){ const fromBtc=Math.min(vBtc,deficit); vBtc-=fromBtc; deficit-=fromBtc; }
+        if(deficit>0 && reActive && p.reCountsFire){ const fromRE=Math.min(vRE,deficit); vRE-=fromRE; deficit-=fromRE; }
+        if(deficit>0){ ruinedPath=true; retired=false; }
+      }
+
+      // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
+      if(wealthTaxActive && spanishResident && (d.m===12 || i===months-1)){
+        const totalWealth=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        const excess=Math.max(0,totalWealth-p.wealthExempt);
+        if(excess>0){
+          let due=excess*(p.wealthRate/100);
+          const fromCons=Math.min(vCons,due); vCons-=fromCons; due-=fromCons;
+          const fromEq=Math.min(vEq,due); vEq-=fromEq; due-=fromEq;
+          const fromGold=Math.min(vGold,due); vGold-=fromGold; due-=fromGold;
+          const fromBtc=Math.min(vBtc,due); vBtc-=fromBtc; due-=fromBtc;
+        }
+      }
+
+      // Glide path: rebalanceo anual entre activos de riesgo (equity+BTC+oro) y la cartera conservadora.
+      if(glideActive && (d.m===12 || i===months-1)){
+        const yearsToTarget=(monthIndex(p.glideTargetYear,1)-i)/12;
+        let riskyShare;
+        if(yearsToTarget>=p.glideStartYears) riskyShare=1;
+        else if(yearsToTarget<=0) riskyShare=p.glideEqFloor/100;
+        else riskyShare=p.glideEqFloor/100+(1-p.glideEqFloor/100)*(yearsToTarget/p.glideStartYears);
+
+        const risky=vEq+vBtc+(goldActive?vGold:0);
+        const totalRC=risky+vCons;
+        const targetRisky=totalRC*riskyShare;
+        const diff=risky-targetRisky;
+        if(Math.abs(diff)>1){
+          if(diff>0 && risky>0){
+            const frac=diff/risky;
+            vCons+=diff; vEq-=vEq*frac; vBtc-=vBtc*frac; if(goldActive) vGold-=vGold*frac;
+          } else if(diff<0 && vCons>0){
+            const move=Math.min(vCons,-diff);
+            vCons-=move;
+            const riskySum=(vEq+vBtc+(goldActive?vGold:0))||1;
+            vEq+=move*(vEq/riskySum||1);
+            vBtc+=move*(vBtc/riskySum);
+            if(goldActive) vGold+=move*(vGold/riskySum);
+          }
+        }
+      }
+
+      if(d.m===12 || i===months-1){
+        snapVals[snap][k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0));
+        snap++;
+      }
+    }
+    ruined[k]=ruinedPath?1:0;
+    finalVal[k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0));
+  }
+
+  const series=annualSnapshots.map((idx,j)=>{
+    const a=Float64Array.from(snapVals[j]).sort();
+    return {idx, year:dateFromIndex(idx).y,
+      p10:a[Math.floor((PATHS-1)*0.10)],
+      p25:a[Math.floor((PATHS-1)*0.25)],
+      p50:a[Math.floor((PATHS-1)*0.50)],
+      p75:a[Math.floor((PATHS-1)*0.75)],
+      p90:a[Math.floor((PATHS-1)*0.90)]
+    };
+  });
+
+  // Only successful retirements count as FIRE dates.
+  const successful=[];
+  for(let k=0;k<PATHS;k++) if(fireMonth[k]>=0 && !ruined[k]) successful.push(fireMonth[k]);
+
+  return {series,target,fireMonths:successful,fireMonthAll:Array.from(fireMonth),ruined,annualSnapshots};
+}
+
+function firstYear(series,key,target){
+  for(const x of series) if(x[key]>=target) return x.year;
+  return null;
+}
+function fireQuantileMonth(fireMonths,q){
+  if(!fireMonths.length) return null;
+  const a=Int32Array.from(fireMonths).sort();
+  return a[Math.floor((a.length-1)*q)];
+}
+
+function drawChart(s,target){
+  const cv=document.getElementById('chart'), dpr=Math.min(window.devicePixelRatio||1,2);
+  const cssW=cv.parentElement.clientWidth, cssH=Math.round(cssW*.62);
+  cv.width=cssW*dpr; cv.height=cssH*dpr; cv.style.height=cssH+'px';
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
+  const L=52,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
+  let max=Math.max(target*1.15,1);
+  s.forEach(v=>max=Math.max(max,v.p90));
+  const X=i=>L+(i/(s.length-1))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
+
+  c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
+  c.font='10px "IBM Plex Mono", monospace'; c.fillStyle='#4A5257';
+  const step=max/4;
+  for(let i=0;i<=4;i++){
+    const v=i*step,y=Y(v); c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();
+    c.textAlign='right';c.textBaseline='middle';c.fillText(eurK(v),L-7,y);
+  }
+  c.textAlign='center';c.textBaseline='top';
+  s.forEach((v,i)=>{if(v.year%5===0){
+    c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+    c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+  }});
+  c.beginPath(); s.forEach((v,i)=>i?c.lineTo(X(i),Y(v.p90)):c.moveTo(X(i),Y(v.p90)));
+  for(let i=s.length-1;i>=0;i--) c.lineTo(X(i),Y(s[i].p10));
+  c.closePath();c.fillStyle='rgba(143,166,178,.32)';c.fill();
+
+  c.save();c.setLineDash([6,5]);c.strokeStyle='#B8791B';c.lineWidth=2;
+  c.beginPath();c.moveTo(L,Y(target));c.lineTo(L+w,Y(target));c.stroke();c.restore();
+
+  c.strokeStyle='#C6187E';c.lineWidth=2.5;c.lineJoin='round';c.beginPath();
+  s.forEach((v,i)=>i?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50)));c.stroke();
+  c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
+}
+
+function run(){
+  const t0=performance.now(), p=readParams();
+  // Paint slider values before any heavy calculation so the UI always shows them.
+  paintLabels(p);
+  const r=simulate(p), s=r.series, target=r.target;
+  const fm50=fireQuantileMonth(r.fireMonths,.50), fm10=fireQuantileMonth(r.fireMonths,.10);
+  const successRate=r.fireMonths.length/PATHS;
+
+  document.getElementById('ageMed').textContent=fm50===null?'—':Math.floor(p.ageNow+yearFrac(fm50));
+  document.getElementById('yearMed').textContent=fm50===null?'no FIRE exitoso':ymdLabel(fm50)+' · P50 · éxito '+Math.round(successRate*100)+'%';
+  document.getElementById('ageP10').textContent=fm10===null?'—':Math.floor(p.ageNow+yearFrac(fm10));
+  document.getElementById('yearP10').textContent=fm10===null?'sin rutas exitosas':ymdLabel(fm10)+' · P10 de fechas FIRE exitosas';
+  document.getElementById('targetCap').textContent=eurK(target);
+  document.getElementById('targetNote').textContent=eur(p.gasto)+'/año ÷ '+p.swr.toFixed(2)+' %';
+
+  const marks=[1e6,1.5e6,2e6,3e6];
+  document.getElementById('wpts').innerHTML=marks.map(m=>{
+    const cell=k=>{
+      const y=firstYear(s,k,m);
+      return y?`<td>${y}<br><span class="age">edad ${p.ageNow+y-START_YEAR}</span></td>`:`<td class="na">—</td>`;
+    };
+    return `<tr class="${firstYear(s,'p50',m)!==null?'hit':''}"><td>${eurK(m)}</td>${cell('p50')}${cell('p10')}${cell('p90')}</tr>`;
+  }).join('');
+
+  drawChart(s,target);
+
+  let firedCount=0, ruinedAfterFire=0;
+  for(let k=0;k<PATHS;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
+  const ruinRate=firedCount?ruinedAfterFire/firedCount:0;
+
+  let calcTxt=PATHS.toLocaleString('es-ES')+' rutas · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
+    Math.round(successRate*100)+' % rutas FIRE exitosas · ruina tras jubilarse '+Math.round(ruinRate*100)+' % · '+
+    Math.round(performance.now()-t0)+' ms';
+  if(p.proMode){
+    const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'];
+    calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
+    if(p.taxOn) calcTxt+=' · fiscalidad ES activa (tipo medio '+p.taxRate.toFixed(1)+'%, repat. +'+p.taxRepatDelay+'a)';
+    if(p.wealthTaxOn) calcTxt+=' · patrimonio > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año';
+    if(p.fxVolOn) calcTxt+=' · FX estocástico';
+    if(p.inflOn) calcTxt+=' · inflación estocástica';
+    if(p.glideOn) calcTxt+=' · glide path activo';
+  }
+  document.getElementById('calc').textContent=calcTxt;
+}
+
+let t=null;
+function schedule(){clearTimeout(t);t=setTimeout(run,el.proMode.checked?150:90);}
+ids.forEach(k=>{ if(el[k]) el[k].addEventListener('input',schedule); });
+el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+document.getElementById('reset').addEventListener('click',()=>{
+  ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
+  document.body.classList.toggle('pro',DEFAULTS.proMode);
+  run();
+});
+window.addEventListener('resize',schedule);
+ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
+document.body.classList.toggle('pro',DEFAULTS.proMode);
+initVisibleLabels();
+try { run(); }
+catch(e) {
+  // Keep the controls usable and values visible even if a browser-specific runtime issue occurs.
+  console.error(e);
+}
+</script>
+
+</body>
+</html>
