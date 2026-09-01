@@ -106,8 +106,27 @@ td .age{color:var(--ink-2);font-size:11px}
 td.na{color:var(--caution)}
 
 /* ---------- gráfico ---------- */
+.chartHead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--rule);padding-bottom:6px;margin-bottom:12px;
+}
+.chartHead h2{border:none;margin:0;padding:0}
+.chartTools{display:flex;align-items:center;gap:14px}
+.zoomReset,.expandBtn,.closeBtn{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
+  color:var(--route);background:none;border:1px solid var(--route);
+  padding:4px 9px;cursor:pointer;text-decoration:none;white-space:nowrap;
+}
+.expandBtn:hover,.closeBtn:hover,.zoomReset:hover{background:var(--route);color:var(--paper)}
 .chartbox{position:relative;margin-top:4px}
-canvas{width:100%;height:auto;display:block}
+canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
+.chart-tip{
+  position:absolute;display:none;pointer-events:none;z-index:5;
+  background:var(--ink);color:var(--paper);
+  font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.55;
+  padding:6px 9px;white-space:nowrap;
+}
+.chart-tip b{color:var(--paper);font-family:'Barlow Condensed',sans-serif;font-size:12.5px}
 .legend{
   display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-2);
@@ -116,6 +135,17 @@ canvas{width:100%;height:auto;display:block}
 .legend .b{height:9px;opacity:.32;background:var(--band)}
 .legend .r{background:var(--route)}
 .legend .t{background:var(--caution);height:0;border-top:2px dashed var(--caution)}
+
+.chartModal{
+  border:2px solid var(--rule);background:var(--paper);color:var(--ink);
+  padding:18px;max-width:min(96vw,1100px);width:100%;
+}
+.chartModal::backdrop{background:rgba(20,24,27,.55)}
+.chartModalHead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--rule);padding-bottom:6px;margin-bottom:12px;
+}
+.chartModalHead h2{border:none;margin:0;padding:0}
 
 /* ---------- panel de parámetros ---------- */
 .group{margin-bottom:22px}
@@ -254,14 +284,43 @@ body:not(.pro) .pro-only{display:none}
   </section>
 
   <section>
-    <h2>Trayectoria</h2>
-    <div class="chartbox"><canvas id="chart" width="1400" height="800"></canvas></div>
+    <div class="chartHead">
+      <h2>Trayectoria</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomReset" style="display:none">Restablecer zoom</a>
+        <button type="button" class="expandBtn" id="expandChart">⤢ Ampliar</button>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="chart" width="1400" height="800"></canvas>
+      <div class="chart-tip" id="chartTip"></div>
+    </div>
     <div class="legend">
       <span><i class="b"></i>P10–P90</span>
       <span><i class="r"></i>Mediana</span>
       <span><i class="t"></i>Objetivo</span>
     </div>
+    <p class="hint">Pasa el ratón (o el dedo) por el gráfico para ver los valores exactos de cada año. Rueda del ratón para hacer zoom, arrastra para desplazarte, o pulsa "Ampliar" para una vista más grande.</p>
   </section>
+
+  <dialog class="chartModal" id="chartModal">
+    <div class="chartModalHead">
+      <h2>Trayectoria — vista ampliada</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomResetModal" style="display:none">Restablecer zoom</a>
+        <button type="button" class="closeBtn" id="closeChartModal">✕ Cerrar</button>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="chartModalCanvas" width="1600" height="900"></canvas>
+      <div class="chart-tip" id="chartTipModal"></div>
+    </div>
+    <div class="legend">
+      <span><i class="b"></i>P10–P90</span>
+      <span><i class="r"></i>Mediana</span>
+      <span><i class="t"></i>Objetivo</span>
+    </div>
+  </dialog>
 
   <section>
     <h2>Parámetros</h2>
@@ -660,11 +719,13 @@ const DEFAULTS = {
   glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4
 };
 
-const PATHS = 2000;
+const PATHS_FULL = 2000;
+const PATHS_PREVIEW = 250;
 const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
 const END_YEAR = 2092, END_MONTH = 12;          // long retirement horizon
 const FS1_GAP = 10400;
+const MONTHS = (END_YEAR-START_YEAR)*12+(END_MONTH-START_MONTH)+1;
 
 const ids = Object.keys(DEFAULTS);
 const el = {}, out = {};
@@ -683,6 +744,17 @@ const yearFrac = i => {
 };
 const ageAt = i => DEFAULTS.ageNow + yearFrac(i);
 const ageOfDate = (y,m=12) => Math.floor(DEFAULTS.ageNow + ((y-START_YEAR)+(m-START_MONTH)/12));
+
+// Precomputed once at load: dateFromIndex(i) is deterministic and path-independent,
+// so calling it ~1.6M times inside simulate()'s per-path monthly loop was pure waste.
+const MONTH_DATES = (() => {
+  const arr = new Array(MONTHS);
+  for (let i = 0; i < MONTHS; i++) {
+    const d = dateFromIndex(i);
+    arr[i] = { y: d.y, m: d.m, isSnap: (d.m === 12 || i === MONTHS - 1) };
+  }
+  return arr;
+})();
 
 function readParams(){
   const p={};
@@ -799,8 +871,8 @@ function ymdLabel(i){
  A FIRE date is counted only if that route survives to END_YEAR.
  This avoids mistaking "touching the number" for "financially viable retirement".
 */
-function simulate(p){
-  const months=(END_YEAR-START_YEAR)*12+(END_MONTH-START_MONTH)+1;
+function simulate(p, paths){
+  const months=MONTHS;
   const eq=logParams(Math.pow(1+p.ret/100,1/12)-1, p.vol/100/Math.sqrt(12));
   const btc=logParams(Math.pow(1+p.btcRet/100,1/12)-1, p.btcVol/100/Math.sqrt(12));
   const rho=p.btcRho/100, rhoC=Math.sqrt(Math.max(0,1-rho*rho));
@@ -830,15 +902,14 @@ function simulate(p){
 
   const annualSnapshots=[];
   for(let i=0;i<months;i++){
-    const d=dateFromIndex(i);
-    if(d.m===12 || i===months-1) annualSnapshots.push(i);
+    if(MONTH_DATES[i].isSnap) annualSnapshots.push(i);
   }
-  const snapVals=annualSnapshots.map(()=>new Float64Array(PATHS));
-  const fireMonth=new Int32Array(PATHS); fireMonth.fill(-1);
-  const ruined=new Uint8Array(PATHS);
-  const finalVal=new Float64Array(PATHS);
+  const snapVals=annualSnapshots.map(()=>new Float64Array(paths));
+  const fireMonth=new Int32Array(paths); fireMonth.fill(-1);
+  const ruined=new Uint8Array(paths);
+  const finalVal=new Float64Array(paths);
 
-  for(let k=0;k<PATHS;k++){
+  for(let k=0;k<paths;k++){
     let vEq=p.startEq, vBtc=p.startBtc, vProv=0;
     let vGold=goldActive?p.startGold:0, vCons=0, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false;
@@ -852,7 +923,7 @@ function simulate(p){
 
     let snap=0;
     for(let i=0;i<months;i++){
-      const d=dateFromIndex(i);
+      const d=MONTH_DATES[i];
       const z1=gauss(), z2=gauss();
       const rEq=Math.exp(eq.mu+eq.sd*z1)-1;
       const rBtc=Math.exp(btc.mu+btc.sd*(rho*z1+rhoC*z2))-1;
@@ -987,7 +1058,7 @@ function simulate(p){
       }
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
-      if(wealthTaxActive && spanishResident && (d.m===12 || i===months-1)){
+      if(wealthTaxActive && spanishResident && d.isSnap){
         const totalWealth=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
         const excess=Math.max(0,totalWealth-p.wealthExempt);
         if(excess>0){
@@ -1000,7 +1071,7 @@ function simulate(p){
       }
 
       // Glide path: rebalanceo anual entre activos de riesgo (equity+BTC+oro) y la cartera conservadora.
-      if(glideActive && (d.m===12 || i===months-1)){
+      if(glideActive && d.isSnap){
         const yearsToTarget=(monthIndex(p.glideTargetYear,1)-i)/12;
         let riskyShare;
         if(yearsToTarget>=p.glideStartYears) riskyShare=1;
@@ -1026,7 +1097,7 @@ function simulate(p){
         }
       }
 
-      if(d.m===12 || i===months-1){
+      if(d.isSnap){
         snapVals[snap][k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0));
         snap++;
       }
@@ -1037,18 +1108,18 @@ function simulate(p){
 
   const series=annualSnapshots.map((idx,j)=>{
     const a=Float64Array.from(snapVals[j]).sort();
-    return {idx, year:dateFromIndex(idx).y,
-      p10:a[Math.floor((PATHS-1)*0.10)],
-      p25:a[Math.floor((PATHS-1)*0.25)],
-      p50:a[Math.floor((PATHS-1)*0.50)],
-      p75:a[Math.floor((PATHS-1)*0.75)],
-      p90:a[Math.floor((PATHS-1)*0.90)]
+    return {idx, year:MONTH_DATES[idx].y,
+      p10:a[Math.floor((paths-1)*0.10)],
+      p25:a[Math.floor((paths-1)*0.25)],
+      p50:a[Math.floor((paths-1)*0.50)],
+      p75:a[Math.floor((paths-1)*0.75)],
+      p90:a[Math.floor((paths-1)*0.90)]
     };
   });
 
   // Only successful retirements count as FIRE dates.
   const successful=[];
-  for(let k=0;k<PATHS;k++) if(fireMonth[k]>=0 && !ruined[k]) successful.push(fireMonth[k]);
+  for(let k=0;k<paths;k++) if(fireMonth[k]>=0 && !ruined[k]) successful.push(fireMonth[k]);
 
   return {series,target,fireMonths:successful,fireMonthAll:Array.from(fireMonth),ruined,annualSnapshots};
 }
@@ -1063,15 +1134,26 @@ function fireQuantileMonth(fireMonths,q){
   return a[Math.floor((a.length-1)*q)];
 }
 
-function drawChart(s,target){
-  const cv=document.getElementById('chart'), dpr=Math.min(window.devicePixelRatio||1,2);
-  const cssW=cv.parentElement.clientWidth, cssH=Math.round(cssW*.62);
-  cv.width=cssW*dpr; cv.height=cssH*dpr; cv.style.height=cssH+'px';
-  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
+// Renderer shared by the inline chart and the "ampliar" modal chart.
+// view={lo,hi} is the visible slice of snapshot indices (zoom/pan); hoverIdx draws
+// a crosshair + point markers at that index (or null for none). Returns the plot
+// geometry so pointer math (hover/zoom/pan) can hit-test without duplicating margins.
+function renderChart(canvas, s, target, view, hoverIdx){
+  if(!canvas || !s || !s.length) return null;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const cssW=canvas.parentElement.clientWidth || 300;
+  const cssH=Math.min(Math.round(cssW*.5), 380);
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
+  const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
   const L=52,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
+
+  const lo=Math.max(0,Math.min(view.lo, s.length-2));
+  const hi=Math.max(lo+1,Math.min(view.hi, s.length-1));
+  const vis=s.slice(lo,hi+1);
+
   let max=Math.max(target*1.15,1);
-  s.forEach(v=>max=Math.max(max,v.p90));
-  const X=i=>L+(i/(s.length-1))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
+  vis.forEach(v=>max=Math.max(max,v.p90));
+  const X=i=>L+((i-lo)/(hi-lo))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
 
   c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
   c.font='10px "IBM Plex Mono", monospace'; c.fillStyle='#4A5257';
@@ -1081,29 +1163,217 @@ function drawChart(s,target){
     c.textAlign='right';c.textBaseline='middle';c.fillText(eurK(v),L-7,y);
   }
   c.textAlign='center';c.textBaseline='top';
-  s.forEach((v,i)=>{if(v.year%5===0){
-    c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
-    c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
-  }});
-  c.beginPath(); s.forEach((v,i)=>i?c.lineTo(X(i),Y(v.p90)):c.moveTo(X(i),Y(v.p90)));
-  for(let i=s.length-1;i>=0;i--) c.lineTo(X(i),Y(s[i].p10));
+  const span=hi-lo;
+  const yearStep = span>40?10:span>15?5:1;
+  for(let i=lo;i<=hi;i++){
+    const v=s[i];
+    if(v.year%yearStep===0){
+      c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+      c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+    }
+  }
+
+  c.beginPath(); vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p90)):c.moveTo(X(i),Y(v.p90));});
+  for(let idx=vis.length-1;idx>=0;idx--){const i=lo+idx; c.lineTo(X(i),Y(vis[idx].p10));}
   c.closePath();c.fillStyle='rgba(143,166,178,.32)';c.fill();
 
   c.save();c.setLineDash([6,5]);c.strokeStyle='#B8791B';c.lineWidth=2;
   c.beginPath();c.moveTo(L,Y(target));c.lineTo(L+w,Y(target));c.stroke();c.restore();
 
   c.strokeStyle='#C6187E';c.lineWidth=2.5;c.lineJoin='round';c.beginPath();
-  s.forEach((v,i)=>i?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50)));c.stroke();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));});c.stroke();
   c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
+
+  if(hoverIdx!=null && hoverIdx>=lo && hoverIdx<=hi){
+    const v=s[hoverIdx], x=X(hoverIdx);
+    c.save();
+    c.strokeStyle='rgba(20,24,27,.45)';c.lineWidth=1;c.setLineDash([3,3]);
+    c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();
+    c.restore();
+    const dot=(val,color)=>{c.beginPath();c.arc(x,Y(val),3.5,0,Math.PI*2);c.fillStyle=color;c.fill();c.strokeStyle='#F1F3F2';c.lineWidth=1.5;c.stroke();};
+    dot(v.p10,'#8FA6B2'); dot(v.p90,'#8FA6B2'); dot(v.p50,'#C6187E');
+  }
+
+  return {L,T,w,h,lo,hi};
 }
 
-function run(){
+// Wires hover-tooltip, wheel-zoom and drag-to-pan onto one canvas, keeping its own
+// view/hover state so the inline chart and the "ampliar" modal chart act independently.
+function makeChartController(canvas, tipEl, resetLinkEl){
+  const state = { series:null, target:0, view:null, hoverIdx:null, geom:null };
+  let dragging=false, dragClientX=0, dragView=null;
+
+  function fullView(){ return {lo:0, hi:state.series.length-1}; }
+
+  function redraw(){
+    if(!state.series || !state.series.length) return;
+    state.geom = renderChart(canvas, state.series, state.target, state.view, state.hoverIdx);
+    if(resetLinkEl){
+      const isFull = state.view.lo===0 && state.view.hi===state.series.length-1;
+      resetLinkEl.style.display = isFull ? 'none' : 'inline-block';
+    }
+  }
+
+  function update(series, target){
+    state.series=series; state.target=target;
+    if(!state.view) state.view=fullView();
+    else state.view={lo:Math.max(0,Math.min(state.view.lo,series.length-2)), hi:Math.max(state.view.lo+1,Math.min(state.view.hi,series.length-1))};
+    redraw();
+  }
+  function setView(v){ if(v && state.series) state.view={...v}; redraw(); }
+  function getView(){ return state.view ? {...state.view} : null; }
+
+  function indexFromClientX(clientX){
+    if(!state.geom) return null;
+    const rect=canvas.getBoundingClientRect();
+    const {L,w,lo,hi}=state.geom;
+    const t=(clientX-rect.left-L)/w;
+    return Math.max(lo, Math.min(hi, Math.round(lo+t*(hi-lo))));
+  }
+
+  function showTip(clientX, clientY, idx){
+    if(!tipEl || !state.series || !state.series[idx]) return;
+    const v=state.series[idx];
+    tipEl.innerHTML='<b>'+v.year+'</b><br>P90 · '+eurK(v.p90)+'<br>Mediana · '+eurK(v.p50)+'<br>P10 · '+eurK(v.p10);
+    const rect=canvas.getBoundingClientRect();
+    let x=clientX-rect.left+12, y=clientY-rect.top+12;
+    if(x+150>rect.width) x=clientX-rect.left-162;
+    tipEl.style.left=Math.max(0,x)+'px'; tipEl.style.top=Math.max(0,y)+'px';
+    tipEl.style.display='block';
+  }
+  function hideTip(){ if(tipEl) tipEl.style.display='none'; }
+
+  canvas.addEventListener('pointermove', e=>{
+    if(dragging){
+      const rect=canvas.getBoundingClientRect();
+      const dx=e.clientX-dragClientX;
+      const {lo,hi}=dragView, span=hi-lo;
+      const shift=-(dx/(state.geom?state.geom.w:rect.width))*span;
+      let newLo=lo+shift, newHi=hi+shift;
+      const maxHi=state.series.length-1;
+      if(newLo<0){ newHi-=newLo; newLo=0; }
+      if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
+      state.view={lo:Math.max(0,newLo), hi:Math.min(maxHi,newHi)};
+      redraw();
+      return;
+    }
+    const idx=indexFromClientX(e.clientX);
+    if(idx==null) return;
+    state.hoverIdx=idx;
+    redraw();
+    showTip(e.clientX, e.clientY, idx);
+  });
+  canvas.addEventListener('pointerleave', ()=>{ state.hoverIdx=null; redraw(); hideTip(); });
+  canvas.addEventListener('pointerdown', e=>{
+    if(!state.series) return;
+    dragging=true; dragClientX=e.clientX; dragView={...state.view};
+    canvas.setPointerCapture(e.pointerId);
+    hideTip();
+  });
+  canvas.addEventListener('pointerup', e=>{ dragging=false; try{canvas.releasePointerCapture(e.pointerId);}catch(err){} });
+  canvas.addEventListener('pointercancel', ()=>{ dragging=false; });
+  canvas.addEventListener('wheel', e=>{
+    if(!state.series) return;
+    e.preventDefault();
+    const idx = indexFromClientX(e.clientX);
+    const center = idx==null ? Math.round((state.view.lo+state.view.hi)/2) : idx;
+    const {lo,hi}=state.view, span=hi-lo;
+    const factor = e.deltaY<0 ? 0.85 : 1/0.85;
+    const maxHi=state.series.length-1;
+    let newSpan=Math.max(4, Math.min(maxHi, span*factor));
+    const t = span>0 ? (center-lo)/span : 0.5;
+    let newLo=center-t*newSpan, newHi=newLo+newSpan;
+    if(newLo<0){ newHi-=newLo; newLo=0; }
+    if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
+    state.view={lo:Math.round(Math.max(0,newLo)), hi:Math.round(Math.min(maxHi,newHi))};
+    redraw();
+  }, {passive:false});
+
+  if(resetLinkEl){
+    resetLinkEl.addEventListener('click', e=>{
+      e.preventDefault();
+      if(state.series) state.view=fullView();
+      redraw();
+    });
+  }
+  window.addEventListener('resize', ()=>redraw());
+
+  return {update, setView, getView};
+}
+
+// The simulation runs off the main thread so dragging sliders / the chart tooltip
+// never stalls while a run is in flight. The worker is assembled at runtime from
+// the .toString() of the very functions already defined above, so there is exactly
+// one implementation of simulate()/gauss()/normal()/logParams() — the worker cannot
+// drift from the main thread because it literally runs the same source.
+function buildWorkerSource(){
+  return [
+    '"use strict";',
+    'const START_YEAR='+START_YEAR+', START_MONTH='+START_MONTH+';',
+    'const CAREER_YEAR='+CAREER_YEAR+', CAREER_MONTH='+CAREER_MONTH+';',
+    'const FS1_GAP='+FS1_GAP+';',
+    'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
+    'const MONTHS=MONTH_DATES.length;',
+    'let spare=null;',
+    'const monthIndex='+monthIndex.toString()+';',
+    'const gauss='+gauss.toString()+';',
+    'const normal='+normal.toString()+';',
+    'const logParams='+logParams.toString()+';',
+    'const simulate='+simulate.toString()+';',
+    'self.onmessage=function(e){',
+    '  const {p,paths,reqId}=e.data;',
+    '  const result=simulate(p,paths);',
+    '  self.postMessage({result,reqId});',
+    '};'
+  ].join('\n');
+}
+
+let worker=null;
+try{
+  const blob=new Blob([buildWorkerSource()], {type:'application/javascript'});
+  worker=new Worker(URL.createObjectURL(blob));
+}catch(e){ worker=null; console.error('Worker no disponible, usando cálculo síncrono:', e); }
+
+let reqCounter=0, latestReqId=0;
+const pendingResolvers=new Map();
+if(worker){
+  worker.onmessage=(e)=>{
+    const {result,reqId}=e.data;
+    const resolve=pendingResolvers.get(reqId);
+    pendingResolvers.delete(reqId);
+    if(reqId!==latestReqId) return; // stale response from a superseded request — drop it
+    if(resolve) resolve(result);
+  };
+  worker.onerror=(e)=>{ console.error('Worker error:', e.message); worker=null; };
+}
+
+function requestSimulation(p, paths){
+  const reqId=++reqCounter;
+  latestReqId=reqId;
+  return new Promise(resolve=>{
+    if(worker){
+      pendingResolvers.set(reqId, resolve);
+      worker.postMessage({p,paths,reqId});
+    } else {
+      resolve(simulate(p,paths));
+    }
+  });
+}
+
+const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
+const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
+let lastSeries=null, lastTarget=0;
+
+async function run(paths){
   const t0=performance.now(), p=readParams();
   // Paint slider values before any heavy calculation so the UI always shows them.
   paintLabels(p);
-  const r=simulate(p), s=r.series, target=r.target;
+  const r=await requestSimulation(p, paths===undefined?PATHS_FULL:paths);
+  const s=r.series, target=r.target;
+  lastSeries=s; lastTarget=target;
   const fm50=fireQuantileMonth(r.fireMonths,.50), fm10=fireQuantileMonth(r.fireMonths,.10);
-  const successRate=r.fireMonths.length/PATHS;
+  const pathsUsed=r.fireMonthAll.length;
+  const successRate=r.fireMonths.length/pathsUsed;
 
   document.getElementById('ageMed').textContent=fm50===null?'—':Math.floor(p.ageNow+yearFrac(fm50));
   document.getElementById('yearMed').textContent=fm50===null?'no FIRE exitoso':ymdLabel(fm50)+' · P50 · éxito '+Math.round(successRate*100)+'%';
@@ -1121,13 +1391,14 @@ function run(){
     return `<tr class="${firstYear(s,'p50',m)!==null?'hit':''}"><td>${eurK(m)}</td>${cell('p50')}${cell('p10')}${cell('p90')}</tr>`;
   }).join('');
 
-  drawChart(s,target);
+  mainChart.update(s,target);
+  if(chartModalEl.open) modalChart.update(s,target);
 
   let firedCount=0, ruinedAfterFire=0;
-  for(let k=0;k<PATHS;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
+  for(let k=0;k<pathsUsed;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
   const ruinRate=firedCount?ruinedAfterFire/firedCount:0;
 
-  let calcTxt=PATHS.toLocaleString('es-ES')+' rutas · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
+  let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
     Math.round(successRate*100)+' % rutas FIRE exitosas · ruina tras jubilarse '+Math.round(ruinRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
   if(p.proMode){
@@ -1142,24 +1413,40 @@ function run(){
   document.getElementById('calc').textContent=calcTxt;
 }
 
-let t=null;
-function schedule(){clearTimeout(t);t=setTimeout(run,el.proMode.checked?150:90);}
-ids.forEach(k=>{ if(el[k]) el[k].addEventListener('input',schedule); });
+// Dragging a range slider fires 'input' continuously: run a cheap preview
+// (PATHS_PREVIEW) with a short debounce so it feels instant. Releasing it fires
+// 'change' once: run the full-precision simulation. Checkboxes only have 'input'
+// (no drag phase) and always go straight to full precision.
+let tPreview=null, tFull=null;
+function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>run(PATHS_PREVIEW),50); }
+function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>run(PATHS_FULL),40); }
+
+ids.forEach(k=>{
+  const n=el[k]; if(!n) return;
+  if(n.type==='range'){ n.addEventListener('input',scheduleInput); n.addEventListener('change',scheduleFull); }
+  else { n.addEventListener('input',scheduleFull); }
+});
 el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
 document.getElementById('reset').addEventListener('click',()=>{
   ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
   document.body.classList.toggle('pro',DEFAULTS.proMode);
-  run();
+  run(PATHS_FULL);
 });
-window.addEventListener('resize',schedule);
+
+const chartModalEl=document.getElementById('chartModal');
+document.getElementById('expandChart').addEventListener('click',()=>{
+  chartModalEl.showModal();
+  if(lastSeries){ modalChart.update(lastSeries,lastTarget); modalChart.setView(mainChart.getView()); }
+});
+document.getElementById('closeChartModal').addEventListener('click',()=>{ chartModalEl.close(); });
+
 ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
 document.body.classList.toggle('pro',DEFAULTS.proMode);
 initVisibleLabels();
-try { run(); }
-catch(e) {
+run(PATHS_FULL).catch(e=>{
   // Keep the controls usable and values visible even if a browser-specific runtime issue occurs.
   console.error(e);
-}
+});
 </script>
 
 </body>
