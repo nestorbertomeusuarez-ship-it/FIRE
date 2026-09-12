@@ -672,6 +672,34 @@ body:not(.pro) .pro-only{display:none}
       <p class="note">"Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
     </div>
 
+    <div class="group pro-only">
+      <h3>PRO · Esperanza de vida y FIRE parcial</h3>
+      <p class="grouphint">Por defecto el dinero tiene que durar hasta una edad muy alta (~94 años) aunque no vayas a vivir tanto, y se asume que al jubilarte el ingreso cae a cero de golpe. Aquí puedes acotar el horizonte a tu esperanza de vida real y modelar que sigas ganando algo tras el FIRE.</p>
+      <div class="toggle">
+        <input type="checkbox" id="lifeExpOn">
+        <label for="lifeExpOn">Limitar el horizonte a tu esperanza de vida</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="lifeExp">Esperanza de vida (edad)</label><output id="lifeExp_o"></output></div>
+        <p class="hint">A partir de esa edad, cada ruta deja de necesitar retirar dinero de la cartera — lo que quede sigue invertido, como una herencia. "Ruina" pasa a significar quedarte sin fondos antes de esa edad, no antes de 2092.</p>
+        <input type="range" id="lifeExp" min="70" max="100" step="1">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="baristaOn">
+        <label for="baristaOn">Ingreso parcial tras el FIRE (Barista FIRE)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o"></output></div>
+        <input type="range" id="baristaIncome" min="0" max="40000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="baristaYears">Duración del ingreso parcial (años tras el FIRE)</label><output id="baristaYears_o"></output></div>
+        <p class="hint">Trabajo a tiempo parcial, consultoría, o cualquier ingreso que sigas teniendo tras dejar Emirates: se resta directamente de lo que hay que sacar de la cartera cada mes durante estos años, y no cuenta como capital nuevo que ahorrar.</p>
+        <input type="range" id="baristaYears" min="0" max="30" step="1">
+      </div>
+      <p class="note">El ingreso parcial se trata como una cifra real (no crece con el tiempo), igual que el resto de cifras "reales" del simulador — súbelo o bájalo a mano si crees que cambiará mucho de un año a otro.</p>
+    </div>
+
     <div class="group">
       <h3>Objetivo</h3>
       <div class="ctrl">
@@ -721,7 +749,10 @@ const DEFAULTS = {
   // activos y allocation adicionales
   startGold:0, goldRet:1.5, goldVol:15, goldRho:-10, goldAporte:0,
   reOn:false, reValue:0, reYield:3.5, reAppr:1, reCountsFire:false,
-  glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4
+  glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4,
+  // esperanza de vida y FIRE parcial
+  lifeExpOn:false, lifeExp:90,
+  baristaOn:false, baristaIncome:12000, baristaYears:5
 };
 
 // Full-precision runs use an adaptive path count instead of a fixed one: cost per
@@ -730,11 +761,12 @@ const DEFAULTS = {
 const PATHS_FULL_MIN = 2000;
 const PATHS_FULL_MAX = 60000;
 const CALIB_N1 = 100, CALIB_N2 = 900;
-// Tuned down from the ~1.3s nominal target: sorting each of the 67 annual
-// snapshots is O(paths log paths), so real cost grows a bit faster than the
-// calibration's linear extrapolation predicts once paths scales up by 10-20x —
-// this empirically keeps the real run inside ~1-1.5s instead of overshooting to ~2s.
-const FULL_TIME_BUDGET_MS = 950;
+// The nominal target is lower than the real wall-clock time we want: sorting
+// each of the 67 annual snapshots is O(paths log paths), so real cost grows a
+// bit faster than the calibration's linear extrapolation predicts once paths
+// scales up by 10-20x from the calibration sample. Empirically this constant
+// needs to be ~65% of the actually-desired wait to land in that range.
+const FULL_TIME_BUDGET_MS = 2600; // targets ~3.5-5s of real wait for maximum precision
 const PATHS_PREVIEW = 250;
 const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
@@ -854,6 +886,9 @@ function paintLabels(p){
   set('glideEqFloor',p.glideEqFloor.toFixed(0)+' %');
   set('consRet',p.consRet.toFixed(2)+' %');
   set('consVol',p.consVol.toFixed(1)+' %');
+  set('lifeExp',p.lifeExp+' años');
+  set('baristaIncome',eur(p.baristaIncome)+'/año');
+  set('baristaYears',p.baristaYears+(p.baristaYears===1?' año':' años'));
 }
 
 let spare=null;
@@ -904,6 +939,11 @@ function simulate(p, paths){
   const fxVolActive=p.proMode && p.fxVolOn;
   const inflActive=p.proMode && p.inflOn;
   const strat=p.proMode ? Math.round(p.wdStrategy) : 0;
+  const lifeActive=p.proMode && p.lifeExpOn;
+  // yearFrac(i) is exactly i/12 by construction of monthIndex, so the month a given
+  // age is reached is just (age-ageNow)*12 — no need to walk MONTH_DATES for this.
+  const lifeMonth=lifeActive ? Math.round((p.lifeExp-p.ageNow)*12) : Infinity;
+  const baristaActive=p.proMode && p.baristaOn;
 
   const gold=goldActive ? logParams(Math.pow(1+p.goldRet/100,1/12)-1, p.goldVol/100/Math.sqrt(12)) : null;
   const goldRho=p.goldRho/100, goldRhoC=Math.sqrt(Math.max(0,1-goldRho*goldRho));
@@ -1033,8 +1073,12 @@ function simulate(p, paths){
           fireMonth[k]=i;
           curSpendAnnual=p.gasto;
         }
-      } else {
+      } else if(!lifeActive || i<=lifeMonth){
         // Retirement phase: real annual retirement spend, inflation already stripped.
+        // Past lifeMonth (esperanza de vida) this whole block is skipped: no more
+        // withdrawals, no more ruin risk — the balance just keeps compounding, like
+        // an inheritance, because you don't need money you'll never spend.
+        const yearsSinceFire=(i-fireMonth[k])/12;
         let wd;
         if(strat===0){
           wd=p.gasto/12; // idéntico al comportamiento original
@@ -1049,12 +1093,17 @@ function simulate(p, paths){
           }
           wd=curSpendAnnual/12;
         } else {
-          const yearsSinceFire=(i-fireMonth[k])/12;
           let mult;
           if(yearsSinceFire<p.goGoYears) mult=p.goGoMult/100;
           else if(yearsSinceFire<p.goGoYears+p.slowGoYears) mult=p.slowGoMult/100;
           else mult=p.noGoMult/100;
           wd=(p.gasto/12)*mult;
+        }
+
+        // Barista/FIRE parcial: ingreso real que reduce directamente la retirada
+        // necesaria durante los primeros baristaYears tras el FIRE de esa ruta.
+        if(baristaActive && yearsSinceFire<p.baristaYears){
+          wd=Math.max(0, wd-p.baristaIncome/12);
         }
 
         if(taxActive){
@@ -1523,6 +1572,8 @@ async function run(mode){
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
     if(p.inflOn) calcTxt+=' · inflación estocástica';
     if(p.glideOn) calcTxt+=' · glide path activo';
+    if(p.lifeExpOn) calcTxt+=' · horizonte limitado a esperanza de vida '+p.lifeExp+' años';
+    if(p.baristaOn) calcTxt+=' · ingreso parcial tras FIRE ('+eurK(p.baristaIncome)+'/año, '+p.baristaYears+'a)';
   }
   document.getElementById('calc').textContent=calcTxt;
 }
