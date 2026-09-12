@@ -413,37 +413,37 @@ body:not(.pro) .pro-only{display:none}
       <h3>Carrera</h3>
       <p class="grouphint">Cuánto ganas y cuándo asciendes no son fechas fijas: se simulan como probabilidades, no como certezas.</p>
       <div class="ctrl">
-        <div class="row"><label for="fx">Tipo AED → EUR</label><output id="fx_o"></output></div>
+        <div class="row"><label for="fx">Tipo AED → EUR</label><output id="fx_o" for="fx"></output></div>
         <input type="range" id="fx" min="0.19" max="0.29" step="0.005">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="salFO">Salario copiloto (AED/año)</label><output id="salFO_o"></output></div>
+        <div class="row"><label for="salFO">Salario copiloto (AED/año)</label><output id="salFO_o" for="salFO"></output></div>
         <input type="range" id="salFO" min="280000" max="500000" step="5000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="salCA">Salario comandante (AED/año)</label><output id="salCA_o"></output></div>
+        <div class="row"><label for="salCA">Salario comandante (AED/año)</label><output id="salCA_o" for="salCA"></output></div>
         <input type="range" id="salCA" min="420000" max="750000" step="5000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="captY">Año de ascenso a comandante</label><output id="captY_o"></output></div>
+        <div class="row"><label for="captY">Año de ascenso a comandante</label><output id="captY_o" for="captY"></output></div>
         <input type="range" id="captY" min="2030" max="2042" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="captDelay">Dispersión del ascenso (años, σ)</label><output id="captDelay_o"></output></div>
+        <div class="row"><label for="captDelay">Dispersión del ascenso (años, σ)</label><output id="captDelay_o" for="captDelay"></output></div>
         <p class="hint">σ (sigma) es la dispersión típica alrededor del año central: no es un rango garantizado, es cuánto suele variar en la práctica. En 0 no hay incertidumbre, el ascenso ocurre justo en el año elegido.</p>
         <input type="range" id="captDelay" min="0" max="5" step="0.5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="startDelay">Riesgo de retraso de entrada (meses, σ)</label><output id="startDelay_o"></output></div>
+        <div class="row"><label for="startDelay">Riesgo de retraso de entrada (meses, σ)</label><output id="startDelay_o" for="startDelay"></output></div>
         <p class="hint">Misma idea que la σ del ascenso, aplicada a cuándo empiezas realmente a volar en Emirates.</p>
         <input type="range" id="startDelay" min="0" max="18" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="salG">Subida salarial real anual</label><output id="salG_o"></output></div>
+        <div class="row"><label for="salG">Subida salarial real anual</label><output id="salG_o" for="salG"></output></div>
         <input type="range" id="salG" min="-1" max="2.5" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="profitShareWeeks">Profit sharing máximo (semanas de básico/año)</label><output id="profitShareWeeks_o"></output></div>
+        <div class="row"><label for="profitShareWeeks">Profit sharing máximo (semanas de básico/año)</label><output id="profitShareWeeks_o" for="profitShareWeeks"></output></div>
         <p class="hint">Emirates paga un profit sharing discrecional, entre el 0 % y el 30 % del básico anual (≈0-15,6 semanas), que la compañía decide de cero cada año según resultados — aquí se sortea un valor distinto cada diciembre, entre 0 y el máximo que fijes, en vez de asumir un importe fijo. Con 0 semanas, no cambia nada respecto a no tenerlo en cuenta.</p>
         <input type="range" id="profitShareWeeks" min="0" max="15.6" step="0.2">
       </div>
@@ -454,11 +454,11 @@ body:not(.pro) .pro-only{display:none}
       <h3>Mercado</h3>
       <p class="grouphint">Estos dos números definen cómo se comporta la bolsa mes a mes en la simulación: cuánto sube de media y cuánto oscila alrededor de esa media.</p>
       <div class="ctrl">
-        <div class="row"><label for="ret">Rentabilidad real media</label><output id="ret_o"></output></div>
+        <div class="row"><label for="ret">Rentabilidad real media</label><output id="ret_o" for="ret"></output></div>
         <input type="range" id="ret" min="2" max="9" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="vol">Volatilidad anual</label><output id="vol_o"></output></div>
+        <div class="row"><label for="vol">Volatilidad anual</label><output id="vol_o" for="vol"></output></div>
         <p class="hint">Cuánto se desvía un año típico de la media. Con 17 %, en torno a 1 de cada 3 años el resultado se aleja de la rentabilidad media en más de ese porcentaje, para bien o para mal.</p>
         <input type="range" id="vol" min="0" max="26" step="0.5">
       </div>
@@ -473,23 +473,23 @@ body:not(.pro) .pro-only{display:none}
     <div class="group">
       <h3>Gastos</h3>
       <div class="ctrl">
-        <div class="row"><label for="vida">Vida en Dubái (€/mes, sin vivienda)</label><output id="vida_o"></output></div>
+        <div class="row"><label for="vida">Vida en Dubái (€/mes, sin vivienda)</label><output id="vida_o" for="vida"></output></div>
         <input type="range" id="vida" min="1800" max="7000" step="50">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="vidaG">Crecimiento real del gasto</label><output id="vidaG_o"></output></div>
+        <div class="row"><label for="vidaG">Crecimiento real del gasto</label><output id="vidaG_o" for="vidaG"></output></div>
         <input type="range" id="vidaG" min="0" max="3" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="hip">Hipoteca Esparreguera (€/mes)</label><output id="hip_o"></output></div>
+        <div class="row"><label for="hip">Hipoteca Esparreguera (€/mes)</label><output id="hip_o" for="hip"></output></div>
         <input type="range" id="hip" min="0" max="1400" step="10">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="hipEnd">Fin de hipoteca</label><output id="hipEnd_o"></output></div>
+        <div class="row"><label for="hipEnd">Fin de hipoteca</label><output id="hipEnd_o" for="hipEnd"></output></div>
         <input type="range" id="hipEnd" min="2027" max="2065" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="nur">Guardería por hijo (€/año)</label><output id="nur_o"></output></div>
+        <div class="row"><label for="nur">Guardería por hijo (€/año)</label><output id="nur_o" for="nur"></output></div>
         <input type="range" id="nur" min="0" max="20000" step="250">
       </div>
       <p class="note">La simulación es mensual y el gasto se aplica durante los meses reales de carrera. Revisa manualmente la cronología de colegio/guardería: sin fechas de nacimiento exactas no conviene fingir precisión.</p>
@@ -498,7 +498,7 @@ body:not(.pro) .pro-only{display:none}
     <div class="group">
       <h3>Liquidaciones</h3>
       <div class="ctrl">
-        <div class="row"><label for="burr">Burriana, tu 50 % neto (€)</label><output id="burr_o"></output></div>
+        <div class="row"><label for="burr">Burriana, tu 50 % neto (€)</label><output id="burr_o" for="burr"></output></div>
         <input type="range" id="burr" min="0" max="130000" step="1000">
       </div>
       <div class="toggle">
@@ -506,15 +506,15 @@ body:not(.pro) .pro-only{display:none}
         <label for="brOn">Brasil se puede vender</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="brNet">Brasil, tu 50 % neto de impuestos (€)</label><output id="brNet_o"></output></div>
+        <div class="row"><label for="brNet">Brasil, tu 50 % neto de impuestos (€)</label><output id="brNet_o" for="brNet"></output></div>
         <input type="range" id="brNet" min="0" max="450000" step="5000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="brStart">Primera venta en Brasil</label><output id="brStart_o"></output></div>
+        <div class="row"><label for="brStart">Primera venta en Brasil</label><output id="brStart_o" for="brStart"></output></div>
         <input type="range" id="brStart" min="2027" max="2045" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="brYears">Años para liquidarlo todo</label><output id="brYears_o"></output></div>
+        <div class="row"><label for="brYears">Años para liquidarlo todo</label><output id="brYears_o" for="brYears"></output></div>
         <input type="range" id="brYears" min="1" max="18" step="1">
       </div>
       <p class="note">Si las fincas siguen a nombre de tu padre, no puedes vender hasta la herencia. Desactiva el interruptor para ver ese escenario.</p>
@@ -524,28 +524,28 @@ body:not(.pro) .pro-only{display:none}
       <h3>Cartera hoy</h3>
       <p class="grouphint">Lo que ya tienes ahorrado, repartido en dos cestas con comportamiento distinto: renta variable tradicional y Bitcoin.</p>
       <div class="ctrl">
-        <div class="row"><label for="startEq">Cash + renta variable (€)</label><output id="startEq_o"></output></div>
+        <div class="row"><label for="startEq">Cash + renta variable (€)</label><output id="startEq_o" for="startEq"></output></div>
         <input type="range" id="startEq" min="0" max="400000" step="2500">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="startBtc">Bitcoin (€)</label><output id="startBtc_o"></output></div>
+        <div class="row"><label for="startBtc">Bitcoin (€)</label><output id="startBtc_o" for="startBtc"></output></div>
         <input type="range" id="startBtc" min="0" max="150000" step="500">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="btcRet">Rentabilidad real media de BTC</label><output id="btcRet_o"></output></div>
+        <div class="row"><label for="btcRet">Rentabilidad real media de BTC</label><output id="btcRet_o" for="btcRet"></output></div>
         <input type="range" id="btcRet" min="-10" max="20" step="0.5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="btcVol">Volatilidad de BTC</label><output id="btcVol_o"></output></div>
+        <div class="row"><label for="btcVol">Volatilidad de BTC</label><output id="btcVol_o" for="btcVol"></output></div>
         <input type="range" id="btcVol" min="20" max="110" step="2">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o"></output></div>
+        <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o" for="btcRho"></output></div>
         <p class="hint">Va de -1 a 1: 0 significa que se mueven sin relación entre sí, 1 que suben y bajan siempre juntos, -1 que cuando uno sube el otro baja. Con 0,40 (el valor por defecto), tienden a moverse en la misma dirección pero sin ir pegados.</p>
         <input type="range" id="btcRho" min="-20" max="90" step="5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="btcAporte">Del ahorro nuevo, a BTC</label><output id="btcAporte_o"></output></div>
+        <div class="row"><label for="btcAporte">Del ahorro nuevo, a BTC</label><output id="btcAporte_o" for="btcAporte"></output></div>
         <input type="range" id="btcAporte" min="0" max="40" step="1">
       </div>
       <p class="note">La rentabilidad futura de BTC no la sabe nadie: el 5 % que viene por defecto es una suposición, no un dato. Prueba a ponerlo en 0 % y en negativo — si el plan solo funciona con BTC subiendo, no es un plan.</p>
@@ -558,20 +558,20 @@ body:not(.pro) .pro-only{display:none}
         <label for="provOn">Contar el Provident Scheme</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="basicFO">Básico copiloto (AED/mes)</label><output id="basicFO_o"></output></div>
+        <div class="row"><label for="basicFO">Básico copiloto (AED/mes)</label><output id="basicFO_o" for="basicFO"></output></div>
         <input type="range" id="basicFO" min="18000" max="40000" step="250">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="basicCA">Básico comandante (AED/mes)</label><output id="basicCA_o"></output></div>
+        <div class="row"><label for="basicCA">Básico comandante (AED/mes)</label><output id="basicCA_o" for="basicCA"></output></div>
         <input type="range" id="basicCA" min="28000" max="60000" step="250">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="provCo">Aportación de Emirates</label><output id="provCo_o"></output></div>
+        <div class="row"><label for="provCo">Aportación de Emirates</label><output id="provCo_o" for="provCo"></output></div>
         <input type="range" id="provCo" min="0" max="20" step="0.5">
       </div>
       <p class="note">Emirates aporta el 12 % del básico (15 % a partir de 10 años de servicio) y tú el 5 %, que sale de tu nómina. Solo se cobra al dejar la compañía — y como dejarla es justo lo que significa jubilarse, cuenta para el objetivo. Antes de 5 años solo te llevas parte de lo que puso Emirates.</p>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="gratuityYears">Años de servicio con gratuity (antes de DEWS)</label><output id="gratuityYears_o"></output></div>
+        <div class="row"><label for="gratuityYears">Años de servicio con gratuity (antes de DEWS)</label><output id="gratuityYears_o" for="gratuityYears"></output></div>
         <p class="hint">El Provident Scheme (DEWS) de arriba solo cubre los años desde que se creó (2020). Los años de servicio anteriores generaban la indemnización de fin de servicio clásica de la ley laboral de EAU: 21 días de básico por año los primeros 5 años y 30 días/año a partir del sexto, con un tope de 2 años de básico — se cobra en un único pago al dejar la compañía, sobre el básico vigente en ese momento (copiloto o comandante). Con 0 años (valor por defecto) no cambia nada.</p>
         <input type="range" id="gratuityYears" min="0" max="15" step="0.5">
       </div>
@@ -585,17 +585,17 @@ body:not(.pro) .pro-only{display:none}
         <label for="taxOn">Tributar plusvalías al repatriar capital</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="taxRate">Tipo medio efectivo sobre plusvalías</label><output id="taxRate_o"></output></div>
+        <div class="row"><label for="taxRate">Tipo medio efectivo sobre plusvalías</label><output id="taxRate_o" for="taxRate"></output></div>
         <p class="hint">Para que te quede X € netos en el bolsillo, hay que vender más de X € en bruto: la simulación "engorda" cada retirada para compensar lo que se queda Hacienda. Se aplica a la cartera gravable: renta variable, BTC, oro, el cubo conservador e inmobiliario.</p>
         <input type="range" id="taxRate" min="0" max="30" step="0.5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="taxRateProv">Tipo medio efectivo sobre el Provident/plan de empresa</label><output id="taxRateProv_o"></output></div>
+        <div class="row"><label for="taxRateProv">Tipo medio efectivo sobre el Provident/plan de empresa</label><output id="taxRateProv_o" for="taxRateProv"></output></div>
         <p class="hint">El Provident Scheme no es una plusvalía: al retirarlo, Hacienda lo trata como rendimiento del trabajo (tramos generales de IRPF), normalmente con un tipo más alto que el de plusvalías de arriba. Como cada cubo puede tener su propio tipo, el simulador retira automáticamente primero del que salga más barato — con los valores por defecto (mismo tipo en los dos) esto no cambia nada, es exactamente el orden de siempre.</p>
         <input type="range" id="taxRateProv" min="0" max="47" step="0.5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="taxRepatDelay">Años tras el FIRE hasta residencia fiscal en España</label><output id="taxRepatDelay_o"></output></div>
+        <div class="row"><label for="taxRepatDelay">Años tras el FIRE hasta residencia fiscal en España</label><output id="taxRepatDelay_o" for="taxRepatDelay"></output></div>
         <p class="hint">Se cuenta desde la fecha en que cada ruta alcanza el FIRE, no desde un año de calendario fijo: como el FIRE varía de una ruta a otra, no tendría sentido fijarlo en el tiempo.</p>
         <input type="range" id="taxRepatDelay" min="0" max="20" step="1">
       </div>
@@ -604,7 +604,7 @@ body:not(.pro) .pro-only{display:none}
         <label for="beckhamOn">Acogido a la Ley Beckham (régimen de impatriados)</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="beckhamYears">Duración del régimen (años)</label><output id="beckhamYears_o"></output></div>
+        <div class="row"><label for="beckhamYears">Duración del régimen (años)</label><output id="beckhamYears_o" for="beckhamYears"></output></div>
         <p class="hint">Mientras dura (el año del cambio de residencia y los cinco siguientes, 6 en total), tributas como no residente: solo se gravan rentas y bienes situados en España. Como este simulador asume que tu cartera está fuera de España, mientras el régimen esté activo se suspenden tanto el IRPF sobre plusvalías como el impuesto de patrimonio.</p>
         <input type="range" id="beckhamYears" min="1" max="6" step="1">
       </div>
@@ -613,26 +613,26 @@ body:not(.pro) .pro-only{display:none}
         <label for="wealthTaxOn">Aplicar impuesto de patrimonio</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="ccaaPreset">Comunidad autónoma (rellena mínimo/bonificación)</label><output id="ccaaPreset_o"></output></div>
+        <div class="row"><label for="ccaaPreset">Comunidad autónoma (rellena mínimo/bonificación)</label><output id="ccaaPreset_o" for="ccaaPreset"></output></div>
         <p class="hint">Un atajo, no una fuente de verdad: al elegir una comunidad se rellenan los dos sliders de abajo con cifras orientativas de 2025, pero puedes seguir ajustándolos a mano. La normativa autonómica cambia con frecuencia — verifica siempre el valor vigente.</p>
         <input type="range" id="ccaaPreset" min="0" max="4" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="wealthExempt">Mínimo exento (€)</label><output id="wealthExempt_o"></output></div>
+        <div class="row"><label for="wealthExempt">Mínimo exento (€)</label><output id="wealthExempt_o" for="wealthExempt"></output></div>
         <p class="hint">El impuesto de patrimonio es un pago anual sobre lo que posees (no sobre lo que ganas), por encima de un mínimo exento. Se cobra cada diciembre mientras seas residente fiscal en España.</p>
         <input type="range" id="wealthExempt" min="500000" max="3000000" step="50000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="wealthRate">Tipo medio anual sobre el exceso</label><output id="wealthRate_o"></output></div>
+        <div class="row"><label for="wealthRate">Tipo medio anual sobre el exceso</label><output id="wealthRate_o" for="wealthRate"></output></div>
         <input type="range" id="wealthRate" min="0" max="3.5" step="0.05">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="wealthBonusPct">Bonificación sobre la cuota</label><output id="wealthBonusPct_o"></output></div>
+        <div class="row"><label for="wealthBonusPct">Bonificación sobre la cuota</label><output id="wealthBonusPct_o" for="wealthBonusPct"></output></div>
         <p class="hint">Varias comunidades (Madrid, Andalucía, Cantabria, Extremadura) no cambian el mínimo exento sino que bonifican el 100 % de la cuota resultante — el impuesto sale a pagar 0 € aunque tengas mucho patrimonio.</p>
         <input type="range" id="wealthBonusPct" min="0" max="100" step="5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="mortgageBalance">Hipoteca pendiente (saldo actual, €)</label><output id="mortgageBalance_o"></output></div>
+        <div class="row"><label for="mortgageBalance">Hipoteca pendiente (saldo actual, €)</label><output id="mortgageBalance_o" for="mortgageBalance"></output></div>
         <p class="hint">La base del impuesto de patrimonio es tu patrimonio neto (bienes menos deudas), no el bruto. Este saldo se amortiza en línea recta hasta 0 en el año de "Fin de hipoteca" que fijaste en Gastos.</p>
         <input type="range" id="mortgageBalance" min="0" max="500000" step="5000">
       </div>
@@ -647,11 +647,11 @@ body:not(.pro) .pro-only{display:none}
         <label for="fxVolOn">Tipo AED→EUR aleatorio (en vez de fijo)</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="fxVol">Volatilidad anual del tipo de cambio</label><output id="fxVol_o"></output></div>
+        <div class="row"><label for="fxVol">Volatilidad anual del tipo de cambio</label><output id="fxVol_o" for="fxVol"></output></div>
         <input type="range" id="fxVol" min="0" max="15" step="0.5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="fxMeanRevert">Reversión anual hacia el tipo base</label><output id="fxMeanRevert_o"></output></div>
+        <div class="row"><label for="fxMeanRevert">Reversión anual hacia el tipo base</label><output id="fxMeanRevert_o" for="fxMeanRevert"></output></div>
         <p class="hint">"Reversión a la media" significa que, aunque el tipo de cambio se desvíe algún mes, tiende a volver hacia el valor base que fijaste arriba (Tipo AED → EUR) en vez de alejarse sin límite. Cuanto más alto el %, más rápido vuelve.</p>
         <input type="range" id="fxMeanRevert" min="0" max="100" step="5">
       </div>
@@ -660,7 +660,7 @@ body:not(.pro) .pro-only{display:none}
         <label for="inflOn">Sorpresas de inflación EUR (en vez de tasas reales fijas)</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="inflVol">Volatilidad anual de la sorpresa de inflación</label><output id="inflVol_o"></output></div>
+        <div class="row"><label for="inflVol">Volatilidad anual de la sorpresa de inflación</label><output id="inflVol_o" for="inflVol"></output></div>
         <input type="range" id="inflVol" min="0" max="4" step="0.1">
       </div>
       <p class="note">El modelo ya trabaja en euros reales de 2026. Esto no reintroduce una base nominal completa: añade ruido alrededor de esa base real, erosionando algo el retorno de mercado y abaratando en términos reales la hipoteca nominal fija cuando la inflación sorprende al alza.</p>
@@ -670,47 +670,47 @@ body:not(.pro) .pro-only{display:none}
       <h3>PRO · Estrategia de retirada</h3>
       <p class="grouphint">En el modo simple, una vez jubilado retiras siempre la misma cantidad cada año. Aquí puedes probar alternativas que ajustan el gasto según cómo le va a la cartera o según la edad.</p>
       <div class="ctrl">
-        <div class="row"><label for="wdStrategy">Estrategia</label><output id="wdStrategy_o"></output></div>
+        <div class="row"><label for="wdStrategy">Estrategia</label><output id="wdStrategy_o" for="wdStrategy"></output></div>
         <input type="range" id="wdStrategy" min="0" max="2" step="1">
       </div>
       <p class="subhead">Guyton-Klinger (guardrails)</p>
       <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más.</p>
       <div class="ctrl">
-        <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o"></output></div>
+        <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o" for="gkGuard"></output></div>
         <input type="range" id="gkGuard" min="10" max="30" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="gkCut">Recorte de gasto al tocar el techo</label><output id="gkCut_o"></output></div>
+        <div class="row"><label for="gkCut">Recorte de gasto al tocar el techo</label><output id="gkCut_o" for="gkCut"></output></div>
         <input type="range" id="gkCut" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="gkRaise">Subida de gasto al tocar el suelo</label><output id="gkRaise_o"></output></div>
+        <div class="row"><label for="gkRaise">Subida de gasto al tocar el suelo</label><output id="gkRaise_o" for="gkRaise"></output></div>
         <input type="range" id="gkRaise" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="gkFreq">Frecuencia de revisión (meses)</label><output id="gkFreq_o"></output></div>
+        <div class="row"><label for="gkFreq">Frecuencia de revisión (meses)</label><output id="gkFreq_o" for="gkFreq"></output></div>
         <input type="range" id="gkFreq" min="6" max="24" step="6">
       </div>
       <p class="subhead">Fases go-go / slow-go / no-go</p>
       <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go).</p>
       <div class="ctrl">
-        <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o"></output></div>
+        <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o" for="goGoMult"></output></div>
         <input type="range" id="goGoMult" min="80" max="150" step="5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="goGoYears">Duración go-go (años)</label><output id="goGoYears_o"></output></div>
+        <div class="row"><label for="goGoYears">Duración go-go (años)</label><output id="goGoYears_o" for="goGoYears"></output></div>
         <input type="range" id="goGoYears" min="0" max="20" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="slowGoMult">Gasto fase slow-go (% del base)</label><output id="slowGoMult_o"></output></div>
+        <div class="row"><label for="slowGoMult">Gasto fase slow-go (% del base)</label><output id="slowGoMult_o" for="slowGoMult"></output></div>
         <input type="range" id="slowGoMult" min="60" max="120" step="5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="slowGoYears">Duración slow-go (años)</label><output id="slowGoYears_o"></output></div>
+        <div class="row"><label for="slowGoYears">Duración slow-go (años)</label><output id="slowGoYears_o" for="slowGoYears"></output></div>
         <input type="range" id="slowGoYears" min="0" max="20" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="noGoMult">Gasto fase no-go (% del base)</label><output id="noGoMult_o"></output></div>
+        <div class="row"><label for="noGoMult">Gasto fase no-go (% del base)</label><output id="noGoMult_o" for="noGoMult"></output></div>
         <input type="range" id="noGoMult" min="50" max="110" step="5">
       </div>
       <p class="note">Con "SWR fijo" el gasto es idéntico al modo simple. Guyton-Klinger ajusta el gasto anual cuando la tasa de retiro efectiva se sale de la banda alrededor del SWR objetivo. Las fases aplican un multiplicador al gasto base según los años transcurridos desde el FIRE de cada ruta.</p>
@@ -721,24 +721,24 @@ body:not(.pro) .pro-only{display:none}
       <p class="grouphint">Además de acciones y BTC, puedes añadir más clases de activo con su propio comportamiento, y decidir si la cartera se vuelve más conservadora a medida que se acerca el FIRE.</p>
       <p class="subhead">Oro</p>
       <div class="ctrl">
-        <div class="row"><label for="startGold">Oro hoy (€)</label><output id="startGold_o"></output></div>
+        <div class="row"><label for="startGold">Oro hoy (€)</label><output id="startGold_o" for="startGold"></output></div>
         <input type="range" id="startGold" min="0" max="100000" step="1000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="goldRet">Rentabilidad real media</label><output id="goldRet_o"></output></div>
+        <div class="row"><label for="goldRet">Rentabilidad real media</label><output id="goldRet_o" for="goldRet"></output></div>
         <input type="range" id="goldRet" min="-5" max="10" step="0.5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="goldVol">Volatilidad anual</label><output id="goldVol_o"></output></div>
+        <div class="row"><label for="goldVol">Volatilidad anual</label><output id="goldVol_o" for="goldVol"></output></div>
         <input type="range" id="goldVol" min="5" max="30" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="goldRho">Correlación oro ↔ bolsa</label><output id="goldRho_o"></output></div>
+        <div class="row"><label for="goldRho">Correlación oro ↔ bolsa</label><output id="goldRho_o" for="goldRho"></output></div>
         <p class="hint">Igual que con BTC: de -1 a 1. Un valor negativo (como el -0,10 por defecto) significa que el oro tiende ligeramente a moverse en dirección contraria a la bolsa — el motivo clásico para tenerlo como amortiguador.</p>
         <input type="range" id="goldRho" min="-50" max="50" step="5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="goldAporte">Del ahorro nuevo, a oro</label><output id="goldAporte_o"></output></div>
+        <div class="row"><label for="goldAporte">Del ahorro nuevo, a oro</label><output id="goldAporte_o" for="goldAporte"></output></div>
         <input type="range" id="goldAporte" min="0" max="30" step="1">
       </div>
       <p class="subhead">Inmueble en alquiler</p>
@@ -747,15 +747,15 @@ body:not(.pro) .pro-only{display:none}
         <label for="reOn">Contar un inmueble en alquiler</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="reValue">Valor del inmueble (€)</label><output id="reValue_o"></output></div>
+        <div class="row"><label for="reValue">Valor del inmueble (€)</label><output id="reValue_o" for="reValue"></output></div>
         <input type="range" id="reValue" min="0" max="500000" step="5000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="reYield">Rentabilidad neta de alquiler</label><output id="reYield_o"></output></div>
+        <div class="row"><label for="reYield">Rentabilidad neta de alquiler</label><output id="reYield_o" for="reYield"></output></div>
         <input type="range" id="reYield" min="0" max="8" step="0.25">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="reAppr">Revalorización real anual</label><output id="reAppr_o"></output></div>
+        <div class="row"><label for="reAppr">Revalorización real anual</label><output id="reAppr_o" for="reAppr"></output></div>
         <input type="range" id="reAppr" min="-2" max="5" step="0.25">
       </div>
       <div class="toggle">
@@ -769,23 +769,23 @@ body:not(.pro) .pro-only{display:none}
         <label for="glideOn">Activar glide path</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o"></output></div>
+        <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o" for="glideTargetYear"></output></div>
         <input type="range" id="glideTargetYear" min="2027" max="2092" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="glideStartYears">Años antes de empezar a des-arriesgar</label><output id="glideStartYears_o"></output></div>
+        <div class="row"><label for="glideStartYears">Años antes de empezar a des-arriesgar</label><output id="glideStartYears_o" for="glideStartYears"></output></div>
         <input type="range" id="glideStartYears" min="1" max="15" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="glideEqFloor">Mínimo en riesgo al llegar la fecha</label><output id="glideEqFloor_o"></output></div>
+        <div class="row"><label for="glideEqFloor">Mínimo en riesgo al llegar la fecha</label><output id="glideEqFloor_o" for="glideEqFloor"></output></div>
         <input type="range" id="glideEqFloor" min="20" max="90" step="5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="consRet">Cartera conservadora, rentabilidad real</label><output id="consRet_o"></output></div>
+        <div class="row"><label for="consRet">Cartera conservadora, rentabilidad real</label><output id="consRet_o" for="consRet"></output></div>
         <input type="range" id="consRet" min="0" max="4" step="0.25">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="consVol">Cartera conservadora, volatilidad</label><output id="consVol_o"></output></div>
+        <div class="row"><label for="consVol">Cartera conservadora, volatilidad</label><output id="consVol_o" for="consVol"></output></div>
         <input type="range" id="consVol" min="0" max="8" step="0.5">
       </div>
       <p class="note">"Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
@@ -799,7 +799,7 @@ body:not(.pro) .pro-only{display:none}
         <label for="lifeExpOn">Limitar el horizonte a tu esperanza de vida</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="lifeExp">Esperanza de vida (edad)</label><output id="lifeExp_o"></output></div>
+        <div class="row"><label for="lifeExp">Esperanza de vida (edad)</label><output id="lifeExp_o" for="lifeExp"></output></div>
         <p class="hint">A partir de esa edad, cada ruta deja de necesitar retirar dinero de la cartera — lo que quede sigue invertido, como una herencia. "Ruina" pasa a significar quedarte sin fondos antes de esa edad, no antes de 2092.</p>
         <input type="range" id="lifeExp" min="70" max="100" step="1">
       </div>
@@ -808,11 +808,11 @@ body:not(.pro) .pro-only{display:none}
         <label for="baristaOn">Ingreso parcial tras el FIRE (Barista FIRE)</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o"></output></div>
+        <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o" for="baristaIncome"></output></div>
         <input type="range" id="baristaIncome" min="0" max="40000" step="1000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="baristaYears">Duración del ingreso parcial (años tras el FIRE)</label><output id="baristaYears_o"></output></div>
+        <div class="row"><label for="baristaYears">Duración del ingreso parcial (años tras el FIRE)</label><output id="baristaYears_o" for="baristaYears"></output></div>
         <p class="hint">Trabajo a tiempo parcial, consultoría, o cualquier ingreso que sigas teniendo tras dejar Emirates: se resta directamente de lo que hay que sacar de la cartera cada mes durante estos años, y no cuenta como capital nuevo que ahorrar.</p>
         <input type="range" id="baristaYears" min="0" max="30" step="1">
       </div>
@@ -822,11 +822,11 @@ body:not(.pro) .pro-only{display:none}
     <div class="group">
       <h3>Objetivo</h3>
       <div class="ctrl">
-        <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o"></output></div>
+        <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o" for="gasto"></output></div>
         <input type="range" id="gasto" min="25000" max="130000" step="1000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="swr">Tasa de retiro segura</label><output id="swr_o"></output></div>
+        <div class="row"><label for="swr">Tasa de retiro segura</label><output id="swr_o" for="swr"></output></div>
         <p class="hint">SWR ("safe withdrawal rate"): el % de tu capital que puedes gastar cada año con baja probabilidad de quedarte sin fondos. La referencia más conocida es la "regla del 4 %".</p>
         <input type="range" id="swr" min="2.4" max="4.6" step="0.05">
       </div>
@@ -1268,8 +1268,14 @@ function simulate(p, paths){
 
       if(!retired){
         if(net>=0){
-          const wBtc=p.btcAporte/100;
-          const wGold=goldActive?p.goldAporte/100:0;
+          let wBtc=p.btcAporte/100;
+          let wGold=goldActive?p.goldAporte/100:0;
+          // Slider caps (40%/30%) can't sum past 100% today, but derive wEq
+          // defensively anyway: if they ever did, wEq would floor at 0 while
+          // wBtc+wGold still summed past 1, investing more than the net cash
+          // actually coming in that month.
+          const totalW=wBtc+wGold;
+          if(totalW>1){ wBtc/=totalW; wGold/=totalW; }
           const wEq=Math.max(0,1-wBtc-wGold);
           vEq+=net*wEq;
           vBtc+=net*wBtc;
@@ -1432,11 +1438,17 @@ function simulate(p, paths){
     };
   });
 
-  // Only successful retirements count as FIRE dates.
-  const successful=[];
-  for(let k=0;k<paths;k++) if(fireMonth[k]>=0 && !ruined[k]) successful.push(fireMonth[k]);
+  // Only successful retirements count as FIRE dates. Preallocated at `paths`
+  // (the worst case, every route succeeding) and returned as a subarray view
+  // instead of a growable plain-array .push() — keeps this a TypedArray all
+  // the way out, alongside fireMonth itself, so both can be handed back as
+  // zero-copy Transferable Objects instead of structured-cloned plain arrays.
+  const successBuf=new Int32Array(paths);
+  let successCount=0;
+  for(let k=0;k<paths;k++) if(fireMonth[k]>=0 && !ruined[k]) successBuf[successCount++]=fireMonth[k];
+  const successful=successBuf.subarray(0,successCount);
 
-  return {series,target,fireMonths:successful,fireMonthAll:Array.from(fireMonth),ruined,annualSnapshots};
+  return {series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,annualSnapshots};
 }
 
 function firstYear(series,key,target){
@@ -1834,7 +1846,7 @@ function buildWorkerSource(){
     '  const t0=performance.now();',
     '  const result=simulate(p,paths);',
     '  const ms=performance.now()-t0;',
-    '  self.postMessage({result,reqId,calibrate,ms});',
+    '  self.postMessage({result,reqId,calibrate,ms}, [result.fireMonthAll.buffer, result.fireMonths.buffer, result.ruined.buffer]);',
     '};'
   ].join('\n');
 }
@@ -1902,7 +1914,11 @@ async function runFullPrecision(p){
   ]);
   const msPerPath=Math.max(0.0005, (c2.ms-c1.ms)/(CALIB_N2-CALIB_N1));
   let pathsFull=Math.round(FULL_TIME_BUDGET_MS/msPerPath);
-  pathsFull=Math.max(PATHS_FULL_MIN, Math.min(PATHS_FULL_MAX, pathsFull));
+  // Without a Worker, requestSimulation() runs simulate() synchronously on the
+  // main thread — calibrating toward the same PATHS_FULL_MAX there would block
+  // the UI (unresponsive sliders/scroll) for the full multi-second budget.
+  const pathsCeiling = worker ? PATHS_FULL_MAX : 5000;
+  pathsFull=Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
   return requestSimulation(p, pathsFull);
 }
 
