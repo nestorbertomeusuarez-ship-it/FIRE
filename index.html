@@ -398,7 +398,7 @@ body:not(.pro) .pro-only{display:none}
     <button type="button" class="reset" id="runSensitivity">Calcular sensibilidad</button>
     <p class="calcLoading" id="sensLoading" style="display:none">Calculando…</p>
     <div class="sensList" id="sensList"></div>
-    <p class="hint">Prueba, uno a uno, cuánto cambia la edad mediana de FIRE al mover cada parámetro un margen razonable arriba y abajo del valor actual, dejando el resto tal cual está. Ordenado de mayor a menor impacto — te dice dónde merece la pena afinar la estimación (o dejar margen de seguridad) y dónde da igual acertar al milímetro. Usa vistas previas rápidas (menos rutas que el cálculo principal), así que las cifras exactas pueden variar ligeramente entre pulsaciones.</p>
+    <p class="hint">Prueba, uno a uno, cuánto cambia la edad mediana de FIRE al mover cada parámetro un margen razonable arriba y abajo del valor actual, dejando el resto tal cual está. Ordenado de mayor a menor impacto — te dice dónde merece la pena afinar la estimación (o dejar margen de seguridad) y dónde da igual acertar al milímetro. Usa la misma precisión máxima que el cálculo principal (no una vista previa), así que puede tardar bastante — de varios segundos a un par de minutos según el dispositivo, porque las 16 simulaciones corren una detrás de otra.</p>
   </section>
 
   <section>
@@ -1906,8 +1906,12 @@ function requestSimulation(p, paths, opts){
 // los parámetros actuales (el coste varía mucho según qué funciones PRO estén
 // activas). Dos puntos en vez de uno cancelan el overhead fijo del mensaje al
 // Worker (que domina en una tanda muy pequeña y sobreestimaría el coste real
-// por ruta), y se extrapola cuántas rutas caben en FULL_TIME_BUDGET_MS.
-async function runFullPrecision(p){
+// por ruta), y se extrapola cuántas rutas caben en FULL_TIME_BUDGET_MS. Se
+// comparte entre runFullPrecision() y runSensitivity(), que calibra una sola
+// vez y reutiliza el mismo pathsFull en sus 16 simulaciones en vez de
+// recalibrar cada una (las perturbaciones de sensibilidad no activan/desactivan
+// ninguna feature PRO, así que el coste por ruta no cambia entre variantes).
+async function calibratePathsFull(p){
   const [c1,c2]=await Promise.all([
     requestSimulation(p, CALIB_N1, {calibrate:true}),
     requestSimulation(p, CALIB_N2, {calibrate:true})
@@ -1918,7 +1922,11 @@ async function runFullPrecision(p){
   // main thread — calibrating toward the same PATHS_FULL_MAX there would block
   // the UI (unresponsive sliders/scroll) for the full multi-second budget.
   const pathsCeiling = worker ? PATHS_FULL_MAX : 5000;
-  pathsFull=Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
+  return Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
+}
+
+async function runFullPrecision(p){
+  const pathsFull=await calibratePathsFull(p);
   return requestSimulation(p, pathsFull);
 }
 
@@ -1938,10 +1946,13 @@ const SENSITIVITY_PARAMS = [
   {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, fmt:v=>eur(v)+'/mes'},
 ];
 
-// Runs each SENSITIVITY_PARAMS entry both up and down from baseParams, using
-// fast preview-precision runs (same path count as the live slider preview —
-// this is an exploratory "which assumption matters" view, not the headline
-// number), and returns them sorted by impact on the median FIRE age.
+// Runs each SENSITIVITY_PARAMS entry both up and down from baseParams, at the
+// same full-precision path count as the main "Trayectoria" calculation (not
+// PATHS_PREVIEW) so the impact figures are as reliable as the headline number
+// — calibrated once from baseParams and reused for all 16 runs, since none of
+// these perturbations toggle a PRO feature on/off (the cost per path doesn't
+// change between variants). Returns the results sorted by impact on the
+// median FIRE age.
 //
 // requestSimulation's normal (non-calibrate) path only resolves the single
 // most-recent request and silently drops any older one — correct for the
@@ -1951,12 +1962,13 @@ const SENSITIVITY_PARAMS = [
 // for exactly that ("never compete for latest, always resolve") — it has no
 // effect on the computation itself, only on how the response is dispatched.
 async function runSensitivity(baseParams){
+  const pathsFull=await calibratePathsFull(baseParams);
   const jobs=SENSITIVITY_PARAMS.map(async def=>{
     const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
     const base=baseParams[def.key];
     const [lowR,highR]=await Promise.all([
-      requestSimulation({...baseParams,[def.key]:base-delta}, PATHS_PREVIEW, {calibrate:true}),
-      requestSimulation({...baseParams,[def.key]:base+delta}, PATHS_PREVIEW, {calibrate:true}),
+      requestSimulation({...baseParams,[def.key]:base-delta}, pathsFull, {calibrate:true}),
+      requestSimulation({...baseParams,[def.key]:base+delta}, pathsFull, {calibrate:true}),
     ]);
     const ageOf=r=>{ const fm=fireQuantileMonth(r.result.fireMonths,.50); return fm===null?null:baseParams.ageNow+yearFrac(fm); };
     const ageLow=ageOf(lowR), ageHigh=ageOf(highR);
