@@ -405,6 +405,11 @@ body:not(.pro) .pro-only{display:none}
         <div class="row"><label for="salG">Subida salarial real anual</label><output id="salG_o"></output></div>
         <input type="range" id="salG" min="-1" max="2.5" step="0.1">
       </div>
+      <div class="ctrl">
+        <div class="row"><label for="profitShareWeeks">Profit sharing máximo (semanas de básico/año)</label><output id="profitShareWeeks_o"></output></div>
+        <p class="hint">Emirates paga un profit sharing discrecional, entre el 0 % y el 30 % del básico anual (≈0-15,6 semanas), que la compañía decide de cero cada año según resultados — aquí se sortea un valor distinto cada diciembre, entre 0 y el máximo que fijes, en vez de asumir un importe fijo. Con 0 semanas, no cambia nada respecto a no tenerlo en cuenta.</p>
+        <input type="range" id="profitShareWeeks" min="0" max="15.6" step="0.2">
+      </div>
       <p class="note">El ascenso se modela como una distribución alrededor del año central: una sola fecha fija crea falsa precisión. Las horas mínimas no sustituyen la incertidumbre de antigüedad, necesidades de compañía y timing real.</p>
     </div>
 
@@ -788,7 +793,7 @@ body:not(.pro) .pro-only{display:none}
 <script>
 const DEFAULTS = {
   ageNow:28,
-  fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5,
+  fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
   ret:5.5, vol:17, vida:3600, vidaG:1.0, hip:850, hipEnd:2056, nur:10000,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
   gasto:60000, swr:3.25,
@@ -894,6 +899,7 @@ function paintLabels(p){
   set('captDelay',p.captDelay.toFixed(1)+' años');
   set('startDelay',p.startDelay.toFixed(0)+' meses');
   set('salG',p.salG.toFixed(1)+' %');
+  set('profitShareWeeks',p.profitShareWeeks.toFixed(1)+' semanas · hasta '+(p.profitShareWeeks*1.923).toFixed(0)+' % del básico anual');
   set('ret',p.ret.toFixed(1)+' %');
   set('vol',p.vol.toFixed(1)+' %');
   set('vida',eur(p.vida)+'/mes');
@@ -1019,6 +1025,9 @@ function simulate(p, paths){
   // age is reached is just (age-ageNow)*12 — no need to walk MONTH_DATES for this.
   const lifeMonth=lifeActive ? Math.round((p.lifeExp-p.ageNow)*12) : Infinity;
   const baristaActive=p.proMode && p.baristaOn;
+  // Profit sharing is a core career assumption (like the salary sliders it sits
+  // next to), not a Modo PRO toggle: with the default of 0 weeks it's simply off.
+  const profitShareActive=p.profitShareWeeks>0;
 
   const gold=goldActive ? logParams(Math.pow(1+p.goldRet/100,1/12)-1, p.goldVol/100/Math.sqrt(12)) : null;
   const goldRho=p.goldRho/100, goldRhoC=Math.sqrt(Math.max(0,1-goldRho*goldRho));
@@ -1099,6 +1108,14 @@ function simulate(p, paths){
           net-=basicEUR*0.05;
         }
         net+=salaryEUR;
+
+        // Profit sharing: discretionary, decided fresh each year (0-30% of básico,
+        // ≈0-15.6 weeks of básico pay) — drawn independently per year, not smoothed
+        // or correlated with anything else, since the company's payout isn't public.
+        if(profitShareActive && d.m===12){
+          const weeksThisYear=Math.random()*p.profitShareWeeks;
+          net+=weeksThisYear*(basicAED*12/52)*fxEff;
+        }
       }
 
       // Real estate: net rental income enters cash flow every month it's held.
@@ -1707,6 +1724,7 @@ async function run(mode){
   let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
     Math.round(successRate*100)+' % rutas FIRE exitosas · ruina tras jubilarse '+Math.round(ruinRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
+  if(p.profitShareWeeks>0) calcTxt+=' · profit sharing hasta '+p.profitShareWeeks.toFixed(1)+' semanas/año (sorteado)';
   if(p.proMode){
     const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'];
     calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
