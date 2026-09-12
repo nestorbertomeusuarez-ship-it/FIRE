@@ -209,6 +209,10 @@ button.reset:focus-visible{outline:2px solid var(--route);outline-offset:2px}
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-2);
   margin-top:10px;
 }
+.calcLoading{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--route);
+  margin-top:4px;
+}
 @media (max-width:520px){
   .masthead h1{font-size:30px}
   .readout .big{font-size:44px}
@@ -685,6 +689,7 @@ body:not(.pro) .pro-only{display:none}
     <div class="actions">
       <button class="reset" id="reset">Restaurar valores base</button>
       <p class="calc" id="calc"></p>
+      <p class="calcLoading" id="calcLoading" style="display:none">Calculando con el máximo de rutas que caben en ~1-2s…</p>
     </div>
   </section>
 </div>
@@ -719,7 +724,17 @@ const DEFAULTS = {
   glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4
 };
 
-const PATHS_FULL = 2000;
+// Full-precision runs use an adaptive path count instead of a fixed one: cost per
+// path varies a lot with which PRO features are on, so a fixed number is either
+// wasteful (simple mode) or too slow (PRO fully loaded). See runFullPrecision().
+const PATHS_FULL_MIN = 2000;
+const PATHS_FULL_MAX = 60000;
+const CALIB_N1 = 100, CALIB_N2 = 900;
+// Tuned down from the ~1.3s nominal target: sorting each of the 67 annual
+// snapshots is O(paths log paths), so real cost grows a bit faster than the
+// calibration's linear extrapolation predicts once paths scales up by 10-20x —
+// this empirically keeps the real run inside ~1-1.5s instead of overshooting to ~2s.
+const FULL_TIME_BUDGET_MS = 950;
 const PATHS_PREVIEW = 250;
 const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
@@ -1390,9 +1405,11 @@ function buildWorkerSource(){
     'const logParams='+logParams.toString()+';',
     'const simulate='+simulate.toString()+';',
     'self.onmessage=function(e){',
-    '  const {p,paths,reqId}=e.data;',
+    '  const {p,paths,reqId,calibrate}=e.data;',
+    '  const t0=performance.now();',
     '  const result=simulate(p,paths);',
-    '  self.postMessage({result,reqId});',
+    '  const ms=performance.now()-t0;',
+    '  self.postMessage({result,reqId,calibrate,ms});',
     '};'
   ].join('\n');
 }
@@ -1407,37 +1424,65 @@ let reqCounter=0, latestReqId=0;
 const pendingResolvers=new Map();
 if(worker){
   worker.onmessage=(e)=>{
-    const {result,reqId}=e.data;
+    const {result,reqId,calibrate,ms}=e.data;
     const resolve=pendingResolvers.get(reqId);
     pendingResolvers.delete(reqId);
-    if(reqId!==latestReqId) return; // stale response from a superseded request — drop it
-    if(resolve) resolve(result);
+    // Calibration pings never compete for "latest" — they don't update the UI,
+    // they only measure timing, so they must never be dropped as stale.
+    if(!calibrate && reqId!==latestReqId) return;
+    if(resolve) resolve({result,ms});
   };
   worker.onerror=(e)=>{ console.error('Worker error:', e.message); worker=null; };
 }
 
-function requestSimulation(p, paths){
+function requestSimulation(p, paths, opts){
+  const calibrate=!!(opts && opts.calibrate);
   const reqId=++reqCounter;
-  latestReqId=reqId;
+  if(!calibrate) latestReqId=reqId;
   return new Promise(resolve=>{
     if(worker){
       pendingResolvers.set(reqId, resolve);
-      worker.postMessage({p,paths,reqId});
+      worker.postMessage({p,paths,reqId,calibrate});
     } else {
-      resolve(simulate(p,paths));
+      const t0=performance.now();
+      const result=simulate(p,paths);
+      resolve({result, ms:performance.now()-t0});
     }
   });
 }
 
+// "Máximo número de rutas posible": en vez de un PATHS fijo, se calibra con dos
+// tandas pequeñas (CALIB_N1/CALIB_N2) para medir el coste MARGINAL por ruta con
+// los parámetros actuales (el coste varía mucho según qué funciones PRO estén
+// activas). Dos puntos en vez de uno cancelan el overhead fijo del mensaje al
+// Worker (que domina en una tanda muy pequeña y sobreestimaría el coste real
+// por ruta), y se extrapola cuántas rutas caben en FULL_TIME_BUDGET_MS.
+async function runFullPrecision(p){
+  const [c1,c2]=await Promise.all([
+    requestSimulation(p, CALIB_N1, {calibrate:true}),
+    requestSimulation(p, CALIB_N2, {calibrate:true})
+  ]);
+  const msPerPath=Math.max(0.0005, (c2.ms-c1.ms)/(CALIB_N2-CALIB_N1));
+  let pathsFull=Math.round(FULL_TIME_BUDGET_MS/msPerPath);
+  pathsFull=Math.max(PATHS_FULL_MIN, Math.min(PATHS_FULL_MAX, pathsFull));
+  return requestSimulation(p, pathsFull);
+}
+
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
+const calcLoadingEl=document.getElementById('calcLoading');
 let lastSeries=null, lastTarget=0;
 
-async function run(paths){
+async function run(mode){
   const t0=performance.now(), p=readParams();
   // Paint slider values before any heavy calculation so the UI always shows them.
   paintLabels(p);
-  const r=await requestSimulation(p, paths===undefined?PATHS_FULL:paths);
+  const isPreview = mode==='preview';
+  let loadingTimer=null;
+  if(!isPreview) loadingTimer=setTimeout(()=>{ if(calcLoadingEl) calcLoadingEl.style.display='inline'; },350);
+  const {result:r} = isPreview ? await requestSimulation(p, PATHS_PREVIEW) : await runFullPrecision(p);
+  clearTimeout(loadingTimer);
+  if(calcLoadingEl) calcLoadingEl.style.display='none';
   const s=r.series, target=r.target;
   lastSeries=s; lastTarget=target;
   const fm50=fireQuantileMonth(r.fireMonths,.50), fm10=fireQuantileMonth(r.fireMonths,.10);
@@ -1467,7 +1512,7 @@ async function run(paths){
   for(let k=0;k<pathsUsed;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
   const ruinRate=firedCount?ruinedAfterFire/firedCount:0;
 
-  let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
+  let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
     Math.round(successRate*100)+' % rutas FIRE exitosas · ruina tras jubilarse '+Math.round(ruinRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
   if(p.proMode){
@@ -1487,8 +1532,8 @@ async function run(paths){
 // 'change' once: run the full-precision simulation. Checkboxes only have 'input'
 // (no drag phase) and always go straight to full precision.
 let tPreview=null, tFull=null;
-function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>run(PATHS_PREVIEW),50); }
-function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>run(PATHS_FULL),40); }
+function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>run('preview'),50); }
+function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>run('full'),40); }
 
 ids.forEach(k=>{
   const n=el[k]; if(!n) return;
@@ -1499,7 +1544,7 @@ el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',e
 document.getElementById('reset').addEventListener('click',()=>{
   ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
   document.body.classList.toggle('pro',DEFAULTS.proMode);
-  run(PATHS_FULL);
+  run('full');
 });
 
 const chartModalEl=document.getElementById('chartModal');
@@ -1512,7 +1557,7 @@ document.getElementById('closeChartModal').addEventListener('click',()=>{ chartM
 ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
 document.body.classList.toggle('pro',DEFAULTS.proMode);
 initVisibleLabels();
-run(PATHS_FULL).catch(e=>{
+run('full').catch(e=>{
   // Keep the controls usable and values visible even if a browser-specific runtime issue occurs.
   console.error(e);
 });
