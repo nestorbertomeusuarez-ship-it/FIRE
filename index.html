@@ -334,6 +334,17 @@ body:not(.pro) .pro-only{display:none}
     <p class="hint">El eje Y es logarítmico (por eso las líneas no están equiespaciadas): con 60+ años de horizonte, algunas rutas crecen muchísimo por interés compuesto, y una escala lineal aplastaría los primeros años —donde ocurre el FIRE— contra el fondo. Pasa el ratón (o el dedo) por el gráfico para ver los valores exactos de cada año. Rueda del ratón para hacer zoom, arrastra para desplazarte, o pulsa "Ampliar" para una vista más grande.</p>
   </section>
 
+  <section>
+    <h2>Aportado vs. rendimiento</h2>
+    <div class="chartbox"><canvas id="contribChart" width="1400" height="700"></canvas></div>
+    <div class="legend">
+      <span><i style="background:#2E6F9E"></i>Aportado (tu dinero)</span>
+      <span><i style="background:#1F7A4D"></i>Rendimiento (lo generan las inversiones)</span>
+      <span><i class="t"></i>Objetivo</span>
+    </div>
+    <p class="hint">De la ruta mediana: "aportado" es el efectivo neto que metes (o retiras) tú — sueldo ahorrado, profit sharing, Burriana/Brasil, menos gasto e hipoteca; "rendimiento" es lo que crece por sí solo con el mercado, encima de eso. A diferencia del gráfico de arriba, este usa escala lineal a propósito: el objetivo es ver cómo el rendimiento acaba superando a lo aportado, no leer cifras exactas de la cola lejana.</p>
+  </section>
+
   <dialog class="chartModal" id="chartModal">
     <div class="chartModalHead">
       <h2>Trayectoria — vista ampliada</h2>
@@ -1044,6 +1055,7 @@ function simulate(p, paths){
     if(MONTH_DATES[i].isSnap) annualSnapshots.push(i);
   }
   const snapVals=annualSnapshots.map(()=>new Float64Array(paths));
+  const contribVals=annualSnapshots.map(()=>new Float64Array(paths));
   const fireMonth=new Int32Array(paths); fireMonth.fill(-1);
   const ruined=new Uint8Array(paths);
   const finalVal=new Float64Array(paths);
@@ -1053,6 +1065,11 @@ function simulate(p, paths){
     let vGold=goldActive?p.startGold:0, vCons=0, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false;
     let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1;
+    // Tracks pure market-driven growth (returns compounding on whatever balance
+    // already existed), independent of contributions/withdrawals — so "aportado"
+    // (net cash you put in) can be recovered as totalWealth-cumGrowth without
+    // having to intercept every single cash-flow line separately.
+    let cumGrowth=0;
     const startBase=monthIndex(CAREER_YEAR,CAREER_MONTH);
     // non-negative truncated delays; central date remains the user's selected value
     const startDelay=Math.max(0,Math.round(normal(0,p.startDelay)));
@@ -1063,6 +1080,7 @@ function simulate(p, paths){
     let snap=0;
     for(let i=0;i<months;i++){
       const d=MONTH_DATES[i];
+      const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
       const z1=gauss(), z2=gauss();
       const rEq=Math.exp(eq.mu+eq.sd*z1)-1;
       const rBtc=Math.exp(btc.mu+btc.sd*(rho*z1+rhoC*z2))-1;
@@ -1080,6 +1098,7 @@ function simulate(p, paths){
       }
       if(glideActive) vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
       if(reActive) vRE*=1+reApprM;
+      cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
 
       if(fxVolActive){
         fxCur+=fxRevM*(p.fx-fxCur)+fxCur*normal(0,fxVolM);
@@ -1268,7 +1287,9 @@ function simulate(p, paths){
       }
 
       if(d.isSnap){
-        snapVals[snap][k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0));
+        const totalNow=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        snapVals[snap][k]=Math.max(0,totalNow);
+        contribVals[snap][k]=totalNow-cumGrowth;
         snap++;
       }
     }
@@ -1278,12 +1299,17 @@ function simulate(p, paths){
 
   const series=annualSnapshots.map((idx,j)=>{
     const a=Float64Array.from(snapVals[j]).sort();
+    const cSorted=Float64Array.from(contribVals[j]).sort();
     return {idx, year:MONTH_DATES[idx].y,
       p10:a[Math.floor((paths-1)*0.10)],
       p25:a[Math.floor((paths-1)*0.25)],
       p50:a[Math.floor((paths-1)*0.50)],
       p75:a[Math.floor((paths-1)*0.75)],
-      p90:a[Math.floor((paths-1)*0.90)]
+      p90:a[Math.floor((paths-1)*0.90)],
+      // Median of cumulative net contributions across paths — an independent
+      // measurement, not derived from p50 above, so it can occasionally run a
+      // touch higher than p50 for the same year; the chart clamps for display.
+      contrib50:cSorted[Math.floor((paths-1)*0.50)]
     };
   });
 
@@ -1400,6 +1426,63 @@ function renderChart(canvas, s, target, view, hoverIdx, extra){
   }
 
   return {L,T,w,h,lo,hi};
+}
+
+// Simpler static chart (no zoom/pan/tooltip) showing, for the median route, how
+// much of the final total is money you put in ("aportado", stacked bottom) vs.
+// pure market growth ("rendimiento", stacked on top). Deliberately LINEAR scale,
+// unlike renderChart()'s log scale: the whole point here is to let growth visibly
+// dwarf contributions over the decades, which a log scale would flatten out.
+function renderContribChart(canvas, series, target){
+  if(!canvas || !series || !series.length) return;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const cssW=canvas.parentElement.clientWidth || 300;
+  const cssH=Math.min(Math.round(cssW*.5), 380);
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
+  const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
+  const L=52,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
+
+  let max=Math.max(target*1.15,1);
+  series.forEach(v=>max=Math.max(max,v.p50));
+  const X=i=>L+(i/(series.length-1))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
+  // Contributions can't exceed the total for the same path in reality; the two
+  // medians are measured independently so clamp for display, never for the data.
+  const contribFor=v=>Math.max(0,Math.min(v.contrib50,v.p50));
+
+  c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
+  c.font='10px "IBM Plex Mono", monospace'; c.fillStyle='#4A5257';
+  const step=max/4;
+  for(let i=0;i<=4;i++){
+    const v=i*step, y=Y(v);
+    c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();
+    c.textAlign='right';c.textBaseline='middle';c.fillText(eurK(v),L-7,y);
+  }
+  c.textAlign='center';c.textBaseline='top';
+  series.forEach((v,i)=>{ if(v.year%5===0){
+    c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+    c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+  }});
+
+  // Aportado (bottom band, 0 → contrib50)
+  c.beginPath();
+  series.forEach((v,i)=> i?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v))));
+  for(let i=series.length-1;i>=0;i--) c.lineTo(X(i),Y(0));
+  c.closePath(); c.fillStyle='rgba(46,111,158,.35)'; c.fill();
+  c.strokeStyle='#2E6F9E'; c.lineWidth=1.5; c.lineJoin='round'; c.beginPath();
+  series.forEach((v,i)=> i?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v)))); c.stroke();
+
+  // Rendimiento (stacked on top, contrib50 → p50)
+  c.beginPath();
+  series.forEach((v,i)=> i?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50)));
+  for(let i=series.length-1;i>=0;i--) c.lineTo(X(i),Y(contribFor(series[i])));
+  c.closePath(); c.fillStyle='rgba(31,122,77,.35)'; c.fill();
+  c.strokeStyle='#1F7A4D'; c.lineWidth=1.5; c.lineJoin='round'; c.beginPath();
+  series.forEach((v,i)=> i?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50))); c.stroke();
+
+  c.save();c.setLineDash([6,5]);c.strokeStyle='#B8791B';c.lineWidth=2;
+  c.beginPath();c.moveTo(L,Y(target));c.lineTo(L+w,Y(target));c.stroke();c.restore();
+
+  c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
 }
 
 // Wires hover-tooltip, wheel-zoom and drag-to-pan onto one canvas, keeping its own
@@ -1675,6 +1758,8 @@ async function runFullPrecision(p){
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
 const calcLoadingEl=document.getElementById('calcLoading');
+const contribChartEl=document.getElementById('contribChart');
+window.addEventListener('resize', ()=>{ if(lastSeries) renderContribChart(contribChartEl, lastSeries, lastTarget); });
 let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0;
 
 async function run(mode){
@@ -1716,6 +1801,7 @@ async function run(mode){
 
   mainChart.update(s,target);
   if(chartModalEl.open) modalChart.update(s,target);
+  renderContribChart(document.getElementById('contribChart'), s, target);
 
   let firedCount=0, ruinedAfterFire=0;
   for(let k=0;k<pathsUsed;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
