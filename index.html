@@ -174,6 +174,16 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 .scenarioItem input[type=checkbox]{accent-color:var(--sc-color);width:16px;height:16px;flex:none}
 .scenarioEmpty{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-2)}
 
+/* ---------- sensibilidad ---------- */
+.sensList{margin-top:14px}
+.sensRow{padding:9px 0;border-bottom:1px solid var(--hair)}
+.sensRow .sensHead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px}
+.sensRow .sensLabel{font-size:13.5px;font-weight:500}
+.sensRow .sensRange{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-2);white-space:nowrap}
+.sensTrack{position:relative;height:8px;background:var(--hair)}
+.sensBar{position:absolute;top:0;bottom:0;background:var(--route)}
+.sensEmpty{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-2)}
+
 /* ---------- panel de parámetros ---------- */
 .group{margin-bottom:22px}
 .group > h3{
@@ -381,6 +391,14 @@ body:not(.pro) .pro-only{display:none}
     <p class="calcLoading" id="scenarioMsg" style="display:none"></p>
     <ul class="scenarioList" id="scenarioList"></ul>
     <p class="hint">Guarda hasta 4 configuraciones distintas para superponer sus medianas en el gráfico de arriba. "Cargar" restaura esos parámetros en todos los sliders; "Eliminar" solo lo quita de la lista. Se guardan en este navegador, así que siguen aquí si recargas la página.</p>
+  </section>
+
+  <section>
+    <h2>Sensibilidad</h2>
+    <button type="button" class="reset" id="runSensitivity">Calcular sensibilidad</button>
+    <p class="calcLoading" id="sensLoading" style="display:none">Calculando…</p>
+    <div class="sensList" id="sensList"></div>
+    <p class="hint">Prueba, uno a uno, cuánto cambia la edad mediana de FIRE al mover cada parámetro un margen razonable arriba y abajo del valor actual, dejando el resto tal cual está. Ordenado de mayor a menor impacto — te dice dónde merece la pena afinar la estimación (o dejar margen de seguridad) y dónde da igual acertar al milímetro. Usa vistas previas rápidas (menos rutas que el cálculo principal), así que las cifras exactas pueden variar ligeramente entre pulsaciones.</p>
   </section>
 
   <section>
@@ -1811,6 +1829,70 @@ async function runFullPrecision(p){
   return requestSimulation(p, pathsFull);
 }
 
+// Curated list of the parameters most likely to move the FIRE date, each with
+// a perturbation step chosen to be "a plausible amount to be wrong by" rather
+// than an arbitrary percentage. Each is tested both up and down from whatever
+// the sliders are currently set to, holding everything else fixed — a classic
+// one-at-a-time sensitivity/tornado analysis.
+const SENSITIVITY_PARAMS = [
+  {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vida', label:'Vida en Dubái (gasto mensual)', delta:p=>p.vida*0.1, fmt:v=>eur(v)+'/mes'},
+  {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, fmt:v=>v.toFixed(2)+' %'},
+  {key:'salG', label:'Crecimiento salarial anual', delta:0.5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'startDelay', label:'Retraso en empezar la carrera', delta:6, fmt:v=>v.toFixed(0)+' meses'},
+  {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, fmt:v=>eur(v)+'/mes'},
+];
+
+// Runs each SENSITIVITY_PARAMS entry both up and down from baseParams, using
+// fast preview-precision runs (same path count as the live slider preview —
+// this is an exploratory "which assumption matters" view, not the headline
+// number), and returns them sorted by impact on the median FIRE age.
+//
+// requestSimulation's normal (non-calibrate) path only resolves the single
+// most-recent request and silently drops any older one — correct for the
+// slider-driven run() pipeline, where a stale in-flight run should lose to a
+// newer one, but wrong here: up to 16 requests run concurrently and every one
+// of them needs its own answer. `calibrate:true` is the existing escape hatch
+// for exactly that ("never compete for latest, always resolve") — it has no
+// effect on the computation itself, only on how the response is dispatched.
+async function runSensitivity(baseParams){
+  const jobs=SENSITIVITY_PARAMS.map(async def=>{
+    const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
+    const base=baseParams[def.key];
+    const [lowR,highR]=await Promise.all([
+      requestSimulation({...baseParams,[def.key]:base-delta}, PATHS_PREVIEW, {calibrate:true}),
+      requestSimulation({...baseParams,[def.key]:base+delta}, PATHS_PREVIEW, {calibrate:true}),
+    ]);
+    const ageOf=r=>{ const fm=fireQuantileMonth(r.result.fireMonths,.50); return fm===null?null:baseParams.ageNow+yearFrac(fm); };
+    const ageLow=ageOf(lowR), ageHigh=ageOf(highR);
+    return {
+      label:def.label, valueLow:base-delta, valueHigh:base+delta, fmt:def.fmt,
+      ageLow, ageHigh,
+      impact: (ageLow===null||ageHigh===null) ? Infinity : Math.abs(ageHigh-ageLow),
+    };
+  });
+  const results=await Promise.all(jobs);
+  results.sort((a,b)=>b.impact-a.impact);
+  return results;
+}
+
+function renderSensitivity(results){
+  const el=document.getElementById('sensList');
+  if(!results.length){ el.innerHTML='<p class="sensEmpty">Sin resultados.</p>'; return; }
+  const maxImpact=Math.max(...results.map(r=>isFinite(r.impact)?r.impact:0), 0.1);
+  el.innerHTML=results.map(r=>{
+    const rangeTxt = (r.ageLow===null||r.ageHigh===null)
+      ? 'sin rutas exitosas en algún extremo'
+      : 'edad '+r.ageLow.toFixed(1)+' – '+r.ageHigh.toFixed(1)+' ('+r.fmt(r.valueLow)+' → '+r.fmt(r.valueHigh)+')';
+    const pct = isFinite(r.impact) ? Math.max(4, Math.round(r.impact/maxImpact*100)) : 100;
+    return '<div class="sensRow"><div class="sensHead"><span class="sensLabel">'+r.label+'</span>'+
+      '<span class="sensRange">'+rangeTxt+'</span></div>'+
+      '<div class="sensTrack"><div class="sensBar" style="width:'+pct+'%"></div></div></div>';
+  }).join('');
+}
+
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
 const contribChart=makeChartController(document.getElementById('contribChart'), document.getElementById('contribChartTip'), document.getElementById('zoomResetContrib'), renderContribChart, v=>{
@@ -2031,6 +2113,17 @@ function deleteScenario(id){
 }
 
 document.getElementById('saveScenario').addEventListener('click', saveCurrentScenario);
+
+document.getElementById('runSensitivity').addEventListener('click', async () => {
+  const btn=document.getElementById('runSensitivity'), loadingEl=document.getElementById('sensLoading');
+  btn.disabled=true; loadingEl.style.display='inline';
+  try{
+    const results=await runSensitivity(readParams());
+    renderSensitivity(results);
+  } finally {
+    btn.disabled=false; loadingEl.style.display='none';
+  }
+});
 document.getElementById('scenarioList').addEventListener('click', e=>{
   const btn=e.target.closest('button[data-act]');
   if(!btn) return;
