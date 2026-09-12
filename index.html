@@ -335,14 +335,22 @@ body:not(.pro) .pro-only{display:none}
   </section>
 
   <section>
-    <h2>Aportado vs. rendimiento</h2>
-    <div class="chartbox"><canvas id="contribChart" width="1400" height="700"></canvas></div>
+    <div class="chartHead">
+      <h2>Aportado vs. rendimiento</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomResetContrib" style="display:none">Restablecer zoom</a>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="contribChart" width="1400" height="700"></canvas>
+      <div class="chart-tip" id="contribChartTip"></div>
+    </div>
     <div class="legend">
       <span><i style="background:#2E6F9E"></i>Aportado (tu dinero)</span>
       <span><i style="background:#1F7A4D"></i>Rendimiento (lo generan las inversiones)</span>
       <span><i class="t"></i>Objetivo</span>
     </div>
-    <p class="hint">De la ruta mediana: "aportado" es el efectivo neto que metes (o retiras) tú — sueldo ahorrado, profit sharing, Burriana/Brasil, menos gasto e hipoteca; "rendimiento" es lo que crece por sí solo con el mercado, encima de eso. A diferencia del gráfico de arriba, este usa escala lineal a propósito: el objetivo es ver cómo el rendimiento acaba superando a lo aportado, no leer cifras exactas de la cola lejana.</p>
+    <p class="hint">De la ruta mediana: "aportado" es el efectivo neto que metes (o retiras) tú — sueldo ahorrado, profit sharing, Burriana/Brasil, menos gasto e hipoteca; "rendimiento" es lo que crece por sí solo con el mercado, encima de eso. A diferencia del gráfico de arriba, este usa escala lineal a propósito: el objetivo es ver cómo el rendimiento acaba superando a lo aportado, no leer cifras exactas de la cola lejana. Pasa el ratón (o el dedo) para ver los valores de cada año; rueda del ratón para hacer zoom, arrastra para desplazarte.</p>
   </section>
 
   <dialog class="chartModal" id="chartModal">
@@ -1428,13 +1436,15 @@ function renderChart(canvas, s, target, view, hoverIdx, extra){
   return {L,T,w,h,lo,hi};
 }
 
-// Simpler static chart (no zoom/pan/tooltip) showing, for the median route, how
-// much of the final total is money you put in ("aportado", stacked bottom) vs.
-// pure market growth ("rendimiento", stacked on top). Deliberately LINEAR scale,
-// unlike renderChart()'s log scale: the whole point here is to let growth visibly
-// dwarf contributions over the decades, which a log scale would flatten out.
-function renderContribChart(canvas, series, target){
-  if(!canvas || !series || !series.length) return;
+// Shows, for the median route, how much of the total is money you put in
+// ("aportado", stacked bottom) vs. pure market growth ("rendimiento", stacked
+// on top). Deliberately LINEAR scale, unlike renderChart()'s log scale: the
+// whole point here is to let growth visibly dwarf contributions over the
+// decades, which a log scale would flatten out. Shares the same view/hoverIdx/
+// geom contract as renderChart() so it can be driven by the same
+// makeChartController() (zoom/pan/tooltip) instead of a bespoke one.
+function renderContribChart(canvas, series, target, view, hoverIdx){
+  if(!canvas || !series || !series.length) return null;
   const dpr=Math.min(window.devicePixelRatio||1,2);
   const cssW=canvas.parentElement.clientWidth || 300;
   const cssH=Math.min(Math.round(cssW*.5), 380);
@@ -1442,9 +1452,14 @@ function renderContribChart(canvas, series, target){
   const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
   const L=52,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
 
+  view = view || {lo:0, hi:series.length-1};
+  const lo=Math.round(Math.max(0,Math.min(view.lo, series.length-2)));
+  const hi=Math.round(Math.max(lo+1,Math.min(view.hi, series.length-1)));
+  const vis=series.slice(lo,hi+1);
+
   let max=Math.max(target*1.15,1);
-  series.forEach(v=>max=Math.max(max,v.p50));
-  const X=i=>L+(i/(series.length-1))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
+  vis.forEach(v=>max=Math.max(max,v.p50));
+  const X=i=>L+((i-lo)/(hi-lo))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
   // Contributions can't exceed the total for the same path in reality; the two
   // medians are measured independently so clamp for display, never for the data.
   const contribFor=v=>Math.max(0,Math.min(v.contrib50,v.p50));
@@ -1458,43 +1473,67 @@ function renderContribChart(canvas, series, target){
     c.textAlign='right';c.textBaseline='middle';c.fillText(eurK(v),L-7,y);
   }
   c.textAlign='center';c.textBaseline='top';
-  series.forEach((v,i)=>{ if(v.year%5===0){
-    c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
-    c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
-  }});
+  const span=hi-lo;
+  const yearStep = span>40?10:span>15?5:1;
+  for(let i=lo;i<=hi;i++){
+    const v=series[i];
+    if(v.year%yearStep===0){
+      c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+      c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+    }
+  }
 
   // Aportado (bottom band, 0 → contrib50)
   c.beginPath();
-  series.forEach((v,i)=> i?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v))));
-  for(let i=series.length-1;i>=0;i--) c.lineTo(X(i),Y(0));
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v)));});
+  for(let idx=vis.length-1;idx>=0;idx--) c.lineTo(X(lo+idx),Y(0));
   c.closePath(); c.fillStyle='rgba(46,111,158,.35)'; c.fill();
   c.strokeStyle='#2E6F9E'; c.lineWidth=1.5; c.lineJoin='round'; c.beginPath();
-  series.forEach((v,i)=> i?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v)))); c.stroke();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v)));}); c.stroke();
 
   // Rendimiento (stacked on top, contrib50 → p50)
   c.beginPath();
-  series.forEach((v,i)=> i?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50)));
-  for(let i=series.length-1;i>=0;i--) c.lineTo(X(i),Y(contribFor(series[i])));
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));});
+  for(let idx=vis.length-1;idx>=0;idx--){ const i=lo+idx; c.lineTo(X(i),Y(contribFor(vis[idx]))); }
   c.closePath(); c.fillStyle='rgba(31,122,77,.35)'; c.fill();
   c.strokeStyle='#1F7A4D'; c.lineWidth=1.5; c.lineJoin='round'; c.beginPath();
-  series.forEach((v,i)=> i?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50))); c.stroke();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));}); c.stroke();
 
   c.save();c.setLineDash([6,5]);c.strokeStyle='#B8791B';c.lineWidth=2;
   c.beginPath();c.moveTo(L,Y(target));c.lineTo(L+w,Y(target));c.stroke();c.restore();
 
   c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
+
+  if(hoverIdx!=null && hoverIdx>=lo && hoverIdx<=hi){
+    const v=series[hoverIdx], x=X(hoverIdx);
+    c.save();
+    c.strokeStyle='rgba(20,24,27,.45)';c.lineWidth=1;c.setLineDash([3,3]);
+    c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();
+    c.restore();
+    const dot=(val,color)=>{c.beginPath();c.arc(x,Y(val),3.5,0,Math.PI*2);c.fillStyle=color;c.fill();c.strokeStyle='#F1F3F2';c.lineWidth=1.5;c.stroke();};
+    dot(contribFor(v),'#2E6F9E'); dot(v.p50,'#1F7A4D');
+  }
+
+  return {L,T,w,h,lo,hi};
 }
 
 // Wires hover-tooltip, wheel-zoom and drag-to-pan onto one canvas, keeping its own
-// view/hover state so the inline chart and the "ampliar" modal chart act independently.
-function makeChartController(canvas, tipEl, resetLinkEl){
+// view/hover state so the inline chart, the "ampliar" modal chart, and the
+// contributions chart all act independently. `renderFn` defaults to renderChart
+// (trajectory chart's log-scale P10-P90 band) but any function sharing its
+// (canvas, series, target, view, hoverIdx, extra) => geom contract works — the
+// contributions chart passes renderContribChart instead. `tipHtml(v)` likewise
+// defaults to the trajectory chart's P90/mediana/P10 tooltip text.
+function makeChartController(canvas, tipEl, resetLinkEl, renderFn, tipHtml){
+  renderFn = renderFn || renderChart;
+  tipHtml = tipHtml || (v => '<b>'+v.year+'</b><br>P90 · '+eurK(v.p90)+'<br>Mediana · '+eurK(v.p50)+'<br>P10 · '+eurK(v.p10));
   const state = { series:null, target:0, view:null, hoverIdx:null, geom:null, extra:[] };
 
   function fullView(){ return {lo:0, hi:state.series.length-1}; }
 
   function redraw(){
     if(!state.series || !state.series.length) return;
-    state.geom = renderChart(canvas, state.series, state.target, state.view, state.hoverIdx, state.extra);
+    state.geom = renderFn(canvas, state.series, state.target, state.view, state.hoverIdx, state.extra);
     if(resetLinkEl){
       const isFull = state.view.lo===0 && state.view.hi===state.series.length-1;
       resetLinkEl.style.display = isFull ? 'none' : 'inline-block';
@@ -1522,7 +1561,7 @@ function makeChartController(canvas, tipEl, resetLinkEl){
   function showTip(clientX, clientY, idx){
     if(!tipEl || !state.series || !state.series[idx]) return;
     const v=state.series[idx];
-    tipEl.innerHTML='<b>'+v.year+'</b><br>P90 · '+eurK(v.p90)+'<br>Mediana · '+eurK(v.p50)+'<br>P10 · '+eurK(v.p10);
+    tipEl.innerHTML=tipHtml(v);
     const rect=canvas.getBoundingClientRect();
     let x=clientX-rect.left+12, y=clientY-rect.top+12;
     if(x+150>rect.width) x=clientX-rect.left-162;
@@ -1757,9 +1796,11 @@ async function runFullPrecision(p){
 
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
+const contribChart=makeChartController(document.getElementById('contribChart'), document.getElementById('contribChartTip'), document.getElementById('zoomResetContrib'), renderContribChart, v=>{
+  const contrib=Math.max(0,Math.min(v.contrib50,v.p50)), growth=v.p50-contrib;
+  return '<b>'+v.year+'</b><br>Total · '+eurK(v.p50)+'<br>Aportado · '+eurK(contrib)+'<br>Rendimiento · '+eurK(growth);
+});
 const calcLoadingEl=document.getElementById('calcLoading');
-const contribChartEl=document.getElementById('contribChart');
-window.addEventListener('resize', ()=>{ if(lastSeries) renderContribChart(contribChartEl, lastSeries, lastTarget); });
 let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0;
 
 async function run(mode){
@@ -1801,7 +1842,7 @@ async function run(mode){
 
   mainChart.update(s,target);
   if(chartModalEl.open) modalChart.update(s,target);
-  renderContribChart(document.getElementById('contribChart'), s, target);
+  contribChart.update(s,target);
 
   let firedCount=0, ruinedAfterFire=0;
   for(let k=0;k<pathsUsed;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
