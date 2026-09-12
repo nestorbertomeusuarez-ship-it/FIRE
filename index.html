@@ -463,6 +463,11 @@ body:not(.pro) .pro-only{display:none}
         <input type="range" id="vol" min="0" max="26" step="0.5">
       </div>
       <p class="note">Renta variable global: ~5,5 % real con ~17 % de volatilidad. Bajar la volatilidad no reduce el riesgo, solo lo esconde.</p>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="histMarketOn">
+        <label for="histMarketOn">Usar rentabilidades históricas reales (bootstrap) en vez de la curva teórica</label>
+      </div>
+      <p class="hint">En vez de sortear cada mes con la media/volatilidad de arriba, cada ruta elige un año al azar dentro del historial real de la bolsa (S&amp;P 500, rentabilidad real 1928-2025) y camina hacia delante con la secuencia tal y como ocurrió — si llega al final de la serie, vuelve a empezar por el principio. Así se conservan caídas y recuperaciones reales (y el riesgo de mala suerte justo al jubilarte) que una distribución teórica no reproduce. Solo afecta a la renta variable tradicional: Bitcoin y oro siguen con su propio modelo, y su correlación con la bolsa (más abajo) se desactiva en este modo. Si además activas el shock de inflación estocástica (Modo PRO), se sigue aplicando encima de estas rentabilidades que ya son reales — no están pensados para combinarse.</p>
     </div>
 
     <div class="group">
@@ -833,10 +838,27 @@ body:not(.pro) .pro-only{display:none}
 
 
 <script>
+// S&P 500 annual REAL (inflation-adjusted) total return, 1928-2025, one entry
+// per calendar year in order. Real return computed as (1+nominal)/(1+CPI)-1
+// from: nominal total return (incl. dividends) — Aswath Damodaran/NYU Stern
+// historical returns dataset; US CPI inflation — officialdata.org. Used only
+// by the "Mercado" historical-bootstrap toggle below; orientativo (datos de
+// 2025), no se actualiza automáticamente.
+const HIST_EQ_REAL_RETURNS = [0.4633,-0.083,-0.2333,-0.383,0.0136,0.5806,-0.0414,0.4353,0.3004,-0.3759,
+0.3203,0.0032,-0.1131,-0.1692,0.0748,0.1784,0.1701,0.3281,-0.1547,-0.0801,
+-0.0219,0.1979,0.2918,0.1465,0.1592,-0.0195,0.5142,0.3309,0.0586,-0.1333,
+0.3974,0.1129,-0.0136,0.2537,-0.0971,0.2101,0.1491,0.1062,-0.1247,0.2009,
+0.0635,-0.1299,-0.0204,0.0943,0.1507,-0.1933,-0.3327,0.2554,0.1709,-0.1266,
+-0.01,0.0644,0.1607,-0.1361,0.1343,0.1854,0.0175,0.2673,0.1633,0.0208,
+0.1191,0.2543,-0.0803,0.2497,0.0435,0.0678,-0.012,0.3342,0.1916,0.3012,
+0.2637,0.1828,-0.1199,-0.1429,-0.2318,0.255,0.0787,0.0139,0.1199,0.0256,
+-0.389,0.264,0.1297,-0.0103,0.1354,0.3025,0.1171,0.0126,0.1038,0.1907,
+-0.0656,0.2894,0.1659,0.227,-0.2411,0.2107,0.2137,0.1462];
+
 const DEFAULTS = {
   ageNow:28,
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
-  ret:5.5, vol:17, vida:3600, vidaG:1.0, hip:850, hipEnd:2056, nur:10000,
+  ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056, nur:10000,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
   gasto:60000, swr:3.25,
   startEq:3000, startBtc:15000,
@@ -1060,6 +1082,10 @@ function simulate(p, paths){
   const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
   const fxVolActive=p.proMode && p.fxVolOn;
   const inflActive=p.proMode && p.inflOn;
+  // Not PRO-gated, like profitShareWeeks/gratuityYears: off by default, lives
+  // in the base "Mercado" group next to the theoretical return/vol sliders it
+  // replaces for the equity leg.
+  const histActive=p.histMarketOn;
   // Mortgage balance amortizes in a straight line to 0 by the end of hipEnd's year.
   const mortgageMonths=Math.max(1, monthIndex(p.hipEnd,12)+1);
   const strat=p.proMode ? Math.round(p.wdStrategy) : 0;
@@ -1114,14 +1140,29 @@ function simulate(p, paths){
     const careerStart=startBase+startDelay;
     const captCentral=monthIndex(p.captY,1);
     const captMonth=Math.max(careerStart, Math.round(normal(captCentral, p.captDelay*12)));
+    // Historical bootstrap: each path picks a random starting year in the real
+    // series and walks forward through the actual recorded sequence (wrapping
+    // around circularly once it runs past the end), instead of drawing i.i.d.
+    // lognormal shocks — this preserves real crashes/recoveries and sequence-
+    // of-returns risk that a parametric model can't reproduce.
+    let histPos=histActive ? Math.floor(Math.random()*HIST_EQ_REAL_RETURNS.length) : 0;
+    let histMonthlyR=histActive ? Math.pow(1+HIST_EQ_REAL_RETURNS[histPos],1/12)-1 : 0;
 
     let snap=0;
     for(let i=0;i<months;i++){
       const d=MONTH_DATES[i];
       const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+      if(histActive && i>0 && d.m===1){
+        histPos=(histPos+1)%HIST_EQ_REAL_RETURNS.length;
+        histMonthlyR=Math.pow(1+HIST_EQ_REAL_RETURNS[histPos],1/12)-1;
+      }
       const z1=gauss(), z2=gauss();
-      const rEq=Math.exp(eq.mu+eq.sd*z1)-1;
-      const rBtc=Math.exp(btc.mu+btc.sd*(rho*z1+rhoC*z2))-1;
+      const rEq=histActive ? histMonthlyR : Math.exp(eq.mu+eq.sd*z1)-1;
+      // The real series only covers equities: there's no matching multi-decade
+      // BTC history to bootstrap alongside it, so btcRho (correlation with
+      // equity) doesn't apply in historical mode — BTC falls back to its own
+      // independent shock instead of being driven by z1.
+      const rBtc=Math.exp(btc.mu+btc.sd*(histActive ? z2 : (rho*z1+rhoC*z2)))-1;
 
       let inflShockM=0;
       if(inflActive){ inflShockM=normal(0,inflVolM); cumInfl+=inflShockM; }
@@ -1131,7 +1172,7 @@ function simulate(p, paths){
       vEq*=1+rEqEff; vBtc*=1+rBtcEff; vProv*=1+rEqEff;
       if(goldActive){
         const z3=gauss();
-        const rGold=Math.exp(gold.mu+gold.sd*(goldRho*z1+goldRhoC*z3))-1;
+        const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
         vGold*=1+rGold;
       }
       if(glideActive) vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
@@ -1745,6 +1786,7 @@ function buildWorkerSource(){
     'const CAREER_YEAR='+CAREER_YEAR+', CAREER_MONTH='+CAREER_MONTH+';',
     'const FS1_GAP='+FS1_GAP+';',
     'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
+    'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
     'const MONTHS=MONTH_DATES.length;',
     'let spare=null;',
     'const monthIndex='+monthIndex.toString()+';',
@@ -1952,6 +1994,7 @@ async function run(mode){
     Math.round(performance.now()-t0)+' ms';
   if(p.profitShareWeeks>0) calcTxt+=' · profit sharing hasta '+p.profitShareWeeks.toFixed(1)+' semanas/año (sorteado)';
   if(p.gratuityYears>0) calcTxt+=' · gratuity de '+p.gratuityYears.toFixed(1)+' años pre-DEWS al jubilarse';
+  if(p.histMarketOn) calcTxt+=' · bolsa: bootstrap histórico real 1928-2025 (no teórico)';
   if(p.proMode){
     const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'];
     calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
