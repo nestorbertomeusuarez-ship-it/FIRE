@@ -586,8 +586,13 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="taxRate">Tipo medio efectivo sobre plusvalías</label><output id="taxRate_o"></output></div>
-        <p class="hint">Para que te quede X € netos en el bolsillo, hay que vender más de X € en bruto: la simulación "engorda" cada retirada para compensar lo que se queda Hacienda.</p>
+        <p class="hint">Para que te quede X € netos en el bolsillo, hay que vender más de X € en bruto: la simulación "engorda" cada retirada para compensar lo que se queda Hacienda. Se aplica a la cartera gravable: renta variable, BTC, oro, el cubo conservador e inmobiliario.</p>
         <input type="range" id="taxRate" min="0" max="30" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="taxRateProv">Tipo medio efectivo sobre el Provident/plan de empresa</label><output id="taxRateProv_o"></output></div>
+        <p class="hint">El Provident Scheme no es una plusvalía: al retirarlo, Hacienda lo trata como rendimiento del trabajo (tramos generales de IRPF), normalmente con un tipo más alto que el de plusvalías de arriba. Como cada cubo puede tener su propio tipo, el simulador retira automáticamente primero del que salga más barato — con los valores por defecto (mismo tipo en los dos) esto no cambia nada, es exactamente el orden de siempre.</p>
+        <input type="range" id="taxRateProv" min="0" max="47" step="0.5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="taxRepatDelay">Años tras el FIRE hasta residencia fiscal en España</label><output id="taxRepatDelay_o"></output></div>
@@ -868,7 +873,7 @@ const DEFAULTS = {
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
-  taxOn:false, taxRate:19, taxRepatDelay:2,
+  taxOn:false, taxRate:19, taxRateProv:19, taxRepatDelay:2,
   beckhamOn:false, beckhamYears:6,
   wealthTaxOn:false, ccaaPreset:0, wealthExempt:700000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
   // inflación / FX estocásticos
@@ -991,6 +996,7 @@ function paintLabels(p){
 
   // ---- Modo PRO ----
   set('taxRate',p.taxRate.toFixed(1)+' %');
+  set('taxRateProv',p.taxRateProv.toFixed(1)+' %');
   set('taxRepatDelay',p.taxRepatDelay+(p.taxRepatDelay===1?' año':' años'));
   set('beckhamYears',p.beckhamYears+(p.beckhamYears===1?' año':' años'));
   set('ccaaPreset',['General (sin bonificación)','Madrid','Andalucía','Cataluña','C. Valenciana'][Math.round(p.ccaaPreset)]);
@@ -1103,6 +1109,19 @@ function simulate(p, paths){
   // as profit sharing above.
   const gratuityActive=p.gratuityYears>0;
   const gratuityCappedDays=Math.min(Math.min(p.gratuityYears,5)*21+Math.max(0,p.gratuityYears-5)*30, 730);
+
+  // Tax-aware withdrawal helpers (used by the retirement drawdown cascade below).
+  // Plain functions with no closure over path/month state, so they stay cheap to
+  // call inside the hot per-path×per-month loop without allocating anything.
+  function takeGross(bal, needNet, ratePct){
+    if(needNet<=0 || bal<=0) return bal;
+    const grossWanted = ratePct>0 ? needNet/(1-ratePct/100) : needNet;
+    return bal - Math.min(bal, grossWanted);
+  }
+  function netTaken(oldBal, newBal, ratePct){
+    const gross=oldBal-newBal;
+    return ratePct>0 ? gross*(1-ratePct/100) : gross;
+  }
 
   const gold=goldActive ? logParams(Math.pow(1+p.goldRet/100,1/12)-1, p.goldVol/100/Math.sqrt(12)) : null;
   const goldRho=p.goldRho/100, goldRhoC=Math.sqrt(Math.max(0,1-goldRho*goldRho));
@@ -1314,16 +1333,32 @@ function simulate(p, paths){
         // Ley Beckham: taxed as a non-resident for its window (year of the move + 5
         // more) — foreign-sourced income/wealth (this model's whole portfolio) is
         // excluded, so both the capital-gains gross-up and the wealth tax pause here.
-        if(taxActive && spanishResident && !inBeckham) wd=wd/(1-p.taxRate/100);
+        //
+        // Each bucket can carry its own tax treatment now (the Provident Scheme is
+        // taxed as earned income in Spain, not as a capital gain like the rest of
+        // the portfolio) — instead of grossing up the whole withdrawal once with a
+        // single rate and then draining buckets in a fixed physical order, drain
+        // whichever bucket is cheaper (lower configured rate) first. With equal
+        // rates (the default) provFirst is false and the order is exactly the
+        // original vCons→vEq→vProv→vGold→vBtc→vRE cascade.
+        const taxNow=taxActive && spanishResident && !inBeckham;
+        const gravRate=taxNow ? p.taxRate : 0;
+        const provRate=taxNow ? p.taxRateProv : 0;
+        const provFirst=provRate<gravRate;
 
-        let deficit=wd;
-        const fromCons=Math.min(vCons,deficit); vCons-=fromCons; deficit-=fromCons;
-        if(deficit>0){ const fromEq=Math.min(vEq,deficit); vEq-=fromEq; deficit-=fromEq; }
-        if(deficit>0){ const fromProv=Math.min(vProv,deficit); vProv-=fromProv; deficit-=fromProv; }
-        if(deficit>0 && goldActive){ const fromGold=Math.min(vGold,deficit); vGold-=fromGold; deficit-=fromGold; }
-        if(deficit>0){ const fromBtc=Math.min(vBtc,deficit); vBtc-=fromBtc; deficit-=fromBtc; }
-        if(deficit>0 && reActive && p.reCountsFire){ const fromRE=Math.min(vRE,deficit); vRE-=fromRE; deficit-=fromRE; }
-        if(deficit>0){ ruinedPath=true; retired=false; }
+        let deficit=wd, nb;
+        if(provFirst){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        if(deficit>0){ nb=takeGross(vCons,deficit,gravRate); deficit-=netTaken(vCons,nb,gravRate); vCons=nb; }
+        if(deficit>0){ nb=takeGross(vEq,deficit,gravRate); deficit-=netTaken(vEq,nb,gravRate); vEq=nb; }
+        if(deficit>0 && goldActive){ nb=takeGross(vGold,deficit,gravRate); deficit-=netTaken(vGold,nb,gravRate); vGold=nb; }
+        if(deficit>0){ nb=takeGross(vBtc,deficit,gravRate); deficit-=netTaken(vBtc,nb,gravRate); vBtc=nb; }
+        if(deficit>0 && reActive && p.reCountsFire){ nb=takeGross(vRE,deficit,gravRate); deficit-=netTaken(vRE,nb,gravRate); vRE=nb; }
+        if(!provFirst && deficit>0){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        // Each cascade step round-trips through a gross-up/net-back division and
+        // multiplication, so a fully-covered deficit can land on a tiny positive
+        // float (e.g. 5e-14) instead of exactly 0 — a cent-scale tolerance keeps
+        // that noise from being misread as a genuine shortfall and ruining the path.
+        if(deficit>1e-6){ ruinedPath=true; retired=false; }
       }
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
@@ -1999,6 +2034,7 @@ async function run(mode){
     const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'];
     calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
     if(p.taxOn) calcTxt+=' · fiscalidad ES activa (tipo medio '+p.taxRate.toFixed(1)+'%, repat. +'+p.taxRepatDelay+'a)';
+    if(p.taxOn && p.taxRateProv!==p.taxRate) calcTxt+=' · retirada optimizada: '+(p.taxRateProv<p.taxRate?'Provident antes que la cartera':'cartera antes que el Provident')+' ('+p.taxRateProv.toFixed(1)+'% vs '+p.taxRate.toFixed(1)+'%)';
     if(p.beckhamOn) calcTxt+=' · Ley Beckham activa ('+p.beckhamYears+'a, IRPF y patrimonio en pausa)';
     if(p.wealthTaxOn) calcTxt+=' · patrimonio neto > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año'+(p.wealthBonusPct>0?' (bonif. '+p.wealthBonusPct.toFixed(0)+'%)':'')+(p.mortgageBalance>0?' (deuda deducida)':'');
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
