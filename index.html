@@ -359,6 +359,7 @@ body:not(.pro) .pro-only{display:none}
       <input type="text" id="scenarioName" placeholder="Nombre (ej. Con Beckham)" maxlength="30">
       <button type="button" class="reset" id="saveScenario">Guardar escenario actual</button>
     </div>
+    <p class="calcLoading" id="scenarioMsg" style="display:none"></p>
     <ul class="scenarioList" id="scenarioList"></ul>
     <p class="hint">Guarda hasta 4 configuraciones distintas para superponer sus medianas en el gráfico de arriba. "Cargar" restaura esos parámetros en todos los sliders; "Eliminar" solo lo quita de la lista. Se guardan en este navegador, así que siguen aquí si recargas la página.</p>
   </section>
@@ -970,12 +971,6 @@ function logParams(mean,vol){
   const s2=Math.log(1+(vol*vol)/(m*m));
   return {mu:Math.log(m)-s2/2,sd:Math.sqrt(s2)};
 }
-function quantile(a,q){
-  const n=a.length;
-  if(!n) return null;
-  const b=Float64Array.from(a).sort();
-  return b[Math.max(0,Math.min(n-1,Math.floor((n-1)*q)))];
-}
 function ymdLabel(i){
   const d=dateFromIndex(i);
   return d.m===12?String(d.y):String(d.y)+'-'+String(d.m).padStart(2,'0');
@@ -994,6 +989,16 @@ function simulate(p, paths){
   const rho=p.btcRho/100, rhoC=Math.sqrt(Math.max(0,1-rho*rho));
   const annualRetGrowth=Math.pow(1+p.salG/100,1/12)-1;
   const annualSpendGrowth=Math.pow(1+p.vidaG/100,1/12)-1;
+  // monthsSinceCareer is deterministic given i and a path's careerStart (no randomness
+  // in the exponent itself), so precompute the growth curve once per simulate() call
+  // instead of calling Math.pow ~paths*months times for a value that only has `months`
+  // distinct outcomes.
+  const retGrowthPow=new Float64Array(months);
+  const spendGrowthPow=new Float64Array(months);
+  for(let n=0;n<months;n++){
+    retGrowthPow[n]=Math.pow(1+annualRetGrowth,n);
+    spendGrowthPow[n]=Math.pow(1+annualSpendGrowth,n);
+  }
   const target=p.gasto/(p.swr/100);
 
   // ---- Modo PRO: activación por sub-feature (siempre condicionada a p.proMode) ----
@@ -1079,7 +1084,7 @@ function simulate(p, paths){
       if(isWorking){
         const monthsSinceCareer=i-careerStart;
         const captain=i>=captMonth;
-        const salaryAED=(captain?p.salCA:p.salFO)/12*Math.pow(1+annualRetGrowth,Math.max(0,monthsSinceCareer));
+        const salaryAED=(captain?p.salCA:p.salFO)/12*retGrowthPow[Math.max(0,monthsSinceCareer)];
         const salaryEUR=salaryAED*fxEff;
 
         const monthsSinceStart=monthsSinceCareer;
@@ -1103,7 +1108,7 @@ function simulate(p, paths){
       // Pre-career Spanish cash flow is intentionally NOT invented.
       if(i>=careerStart && !retired){
         const monthsSinceCareer=i-careerStart;
-        const living=p.vida*Math.pow(1+annualSpendGrowth,Math.max(0,monthsSinceCareer));
+        const living=p.vida*spendGrowthPow[Math.max(0,monthsSinceCareer)];
         net-=living;
         const hipReal=inflActive ? p.hip*Math.exp(-cumInfl) : p.hip;
         if(d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12)) net-=hipReal;
@@ -1566,18 +1571,31 @@ try{
 }catch(e){ worker=null; console.error('Worker no disponible, usando cálculo síncrono:', e); }
 
 let reqCounter=0, latestReqId=0;
-const pendingResolvers=new Map();
+const pendingResolvers=new Map(); // reqId -> {resolve, p, paths}
 if(worker){
   worker.onmessage=(e)=>{
     const {result,reqId,calibrate,ms}=e.data;
-    const resolve=pendingResolvers.get(reqId);
+    const entry=pendingResolvers.get(reqId);
     pendingResolvers.delete(reqId);
     // Calibration pings never compete for "latest" — they don't update the UI,
     // they only measure timing, so they must never be dropped as stale.
     if(!calibrate && reqId!==latestReqId) return;
-    if(resolve) resolve({result,ms});
+    if(entry) entry.resolve({result,ms});
   };
-  worker.onerror=(e)=>{ console.error('Worker error:', e.message); worker=null; };
+  worker.onerror=(e)=>{
+    console.error('Worker error, cambiando a cálculo síncrono:', e.message);
+    worker=null;
+    // Without this, any request already in flight when the worker dies would
+    // never resolve — the UI would show "Calculando…" forever. Finish them on
+    // the main thread instead so a mid-flight crash never hangs the app.
+    const pending=Array.from(pendingResolvers.values());
+    pendingResolvers.clear();
+    pending.forEach(({resolve,p,paths})=>{
+      const t0=performance.now();
+      const result=simulate(p,paths);
+      resolve({result, ms:performance.now()-t0});
+    });
+  };
 }
 
 function requestSimulation(p, paths, opts){
@@ -1586,7 +1604,7 @@ function requestSimulation(p, paths, opts){
   if(!calibrate) latestReqId=reqId;
   return new Promise(resolve=>{
     if(worker){
-      pendingResolvers.set(reqId, resolve);
+      pendingResolvers.set(reqId, {resolve, p, paths});
       worker.postMessage({p,paths,reqId,calibrate});
     } else {
       const t0=performance.now();
@@ -1763,7 +1781,7 @@ function renderScenarioList(){
         '<span class="name">'+sc.name+'</span>'+
         '<span class="stats">edad '+sc.ageMed+' · éxito '+Math.round(sc.successRate*100)+'%</span>'+
         '<button type="button" data-act="load" data-id="'+sc.id+'">Cargar</button>'+
-        '<button type="button" data-act="del" data-id="'+sc.id+'">✕</button>'+
+        '<button type="button" data-act="del" data-id="'+sc.id+'" aria-label="Eliminar escenario">✕</button>'+
       '</li>'
     ).join('');
   }
@@ -1774,10 +1792,18 @@ function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 
+function showScenarioMsg(text){
+  const el2=document.getElementById('scenarioMsg');
+  if(!el2) return;
+  el2.textContent=text;
+  el2.style.display=text?'block':'none';
+  if(text) setTimeout(()=>{ if(el2.textContent===text) el2.style.display='none'; }, 4000);
+}
+
 function saveCurrentScenario(){
   if(!lastSeries){ return; }
   if(savedScenarios.length>=SCENARIO_MAX){
-    alert('Ya hay '+SCENARIO_MAX+' escenarios guardados. Elimina uno antes de guardar otro.');
+    showScenarioMsg('Ya hay '+SCENARIO_MAX+' escenarios guardados. Elimina uno antes de guardar otro.');
     return;
   }
   const nameInput=document.getElementById('scenarioName');
