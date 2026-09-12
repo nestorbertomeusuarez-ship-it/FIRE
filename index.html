@@ -147,6 +147,33 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 }
 .chartModalHead h2{border:none;margin:0;padding:0}
 
+/* ---------- comparar escenarios ---------- */
+.scenarioSave{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.scenarioSave input[type=text]{
+  flex:1;min-width:160px;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);
+  background:var(--paper);border:1px solid var(--hair);padding:9px 10px;
+}
+.scenarioSave input[type=text]:focus-visible{outline:2px solid var(--route);outline-offset:1px}
+.scenarioList{list-style:none;margin:0;padding:0}
+.scenarioItem{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 0;border-bottom:1px solid var(--hair);
+}
+.scenarioItem .swatch{width:12px;height:12px;border-radius:50%;flex:none;background:var(--sc-color)}
+.scenarioItem .name{font-size:13.5px;font-weight:500;flex:1;min-width:120px}
+.scenarioItem .stats{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-2);white-space:nowrap;
+}
+.scenarioItem button{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;
+  background:none;border:1px solid var(--hair);color:var(--ink);
+  padding:4px 9px;cursor:pointer;
+}
+.scenarioItem button:hover{border-color:var(--route);color:var(--route)}
+.scenarioItem input[type=checkbox]{accent-color:var(--sc-color);width:16px;height:16px;flex:none}
+.scenarioEmpty{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-2)}
+
 /* ---------- panel de parámetros ---------- */
 .group{margin-bottom:22px}
 .group > h3{
@@ -299,7 +326,7 @@ body:not(.pro) .pro-only{display:none}
       <canvas id="chart" width="1400" height="800"></canvas>
       <div class="chart-tip" id="chartTip"></div>
     </div>
-    <div class="legend">
+    <div class="legend" id="legend">
       <span><i class="b"></i>P10–P90</span>
       <span><i class="r"></i>Mediana</span>
       <span><i class="t"></i>Objetivo</span>
@@ -319,12 +346,22 @@ body:not(.pro) .pro-only{display:none}
       <canvas id="chartModalCanvas" width="1600" height="900"></canvas>
       <div class="chart-tip" id="chartTipModal"></div>
     </div>
-    <div class="legend">
+    <div class="legend" id="legendModal">
       <span><i class="b"></i>P10–P90</span>
       <span><i class="r"></i>Mediana</span>
       <span><i class="t"></i>Objetivo</span>
     </div>
   </dialog>
+
+  <section>
+    <h2>Comparar escenarios</h2>
+    <div class="scenarioSave">
+      <input type="text" id="scenarioName" placeholder="Nombre (ej. Con Beckham)" maxlength="30">
+      <button type="button" class="reset" id="saveScenario">Guardar escenario actual</button>
+    </div>
+    <ul class="scenarioList" id="scenarioList"></ul>
+    <p class="hint">Guarda hasta 4 configuraciones distintas para superponer sus medianas en el gráfico de arriba. "Cargar" restaura esos parámetros en todos los sliders; "Eliminar" solo lo quita de la lista. Se guardan en este navegador, así que siguen aquí si recargas la página.</p>
+  </section>
 
   <section>
     <h2>Parámetros</h2>
@@ -1249,7 +1286,7 @@ function fireQuantileMonth(fireMonths,q){
 // view={lo,hi} is the visible slice of snapshot indices (zoom/pan); hoverIdx draws
 // a crosshair + point markers at that index (or null for none). Returns the plot
 // geometry so pointer math (hover/zoom/pan) can hit-test without duplicating margins.
-function renderChart(canvas, s, target, view, hoverIdx){
+function renderChart(canvas, s, target, view, hoverIdx, extra){
   if(!canvas || !s || !s.length) return null;
   const dpr=Math.min(window.devicePixelRatio||1,2);
   const cssW=canvas.parentElement.clientWidth || 300;
@@ -1264,6 +1301,7 @@ function renderChart(canvas, s, target, view, hoverIdx){
 
   let max=Math.max(target*1.15,1);
   vis.forEach(v=>max=Math.max(max,v.p90));
+  if(extra) extra.forEach(ex=>{ if(ex.series) ex.series.slice(lo,hi+1).forEach(v=>{ if(v) max=Math.max(max,v.p50); }); });
   const X=i=>L+((i-lo)/(hi-lo))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
 
   c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
@@ -1291,6 +1329,16 @@ function renderChart(canvas, s, target, view, hoverIdx){
   c.save();c.setLineDash([6,5]);c.strokeStyle='#B8791B';c.lineWidth=2;
   c.beginPath();c.moveTo(L,Y(target));c.lineTo(L+w,Y(target));c.stroke();c.restore();
 
+  // Saved comparison scenarios: median only, thinner than the live line below so
+  // the current scenario stays the visual focus even when lines overlap.
+  if(extra) extra.forEach(ex=>{
+    if(!ex.series || !ex.series.length) return;
+    const exVis=ex.series.slice(lo,Math.min(hi,ex.series.length-1)+1);
+    c.strokeStyle=ex.color;c.lineWidth=1.8;c.lineJoin='round';c.beginPath();
+    exVis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));});
+    c.stroke();
+  });
+
   c.strokeStyle='#C6187E';c.lineWidth=2.5;c.lineJoin='round';c.beginPath();
   vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));});c.stroke();
   c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
@@ -1311,13 +1359,13 @@ function renderChart(canvas, s, target, view, hoverIdx){
 // Wires hover-tooltip, wheel-zoom and drag-to-pan onto one canvas, keeping its own
 // view/hover state so the inline chart and the "ampliar" modal chart act independently.
 function makeChartController(canvas, tipEl, resetLinkEl){
-  const state = { series:null, target:0, view:null, hoverIdx:null, geom:null };
+  const state = { series:null, target:0, view:null, hoverIdx:null, geom:null, extra:[] };
 
   function fullView(){ return {lo:0, hi:state.series.length-1}; }
 
   function redraw(){
     if(!state.series || !state.series.length) return;
-    state.geom = renderChart(canvas, state.series, state.target, state.view, state.hoverIdx);
+    state.geom = renderChart(canvas, state.series, state.target, state.view, state.hoverIdx, state.extra);
     if(resetLinkEl){
       const isFull = state.view.lo===0 && state.view.hi===state.series.length-1;
       resetLinkEl.style.display = isFull ? 'none' : 'inline-block';
@@ -1332,6 +1380,7 @@ function makeChartController(canvas, tipEl, resetLinkEl){
   }
   function setView(v){ if(v && state.series) state.view={...v}; redraw(); }
   function getView(){ return state.view ? {...state.view} : null; }
+  function setExtra(list){ state.extra=list||[]; redraw(); }
 
   function indexFromClientX(clientX){
     if(!state.geom) return null;
@@ -1478,7 +1527,7 @@ function makeChartController(canvas, tipEl, resetLinkEl){
   }
   window.addEventListener('resize', ()=>redraw());
 
-  return {update, setView, getView};
+  return {update, setView, getView, setExtra};
 }
 
 // The simulation runs off the main thread so dragging sliders / the chart tooltip
@@ -1567,7 +1616,7 @@ async function runFullPrecision(p){
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
 const calcLoadingEl=document.getElementById('calcLoading');
-let lastSeries=null, lastTarget=0;
+let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0;
 
 async function run(mode){
   const t0=performance.now(), p=readParams();
@@ -1585,6 +1634,8 @@ async function run(mode){
   const pathsUsed=r.fireMonthAll.length;
   const successRate=r.fireMonths.length/pathsUsed;
 
+  lastAgeMedText=fm50===null?'—':String(Math.floor(p.ageNow+yearFrac(fm50)));
+  lastSuccessRate=successRate;
   document.getElementById('ageMed').textContent=fm50===null?'—':Math.floor(p.ageNow+yearFrac(fm50));
   document.getElementById('yearMed').textContent=fm50===null?'no FIRE exitoso':ymdLabel(fm50)+' · P50 · éxito '+Math.round(successRate*100)+'%';
   document.getElementById('ageP10').textContent=fm10===null?'—':Math.floor(p.ageNow+yearFrac(fm10));
@@ -1668,6 +1719,116 @@ document.getElementById('expandChart').addEventListener('click',()=>{
   if(lastSeries){ modalChart.update(lastSeries,lastTarget); modalChart.setView(mainChart.getView()); }
 });
 document.getElementById('closeChartModal').addEventListener('click',()=>{ chartModalEl.close(); });
+
+// ---- Comparar escenarios: pure UI/state, never touches simulate() ----
+const SCENARIO_MAX=4;
+const SCENARIO_COLORS=['#1F7A4D','#2E6F9E','#0E7C86','#6B4FA0'];
+const SCENARIO_STORAGE_KEY='fireSimScenarios';
+let savedScenarios=[];
+try{
+  const raw=localStorage.getItem(SCENARIO_STORAGE_KEY);
+  if(raw) savedScenarios=JSON.parse(raw)||[];
+}catch(e){ savedScenarios=[]; }
+
+function persistScenarios(){
+  try{ localStorage.setItem(SCENARIO_STORAGE_KEY, JSON.stringify(savedScenarios)); }catch(e){}
+}
+
+function refreshScenarioOverlays(){
+  const visible=savedScenarios.filter(sc=>sc.visible!==false);
+  const forChart=visible.map(sc=>({color:sc.color, series:sc.series}));
+  mainChart.setExtra(forChart);
+  modalChart.setExtra(forChart);
+  [document.getElementById('legend'), document.getElementById('legendModal')].forEach(legendEl=>{
+    if(!legendEl) return;
+    legendEl.querySelectorAll('.scenarioLegendItem').forEach(el2=>el2.remove());
+    visible.forEach(sc=>{
+      const span=document.createElement('span');
+      span.className='scenarioLegendItem';
+      span.innerHTML='<i style="background:'+sc.color+'"></i>'+sc.name;
+      legendEl.appendChild(span);
+    });
+  });
+}
+
+function renderScenarioList(){
+  const ul=document.getElementById('scenarioList');
+  if(!savedScenarios.length){
+    ul.innerHTML='<li class="scenarioEmpty">Todavía no has guardado ningún escenario.</li>';
+  } else {
+    ul.innerHTML=savedScenarios.map(sc=>
+      '<li class="scenarioItem" style="--sc-color:'+sc.color+'">'+
+        '<input type="checkbox" data-act="toggle" data-id="'+sc.id+'" '+(sc.visible!==false?'checked':'')+'>'+
+        '<span class="swatch"></span>'+
+        '<span class="name">'+sc.name+'</span>'+
+        '<span class="stats">edad '+sc.ageMed+' · éxito '+Math.round(sc.successRate*100)+'%</span>'+
+        '<button type="button" data-act="load" data-id="'+sc.id+'">Cargar</button>'+
+        '<button type="button" data-act="del" data-id="'+sc.id+'">✕</button>'+
+      '</li>'
+    ).join('');
+  }
+  refreshScenarioOverlays();
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function saveCurrentScenario(){
+  if(!lastSeries){ return; }
+  if(savedScenarios.length>=SCENARIO_MAX){
+    alert('Ya hay '+SCENARIO_MAX+' escenarios guardados. Elimina uno antes de guardar otro.');
+    return;
+  }
+  const nameInput=document.getElementById('scenarioName');
+  const name=escapeHtml((nameInput.value||'').trim() || ('Escenario '+(savedScenarios.length+1)));
+  const usedColors=new Set(savedScenarios.map(sc=>sc.color));
+  const color=SCENARIO_COLORS.find(c=>!usedColors.has(c)) || SCENARIO_COLORS[savedScenarios.length%SCENARIO_COLORS.length];
+  savedScenarios.push({
+    id:'sc'+Date.now()+Math.random().toString(36).slice(2,7),
+    name, color, visible:true,
+    series:lastSeries, target:lastTarget,
+    ageMed:lastAgeMedText, successRate:lastSuccessRate,
+    params:readParams()
+  });
+  nameInput.value='';
+  persistScenarios();
+  renderScenarioList();
+}
+
+function loadScenario(id){
+  const sc=savedScenarios.find(x=>x.id===id);
+  if(!sc) return;
+  ids.forEach(k=>{
+    const n=el[k]; if(!n || !(k in sc.params)) return;
+    if(n.type==='checkbox') n.checked=sc.params[k]; else n.value=sc.params[k];
+  });
+  document.body.classList.toggle('pro', !!sc.params.proMode);
+  initVisibleLabels();
+  run('full');
+}
+
+function deleteScenario(id){
+  savedScenarios=savedScenarios.filter(x=>x.id!==id);
+  persistScenarios();
+  renderScenarioList();
+}
+
+document.getElementById('saveScenario').addEventListener('click', saveCurrentScenario);
+document.getElementById('scenarioList').addEventListener('click', e=>{
+  const btn=e.target.closest('button[data-act]');
+  if(!btn) return;
+  const id=btn.getAttribute('data-id');
+  if(btn.getAttribute('data-act')==='load') loadScenario(id);
+  else if(btn.getAttribute('data-act')==='del') deleteScenario(id);
+});
+document.getElementById('scenarioList').addEventListener('change', e=>{
+  const cb=e.target.closest('input[data-act="toggle"]');
+  if(!cb) return;
+  const sc=savedScenarios.find(x=>x.id===cb.getAttribute('data-id'));
+  if(sc){ sc.visible=cb.checked; persistScenarios(); refreshScenarioOverlays(); }
+});
+renderScenarioList();
 
 ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
 document.body.classList.toggle('pro',DEFAULTS.proMode);
