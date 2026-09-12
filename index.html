@@ -505,10 +505,24 @@ body:not(.pro) .pro-only{display:none}
         <input type="range" id="taxRepatDelay" min="0" max="20" step="1">
       </div>
       <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="beckhamOn">
+        <label for="beckhamOn">Acogido a la Ley Beckham (régimen de impatriados)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="beckhamYears">Duración del régimen (años)</label><output id="beckhamYears_o"></output></div>
+        <p class="hint">Mientras dura (el año del cambio de residencia y los cinco siguientes, 6 en total), tributas como no residente: solo se gravan rentas y bienes situados en España. Como este simulador asume que tu cartera está fuera de España, mientras el régimen esté activo se suspenden tanto el IRPF sobre plusvalías como el impuesto de patrimonio.</p>
+        <input type="range" id="beckhamYears" min="1" max="6" step="1">
+      </div>
+      <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="wealthTaxOn">
         <label for="wealthTaxOn">Aplicar impuesto de patrimonio</label>
       </div>
       <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="ccaaPreset">Comunidad autónoma (rellena mínimo/bonificación)</label><output id="ccaaPreset_o"></output></div>
+        <p class="hint">Un atajo, no una fuente de verdad: al elegir una comunidad se rellenan los dos sliders de abajo con cifras orientativas de 2025, pero puedes seguir ajustándolos a mano. La normativa autonómica cambia con frecuencia — verifica siempre el valor vigente.</p>
+        <input type="range" id="ccaaPreset" min="0" max="4" step="1">
+      </div>
+      <div class="ctrl">
         <div class="row"><label for="wealthExempt">Mínimo exento (€)</label><output id="wealthExempt_o"></output></div>
         <p class="hint">El impuesto de patrimonio es un pago anual sobre lo que posees (no sobre lo que ganas), por encima de un mínimo exento. Se cobra cada diciembre mientras seas residente fiscal en España.</p>
         <input type="range" id="wealthExempt" min="500000" max="3000000" step="50000">
@@ -517,7 +531,17 @@ body:not(.pro) .pro-only{display:none}
         <div class="row"><label for="wealthRate">Tipo medio anual sobre el exceso</label><output id="wealthRate_o"></output></div>
         <input type="range" id="wealthRate" min="0" max="3.5" step="0.05">
       </div>
-      <p class="note">El "año de repatriación" se cuenta desde la fecha FIRE de cada ruta, no como un año fijo: el FIRE es first-passage y varía ruta a ruta. Los impuestos se detraen directamente de la cartera, así que todas las cifras que ves arriba ya quedan netas.</p>
+      <div class="ctrl">
+        <div class="row"><label for="wealthBonusPct">Bonificación sobre la cuota</label><output id="wealthBonusPct_o"></output></div>
+        <p class="hint">Varias comunidades (Madrid, Andalucía, Cantabria, Extremadura) no cambian el mínimo exento sino que bonifican el 100 % de la cuota resultante — el impuesto sale a pagar 0 € aunque tengas mucho patrimonio.</p>
+        <input type="range" id="wealthBonusPct" min="0" max="100" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="mortgageBalance">Hipoteca pendiente (saldo actual, €)</label><output id="mortgageBalance_o"></output></div>
+        <p class="hint">La base del impuesto de patrimonio es tu patrimonio neto (bienes menos deudas), no el bruto. Este saldo se amortiza en línea recta hasta 0 en el año de "Fin de hipoteca" que fijaste en Gastos.</p>
+        <input type="range" id="mortgageBalance" min="0" max="500000" step="5000">
+      </div>
+      <p class="note">El "año de repatriación" se cuenta desde la fecha FIRE de cada ruta, no como un año fijo: el FIRE es first-passage y varía ruta a ruta. Los impuestos se detraen directamente de la cartera, así que todas las cifras que ves arriba ya quedan netas. Los mínimos/bonificaciones por comunidad son orientativos (2025): Madrid/Andalucía/Cantabria/Extremadura bonifican el 100 %, Cataluña fija 500.000 € de mínimo, Comunidad Valenciana 1.000.000 € — confírmalo con tu asesor antes de tomar decisiones.</p>
     </div>
 
     <div class="group pro-only">
@@ -738,7 +762,8 @@ const DEFAULTS = {
   proMode:false,
   // fiscalidad España
   taxOn:false, taxRate:19, taxRepatDelay:2,
-  wealthTaxOn:false, wealthExempt:700000, wealthRate:0.5,
+  beckhamOn:false, beckhamYears:6,
+  wealthTaxOn:false, ccaaPreset:0, wealthExempt:700000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
   // inflación / FX estocásticos
   fxVolOn:false, fxVol:4, fxMeanRevert:20,
   inflOn:false, inflVol:1.2,
@@ -858,8 +883,12 @@ function paintLabels(p){
   // ---- Modo PRO ----
   set('taxRate',p.taxRate.toFixed(1)+' %');
   set('taxRepatDelay',p.taxRepatDelay+(p.taxRepatDelay===1?' año':' años'));
+  set('beckhamYears',p.beckhamYears+(p.beckhamYears===1?' año':' años'));
+  set('ccaaPreset',['General (sin bonificación)','Madrid','Andalucía','Cataluña','C. Valenciana'][Math.round(p.ccaaPreset)]);
   set('wealthExempt',eur(p.wealthExempt));
   set('wealthRate',p.wealthRate.toFixed(2)+' %/año');
+  set('wealthBonusPct',p.wealthBonusPct.toFixed(0)+' %');
+  set('mortgageBalance',eur(p.mortgageBalance));
   set('fxVol',p.fxVol.toFixed(1)+' %/año');
   set('fxMeanRevert',p.fxMeanRevert.toFixed(0)+' %/año');
   set('inflVol',p.inflVol.toFixed(1)+' %/año');
@@ -936,8 +965,12 @@ function simulate(p, paths){
   const glideActive=p.proMode && p.glideOn;
   const taxActive=p.proMode && p.taxOn;
   const wealthTaxActive=p.proMode && p.wealthTaxOn;
+  const beckhamActive=p.proMode && p.beckhamOn;
+  const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
   const fxVolActive=p.proMode && p.fxVolOn;
   const inflActive=p.proMode && p.inflOn;
+  // Mortgage balance amortizes in a straight line to 0 by the end of hipEnd's year.
+  const mortgageMonths=Math.max(1, monthIndex(p.hipEnd,12)+1);
   const strat=p.proMode ? Math.round(p.wdStrategy) : 0;
   const lifeActive=p.proMode && p.lifeExpOn;
   // yearFrac(i) is exactly i/12 by construction of monthIndex, so the month a given
@@ -968,7 +1001,7 @@ function simulate(p, paths){
     let vEq=p.startEq, vBtc=p.startBtc, vProv=0;
     let vGold=goldActive?p.startGold:0, vCons=0, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false;
-    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false;
+    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1;
     const startBase=monthIndex(CAREER_YEAR,CAREER_MONTH);
     // non-negative truncated delays; central date remains the user's selected value
     const startDelay=Math.max(0,Math.round(normal(0,p.startDelay)));
@@ -1051,6 +1084,12 @@ function simulate(p, paths){
       // Brazil: monthly receipts across the chosen liquidation window, not an annual lump.
       if(p.brOn && d.y>=p.brStart && d.y<p.brStart+p.brYears) net+=p.brNet/(p.brYears*12);
 
+      // Computed here (not just inside the retirement branch below) so the wealth
+      // tax check further down — which runs regardless of the retired/working
+      // branch, and even past the esperanza de vida cutoff — can also see whether
+      // the Ley Beckham window is still open.
+      const inBeckham=beckhamActive && spanishResidentMonth>=0 && (i-spanishResidentMonth)<p.beckhamYears*12;
+
       if(!retired){
         if(net>=0){
           const wBtc=p.btcAporte/100;
@@ -1106,10 +1145,14 @@ function simulate(p, paths){
           wd=Math.max(0, wd-p.baristaIncome/12);
         }
 
-        if(taxActive){
-          if(!spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12) spanishResident=true;
-          if(spanishResident) wd=wd/(1-p.taxRate/100);
+        if(fiscalityActive && !spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12){
+          spanishResident=true;
+          spanishResidentMonth=i;
         }
+        // Ley Beckham: taxed as a non-resident for its window (year of the move + 5
+        // more) — foreign-sourced income/wealth (this model's whole portfolio) is
+        // excluded, so both the capital-gains gross-up and the wealth tax pause here.
+        if(taxActive && spanishResident && !inBeckham) wd=wd/(1-p.taxRate/100);
 
         let deficit=wd;
         const fromCons=Math.min(vCons,deficit); vCons-=fromCons; deficit-=fromCons;
@@ -1122,11 +1165,15 @@ function simulate(p, paths){
       }
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
-      if(wealthTaxActive && spanishResident && d.isSnap){
+      if(wealthTaxActive && spanishResident && !inBeckham && d.isSnap){
         const totalWealth=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
-        const excess=Math.max(0,totalWealth-p.wealthExempt);
+        // Debts reduce the taxable base (patrimonio neto, Ley 19/1991 art. 9): the
+        // mortgage balance amortizes in a straight line to 0 by hipEnd.
+        const debtNow=p.mortgageBalance>0 ? p.mortgageBalance*Math.max(0,1-i/mortgageMonths) : 0;
+        const netWealth=Math.max(0, totalWealth-debtNow);
+        const excess=Math.max(0,netWealth-p.wealthExempt);
         if(excess>0){
-          let due=excess*(p.wealthRate/100);
+          let due=excess*(p.wealthRate/100)*(1-p.wealthBonusPct/100);
           const fromCons=Math.min(vCons,due); vCons-=fromCons; due-=fromCons;
           const fromEq=Math.min(vEq,due); vEq-=fromEq; due-=fromEq;
           const fromGold=Math.min(vGold,due); vGold-=fromGold; due-=fromGold;
@@ -1568,7 +1615,8 @@ async function run(mode){
     const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'];
     calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
     if(p.taxOn) calcTxt+=' · fiscalidad ES activa (tipo medio '+p.taxRate.toFixed(1)+'%, repat. +'+p.taxRepatDelay+'a)';
-    if(p.wealthTaxOn) calcTxt+=' · patrimonio > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año';
+    if(p.beckhamOn) calcTxt+=' · Ley Beckham activa ('+p.beckhamYears+'a, IRPF y patrimonio en pausa)';
+    if(p.wealthTaxOn) calcTxt+=' · patrimonio neto > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año'+(p.wealthBonusPct>0?' (bonif. '+p.wealthBonusPct.toFixed(0)+'%)':'')+(p.mortgageBalance>0?' (deuda deducida)':'');
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
     if(p.inflOn) calcTxt+=' · inflación estocástica';
     if(p.glideOn) calcTxt+=' · glide path activo';
@@ -1592,6 +1640,22 @@ ids.forEach(k=>{
   else { n.addEventListener('input',scheduleFull); }
 });
 el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+// ccaaPreset is a UI shortcut, not a simulate() input: it just pre-fills the two
+// sliders that actually drive the calculation, which stay editable afterward.
+const CCAA_PRESETS=[
+  {exempt:700000, bonus:0},   // General (sin bonificación)
+  {exempt:700000, bonus:100}, // Madrid
+  {exempt:700000, bonus:100}, // Andalucía
+  {exempt:500000, bonus:0},   // Cataluña
+  {exempt:1000000, bonus:0}   // C. Valenciana
+];
+el.ccaaPreset.addEventListener('input',()=>{
+  const preset=CCAA_PRESETS[Math.round(parseFloat(el.ccaaPreset.value))];
+  if(!preset) return;
+  el.wealthExempt.value=preset.exempt;
+  el.wealthBonusPct.value=preset.bonus;
+  paintLabels(readParams());
+});
 document.getElementById('reset').addEventListener('click',()=>{
   ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
   document.body.classList.toggle('pro',DEFAULTS.proMode);
