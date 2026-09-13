@@ -325,6 +325,17 @@ body:not(.pro) .pro-only{display:none}
   </section>
 
   <section>
+    <h2>Riesgo de ruina tras el FIRE</h2>
+    <table>
+      <thead>
+        <tr><th>Años desde el FIRE</th><th>% de rutas ya arruinadas</th></tr>
+      </thead>
+      <tbody id="ruinTable"></tbody>
+    </table>
+    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación (2092), sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
+  </section>
+
+  <section>
     <div class="chartHead">
       <h2>Trayectoria</h2>
       <div class="chartTools">
@@ -361,6 +372,23 @@ body:not(.pro) .pro-only{display:none}
       <span><i class="t"></i>Objetivo</span>
     </div>
     <p class="hint">De la ruta mediana: "aportado" es el efectivo neto que metes (o retiras) tú — sueldo ahorrado, profit sharing, Burriana/Brasil, menos gasto e hipoteca; "rendimiento" es lo que crece por sí solo con el mercado, encima de eso. A diferencia del gráfico de arriba, este usa escala lineal a propósito: el objetivo es ver cómo el rendimiento acaba superando a lo aportado, no leer cifras exactas de la cola lejana. Pasa el ratón (o el dedo) para ver los valores de cada año; rueda del ratón para hacer zoom, arrastra para desplazarte.</p>
+  </section>
+
+  <section>
+    <div class="chartHead">
+      <h2>Probabilidad acumulada de ruina desde el FIRE</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomResetRuin" style="display:none">Restablecer zoom</a>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="ruinChartCanvas" width="1400" height="700"></canvas>
+      <div class="chart-tip" id="ruinChartTip"></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#B8791B"></i>% de rutas FIRE ya arruinadas</span>
+    </div>
+    <p class="hint">La misma tabla de arriba, pero como curva continua año a año en vez de solo unos hitos — así se ve la forma completa: si el riesgo crece deprisa nada más jubilarte o se acumula despacio con el tiempo. La curva se corta donde quedan demasiadas pocas rutas con suficiente horizonte restante para seguir midiendo con fiabilidad, en vez de inventar una cola. Pasa el ratón para ver el año exacto; rueda del ratón para hacer zoom, arrastra para desplazarte.</p>
   </section>
 
   <dialog class="chartModal" id="chartModal">
@@ -1141,6 +1169,11 @@ function simulate(p, paths){
   const contribVals=annualSnapshots.map(()=>new Float64Array(paths));
   const fireMonth=new Int32Array(paths); fireMonth.fill(-1);
   const ruined=new Uint8Array(paths);
+  // Month a route actually goes broke, so callers can ask "how many years
+  // after FIRE" rather than just whether it happened at all. -1 until set;
+  // ruin is an absorbing state (retired never goes back to true afterward),
+  // so this is written at most once per path.
+  const ruinMonth=new Int32Array(paths); ruinMonth.fill(-1);
   const finalVal=new Float64Array(paths);
 
   for(let k=0;k<paths;k++){
@@ -1364,7 +1397,7 @@ function simulate(p, paths){
         // multiplication, so a fully-covered deficit can land on a tiny positive
         // float (e.g. 5e-14) instead of exactly 0 — a cent-scale tolerance keeps
         // that noise from being misread as a genuine shortfall and ruining the path.
-        if(deficit>1e-6){ ruinedPath=true; retired=false; }
+        if(deficit>1e-6){ ruinedPath=true; retired=false; ruinMonth[k]=i; }
       }
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
@@ -1448,7 +1481,7 @@ function simulate(p, paths){
   for(let k=0;k<paths;k++) if(fireMonth[k]>=0 && !ruined[k]) successBuf[successCount++]=fireMonth[k];
   const successful=successBuf.subarray(0,successCount);
 
-  return {series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,annualSnapshots};
+  return {series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots};
 }
 
 function firstYear(series,key,target){
@@ -1459,6 +1492,46 @@ function fireQuantileMonth(fireMonths,q){
   if(!fireMonths.length) return null;
   const a=Int32Array.from(fireMonths).sort();
   return a[Math.floor((a.length-1)*q)];
+}
+
+const RUIN_MAX_YEARS=45; // reasonable retirement span; beyond this too few routes have enough runway left before END_YEAR to say anything
+const RUIN_MILESTONES=[1,5,10,15,20,25,30];
+
+// Cumulative probability of ruin by each year since FIRE, among routes that
+// actually reached FIRE. Ruin is an absorbing state (a route never goes back
+// to "retired" once ruined), so a route's ruined-by-year-y status is exactly
+// knowable whenever its own horizon runway covers year y — no need for a
+// Kaplan-Meier-style estimator, just restrict each year's denominator to the
+// routes with enough runway ("at risk") instead of pretending routes that
+// simply ran out of simulated time survived.
+function buildRuinCurve(r, pathsUsed){
+  const minSample=Math.max(30, Math.round(pathsUsed*0.01));
+  const curve=[];
+  for(let y=1;y<=RUIN_MAX_YEARS;y++){
+    let atRisk=0, ruinedByY=0;
+    for(let k=0;k<pathsUsed;k++){
+      const fm=r.fireMonthAll[k];
+      if(fm<0) continue;
+      const cutoff=fm+y*12;
+      if(cutoff>MONTHS-1) continue; // this route's simulated horizon doesn't reach year y post-FIRE
+      atRisk++;
+      if(r.ruinMonth[k]>=0 && r.ruinMonth[k]<=cutoff) ruinedByY++;
+    }
+    curve.push({y, atRisk, pct: atRisk>=minSample ? ruinedByY/atRisk : null});
+  }
+  return curve;
+}
+
+function renderRuinTable(curve){
+  const el=document.getElementById('ruinTable');
+  if(!el) return;
+  el.innerHTML=RUIN_MILESTONES.map(y=>{
+    const row=curve.find(c=>c.y===y);
+    const cell = row && row.pct!==null
+      ? `<td>${(row.pct*100).toFixed(0)} %<br><span class="age">n=${row.atRisk.toLocaleString('es-ES')}</span></td>`
+      : '<td class="na">muestra insuficiente</td>';
+    return `<tr><td>${y} ${y===1?'año':'años'}</td>${cell}</tr>`;
+  }).join('');
 }
 
 // "Nice" reference values for a log-scale axis: 1x and 3x each power of ten
@@ -1635,6 +1708,73 @@ function renderContribChart(canvas, series, target, view, hoverIdx){
     c.restore();
     const dot=(val,color)=>{c.beginPath();c.arc(x,Y(val),3.5,0,Math.PI*2);c.fillStyle=color;c.fill();c.strokeStyle='#F1F3F2';c.lineWidth=1.5;c.stroke();};
     dot(contribFor(v),'#2E6F9E'); dot(v.p50,'#1F7A4D');
+  }
+
+  return {L,T,w,h,lo,hi};
+}
+
+// Cumulative probability of ruin by years since FIRE (renderRuinTable's
+// companion chart). Deliberately linear 0-100% Y axis — this is already a
+// bounded percentage, nothing to gain from a log scale. `curve` entries with
+// pct===null (not enough at-risk routes left — see buildRuinCurve) only ever
+// form a trailing run, since the at-risk count shrinks monotonically as the
+// required years-since-FIRE runway grows, so the chart simply stops drawing
+// there rather than extrapolating a number that isn't statistically real.
+function renderRuinChart(canvas, curve, target, view, hoverIdx){
+  if(!canvas || !curve || !curve.length) return null;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const cssW=canvas.parentElement.clientWidth || 300;
+  const cssH=Math.min(Math.round(cssW*.5), 380);
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
+  const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
+  const L=44,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
+
+  let validLen=curve.findIndex(v=>v.pct===null);
+  if(validLen===-1) validLen=curve.length;
+  const data=curve.slice(0,validLen);
+  if(data.length<2) return null; // not enough sample even for year 1 — nothing meaningful to plot
+
+  view = view || {lo:0, hi:data.length-1};
+  const lo=Math.round(Math.max(0,Math.min(view.lo, Math.max(0,data.length-2))));
+  const hi=Math.round(Math.max(lo+1,Math.min(view.hi, data.length-1)));
+  const vis=data.slice(lo,hi+1);
+
+  const X=i=>L+((i-lo)/(hi-lo))*w, Y=pct=>T+h-Math.max(0,Math.min(1,pct/100))*h;
+
+  c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
+  c.font='10px "IBM Plex Mono", monospace'; c.fillStyle='#4A5257';
+  [0,25,50,75,100].forEach(mark=>{
+    const y=Y(mark);
+    c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();
+    c.textAlign='right';c.textBaseline='middle';c.fillText(mark+' %',L-7,y);
+  });
+  c.textAlign='center';c.textBaseline='top';
+  const span=hi-lo;
+  const yearStep = span>30?10:span>10?5:1;
+  for(let i=lo;i<=hi;i++){
+    const v=data[i];
+    if(v.y%yearStep===0){
+      c.fillText(v.y,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+      c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+    }
+  }
+
+  c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.pct*100)):c.moveTo(X(i),Y(v.pct*100));});
+  for(let idx=vis.length-1;idx>=0;idx--) c.lineTo(X(lo+idx),Y(0));
+  c.closePath(); c.fillStyle='rgba(184,121,27,.28)'; c.fill();
+  c.strokeStyle='#B8791B'; c.lineWidth=2; c.lineJoin='round'; c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.pct*100)):c.moveTo(X(i),Y(v.pct*100));}); c.stroke();
+
+  c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
+
+  if(hoverIdx!=null && hoverIdx>=lo && hoverIdx<=hi){
+    const v=data[hoverIdx], x=X(hoverIdx);
+    c.save();
+    c.strokeStyle='rgba(20,24,27,.45)';c.lineWidth=1;c.setLineDash([3,3]);
+    c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();
+    c.restore();
+    c.beginPath();c.arc(x,Y(v.pct*100),3.5,0,Math.PI*2);c.fillStyle='#B8791B';c.fill();c.strokeStyle='#F1F3F2';c.lineWidth=1.5;c.stroke();
   }
 
   return {L,T,w,h,lo,hi};
@@ -1846,7 +1986,7 @@ function buildWorkerSource(){
     '  const t0=performance.now();',
     '  const result=simulate(p,paths);',
     '  const ms=performance.now()-t0;',
-    '  self.postMessage({result,reqId,calibrate,ms}, [result.fireMonthAll.buffer, result.fireMonths.buffer, result.ruined.buffer]);',
+    '  self.postMessage({result,reqId,calibrate,ms}, [result.fireMonthAll.buffer, result.fireMonths.buffer, result.ruined.buffer, result.ruinMonth.buffer]);',
     '};'
   ].join('\n');
 }
@@ -2004,6 +2144,9 @@ const contribChart=makeChartController(document.getElementById('contribChart'), 
   const contrib=Math.max(0,Math.min(v.contrib50,v.p50)), growth=v.p50-contrib;
   return '<b>'+v.year+'</b><br>Total · '+eurK(v.p50)+'<br>Aportado · '+eurK(contrib)+'<br>Rendimiento · '+eurK(growth);
 });
+const ruinChart=makeChartController(document.getElementById('ruinChartCanvas'), document.getElementById('ruinChartTip'), document.getElementById('zoomResetRuin'), renderRuinChart, v=>{
+  return '<b>Año '+v.y+' desde el FIRE</b><br>Ruina acumulada · '+(v.pct*100).toFixed(0)+' %<br>n='+v.atRisk.toLocaleString('es-ES')+' rutas';
+});
 const calcLoadingEl=document.getElementById('calcLoading');
 let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0;
 
@@ -2051,6 +2194,10 @@ async function run(mode){
   let firedCount=0, ruinedAfterFire=0;
   for(let k=0;k<pathsUsed;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
   const ruinRate=firedCount?ruinedAfterFire/firedCount:0;
+
+  const ruinCurve=buildRuinCurve(r, pathsUsed);
+  renderRuinTable(ruinCurve);
+  ruinChart.update(ruinCurve, null);
 
   let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
     Math.round(successRate*100)+' % rutas FIRE exitosas · ruina tras jubilarse '+Math.round(ruinRate*100)+' % · '+
