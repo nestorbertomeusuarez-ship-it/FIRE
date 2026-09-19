@@ -622,6 +622,11 @@ body:not(.pro) .pro-only{display:none}
         <p class="hint">El Provident Scheme no es una plusvalía: al retirarlo, Hacienda lo trata como rendimiento del trabajo (tramos generales de IRPF), normalmente con un tipo más alto que el de plusvalías de arriba. Como cada cubo puede tener su propio tipo, el simulador retira automáticamente primero del que salga más barato — con los valores por defecto (mismo tipo en los dos) esto no cambia nada, es exactamente el orden de siempre.</p>
         <input type="range" id="taxRateProv" min="0" max="47" step="0.5">
       </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="taxBracketsOn">
+        <label for="taxBracketsOn">Usar tramos reales del ahorro (IRPF) en vez de un tipo medio</label>
+      </div>
+      <p class="hint">La base del ahorro tributa por tramos progresivos (19% hasta 6.000 €, 21% hasta 50.000 €, 23% hasta 200.000 €, 27% hasta 300.000 € y 30% a partir de ahí — orientativo, 2025), no a un tipo fijo: retirar una cantidad grande de golpe en un año paga de media más que la misma cantidad repartida en varios años, porque una parte mayor cae en tramos altos. Con esto activo, el "tipo medio efectivo sobre plusvalías" de arriba deja de usarse para la cartera gravable — el tipo emerge de cuánto se retira cada año natural, no de una cifra fija. Solo afecta a la cartera gravable; el Provident sigue con su tipo medio de arriba, porque sus tramos reales (renta del trabajo) son mucho más complejos.</p>
       <div class="ctrl">
         <div class="row"><label for="taxRepatDelay">Años tras el FIRE hasta residencia fiscal en España</label><output id="taxRepatDelay_o" for="taxRepatDelay"></output></div>
         <p class="hint">Se cuenta desde la fecha en que cada ruta alcanza el FIRE, no desde un año de calendario fijo: como el FIRE varía de una ruta a otra, no tendría sentido fijarlo en el tiempo.</p>
@@ -888,6 +893,20 @@ const HIST_EQ_REAL_RETURNS = [0.4633,-0.083,-0.2333,-0.383,0.0136,0.5806,-0.0414
 -0.389,0.264,0.1297,-0.0103,0.1354,0.3025,0.1171,0.0126,0.1038,0.1907,
 -0.0656,0.2894,0.1659,0.227,-0.2411,0.2107,0.2137,0.1462];
 
+// Spanish savings-income ("base del ahorro") tax brackets — orientativo, 2025.
+// upTo is the cumulative gross amount at which each marginal rate stops
+// applying (Hacienda taxes the whole tax year together, so this is a running
+// total across a calendar year, not per withdrawal). Used only by the
+// "tramos reales" toggle under Fiscalidad España — the flat "tipo medio
+// efectivo" slider stays the default.
+const SAVINGS_TAX_BRACKETS=[
+  {upTo:6000,     rate:0.19},
+  {upTo:50000,    rate:0.21},
+  {upTo:200000,   rate:0.23},
+  {upTo:300000,   rate:0.27},
+  {upTo:Infinity, rate:0.30},
+];
+
 const DEFAULTS = {
   ageNow:28,
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
@@ -901,7 +920,7 @@ const DEFAULTS = {
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
-  taxOn:false, taxRate:19, taxRateProv:19, taxRepatDelay:2,
+  taxOn:false, taxRate:19, taxRateProv:19, taxBracketsOn:false, taxRepatDelay:2,
   beckhamOn:false, beckhamYears:6,
   wealthTaxOn:false, ccaaPreset:0, wealthExempt:700000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
   // inflación / FX estocásticos
@@ -1111,6 +1130,7 @@ function simulate(p, paths){
   const reActive=p.proMode && p.reOn;
   const glideActive=p.proMode && p.glideOn;
   const taxActive=p.proMode && p.taxOn;
+  const taxBracketsActive=taxActive && p.taxBracketsOn;
   const wealthTaxActive=p.proMode && p.wealthTaxOn;
   const beckhamActive=p.proMode && p.beckhamOn;
   const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
@@ -1149,6 +1169,49 @@ function simulate(p, paths){
   function netTaken(oldBal, newBal, ratePct){
     const gross=oldBal-newBal;
     return ratePct>0 ? gross*(1-ratePct/100) : gross;
+  }
+
+  // Marginal rate for the next euro of gravable withdrawal, given how much
+  // gross has already come out of that bucket this calendar year — used both
+  // to tax the progressive-bracket cascade and (as a stand-in for the flat
+  // rate) to decide whether Provident or the gravable bucket is cheaper to
+  // draw from first this month.
+  function marginalRate(grossSoFar, brackets){
+    for(const b of brackets) if(grossSoFar<b.upTo) return b.rate;
+    return brackets[brackets.length-1].rate;
+  }
+  // Same job as takeGross+netTaken but progressive: consumes needNet starting
+  // from wherever this year's cumulative gravable withdrawal (yearSoFarGross)
+  // already sits in the bracket table, walking forward through brackets at
+  // their own marginal rate instead of a single flat one. Hacienda taxes the
+  // whole tax year together, not each withdrawal separately, so a small
+  // monthly draw and a single annual lump sum of the same total size end up
+  // taxed identically here — which is the point: only concentrating a much
+  // bigger total into fewer, richer years pushes more of it into high brackets.
+  function withdrawProgressive(bal, needNet, yearSoFarGross, brackets){
+    let netNeed=needNet, grossTaken=0, cursor=yearSoFarGross;
+    for(const {upTo,rate} of brackets){
+      if(netNeed<=0 || cursor>=upTo) continue;
+      const netPerGross=1-rate;
+      const roomNet = upTo===Infinity ? Infinity : (upTo-cursor)*netPerGross;
+      const netHere=Math.min(netNeed, roomNet, (bal-grossTaken)*netPerGross);
+      const grossHere=netPerGross>0 ? netHere/netPerGross : 0;
+      grossTaken+=grossHere; cursor+=grossHere; netNeed-=netHere;
+    }
+    return {grossTaken, netGot:needNet-netNeed, newCursor:cursor};
+  }
+  // Draws from a gravable (capital-gains-taxed) bucket, dispatching to the
+  // progressive or flat model depending on useBrackets (passed in per call
+  // rather than read from an outer flag, since whether brackets actually
+  // apply this month also depends on residency/Ley Beckham timing, not just
+  // whether the toggle is checked).
+  function drawGravable(bal, needNet, gravRate, yearSoFarGross, useBrackets){
+    if(useBrackets){
+      const res=withdrawProgressive(bal, needNet, yearSoFarGross, SAVINGS_TAX_BRACKETS);
+      return {bal:bal-res.grossTaken, netGot:res.netGot, yearSoFarGross:res.newCursor};
+    }
+    const nb=takeGross(bal, needNet, gravRate);
+    return {bal:nb, netGot:netTaken(bal,nb,gravRate), yearSoFarGross};
   }
 
   const gold=goldActive ? logParams(Math.pow(1+p.goldRet/100,1/12)-1, p.goldVol/100/Math.sqrt(12)) : null;
@@ -1199,11 +1262,17 @@ function simulate(p, paths){
     // of-returns risk that a parametric model can't reproduce.
     let histPos=histActive ? Math.floor(Math.random()*HIST_EQ_REAL_RETURNS.length) : 0;
     let histMonthlyR=histActive ? Math.pow(1+HIST_EQ_REAL_RETURNS[histPos],1/12)-1 : 0;
+    // Gross gravable-bucket withdrawals so far this calendar year, for the
+    // progressive-bracket withdrawal mode — Hacienda taxes savings income per
+    // tax year, not per transaction, so which bracket a given euro falls into
+    // depends on how much has already been withdrawn since January.
+    let curYearGrossGravable=0;
 
     let snap=0;
     for(let i=0;i<months;i++){
       const d=MONTH_DATES[i];
       const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+      if(d.m===1) curYearGrossGravable=0;
       if(histActive && i>0 && d.m===1){
         histPos=(histPos+1)%HIST_EQ_REAL_RETURNS.length;
         histMonthlyR=Math.pow(1+HIST_EQ_REAL_RETURNS[histPos],1/12)-1;
@@ -1381,17 +1450,23 @@ function simulate(p, paths){
         // rates (the default) provFirst is false and the order is exactly the
         // original vCons→vEq→vProv→vGold→vBtc→vRE cascade.
         const taxNow=taxActive && spanishResident && !inBeckham;
+        const bracketsNow=taxNow && taxBracketsActive;
         const gravRate=taxNow ? p.taxRate : 0;
         const provRate=taxNow ? p.taxRateProv : 0;
-        const provFirst=provRate<gravRate;
+        // With progressive brackets there's no single "the" gravable rate —
+        // use the marginal rate on the next euro (given what's already come
+        // out of that bucket this calendar year) as the stand-in for deciding
+        // whether Provident is cheaper to draw from first this month.
+        const gravRateForOrder=bracketsNow ? marginalRate(curYearGrossGravable, SAVINGS_TAX_BRACKETS) : gravRate;
+        const provFirst=provRate<gravRateForOrder;
 
-        let deficit=wd, nb;
+        let deficit=wd, nb, gres;
         if(provFirst){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
-        if(deficit>0){ nb=takeGross(vCons,deficit,gravRate); deficit-=netTaken(vCons,nb,gravRate); vCons=nb; }
-        if(deficit>0){ nb=takeGross(vEq,deficit,gravRate); deficit-=netTaken(vEq,nb,gravRate); vEq=nb; }
-        if(deficit>0 && goldActive){ nb=takeGross(vGold,deficit,gravRate); deficit-=netTaken(vGold,nb,gravRate); vGold=nb; }
-        if(deficit>0){ nb=takeGross(vBtc,deficit,gravRate); deficit-=netTaken(vBtc,nb,gravRate); vBtc=nb; }
-        if(deficit>0 && reActive && p.reCountsFire){ nb=takeGross(vRE,deficit,gravRate); deficit-=netTaken(vRE,nb,gravRate); vRE=nb; }
+        gres=drawGravable(vCons,deficit,gravRate,curYearGrossGravable,bracketsNow); vCons=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross;
+        if(deficit>0){ gres=drawGravable(vEq,deficit,gravRate,curYearGrossGravable,bracketsNow); vEq=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
+        if(deficit>0 && goldActive){ gres=drawGravable(vGold,deficit,gravRate,curYearGrossGravable,bracketsNow); vGold=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
+        if(deficit>0){ gres=drawGravable(vBtc,deficit,gravRate,curYearGrossGravable,bracketsNow); vBtc=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
+        if(deficit>0 && reActive && p.reCountsFire){ gres=drawGravable(vRE,deficit,gravRate,curYearGrossGravable,bracketsNow); vRE=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
         if(!provFirst && deficit>0){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
         // Each cascade step round-trips through a gross-up/net-back division and
         // multiplication, so a fully-covered deficit can land on a tiny positive
@@ -1974,6 +2049,9 @@ function buildWorkerSource(){
     'const FS1_GAP='+FS1_GAP+';',
     'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
     'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
+    // Plain JS source (not JSON.stringify) because the top bracket's upTo is
+    // Infinity, which JSON would silently turn into null.
+    'const SAVINGS_TAX_BRACKETS=['+SAVINGS_TAX_BRACKETS.map(b=>'{upTo:'+(b.upTo===Infinity?'Infinity':b.upTo)+',rate:'+b.rate+'}').join(',')+'];',
     'const MONTHS=MONTH_DATES.length;',
     'let spare=null;',
     'const monthIndex='+monthIndex.toString()+';',
@@ -2210,6 +2288,7 @@ async function run(mode){
     calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
     if(p.taxOn) calcTxt+=' · fiscalidad ES activa (tipo medio '+p.taxRate.toFixed(1)+'%, repat. +'+p.taxRepatDelay+'a)';
     if(p.taxOn && p.taxRateProv!==p.taxRate) calcTxt+=' · retirada optimizada: '+(p.taxRateProv<p.taxRate?'Provident antes que la cartera':'cartera antes que el Provident')+' ('+p.taxRateProv.toFixed(1)+'% vs '+p.taxRate.toFixed(1)+'%)';
+    if(p.taxOn && p.taxBracketsOn) calcTxt+=' · cartera gravable: tramos reales del ahorro (19-30%), no tipo medio';
     if(p.beckhamOn) calcTxt+=' · Ley Beckham activa ('+p.beckhamYears+'a, IRPF y patrimonio en pausa)';
     if(p.wealthTaxOn) calcTxt+=' · patrimonio neto > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año'+(p.wealthBonusPct>0?' (bonif. '+p.wealthBonusPct.toFixed(0)+'%)':'')+(p.mortgageBalance>0?' (deuda deducida)':'');
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
