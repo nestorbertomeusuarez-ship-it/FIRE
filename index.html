@@ -918,25 +918,25 @@ const DEFAULTS = {
   basicFO:26485, basicCA:40100, provCo:12, provOn:true, gratuityYears:0,
 
   // ---- Modo PRO ----
-  proMode:false,
+  proMode:true,
   // fiscalidad España
-  taxOn:false, taxRate:19, taxRateProv:19, taxBracketsOn:false, taxRepatDelay:2,
-  beckhamOn:false, beckhamYears:6,
-  wealthTaxOn:false, ccaaPreset:0, wealthExempt:700000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
+  taxOn:true, taxRate:19, taxRateProv:19, taxBracketsOn:true, taxRepatDelay:2,
+  beckhamOn:true, beckhamYears:6,
+  wealthTaxOn:true, ccaaPreset:3, wealthExempt:500000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
   // inflación / FX estocásticos
-  fxVolOn:false, fxVol:4, fxMeanRevert:20,
-  inflOn:false, inflVol:1.2,
+  fxVolOn:true, fxVol:4, fxMeanRevert:20,
+  inflOn:true, inflVol:1.2,
   // estrategia de retirada
-  wdStrategy:0,
+  wdStrategy:1,
   gkGuard:20, gkCut:10, gkRaise:10, gkFreq:12,
   goGoMult:115, goGoYears:10, slowGoMult:90, slowGoYears:10, noGoMult:100,
   // activos y allocation adicionales
   startGold:0, goldRet:1.5, goldVol:15, goldRho:-10, goldAporte:0,
   reOn:false, reValue:0, reYield:3.5, reAppr:1, reCountsFire:false,
-  glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4,
+  glideOn:true, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4,
   // esperanza de vida y FIRE parcial
-  lifeExpOn:false, lifeExp:90,
-  baristaOn:false, baristaIncome:12000, baristaYears:5
+  lifeExpOn:true, lifeExp:90,
+  baristaOn:true, baristaIncome:12000, baristaYears:5
 };
 
 // Full-precision runs use an adaptive path count instead of a fixed one: cost per
