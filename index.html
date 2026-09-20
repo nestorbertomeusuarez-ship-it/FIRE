@@ -431,7 +431,7 @@ body:not(.pro) .pro-only{display:none}
 
   <section>
     <h2>Backtest histórico secuencial (retirada)</h2>
-    <p class="grouphint">Una prueba distinta a todo lo de arriba: en vez de simular tu carrera hasta el FIRE, imagina que YA tienes un capital hoy y quieres saber si habría aguantado retirando una cantidad fija (ajustada a inflación) durante todos y cada uno de los periodos históricos reales — exactamente la prueba "¿me bastan 600.000€?" de la que parte este análisis. No usa carrera, sueldo ni fiscalidad; es solo capital inicial → retirada → cuántos de los ~<span id="btPeriodCount">—</span> periodos reales de 1928-2025 habrían sobrevivido.</p>
+    <p class="grouphint">Una prueba distinta a todo lo de arriba: en vez de simular tu carrera hasta el FIRE, imagina que YA tienes un capital hoy y quieres saber si habría aguantado retirando una cantidad fija (ajustada a inflación) durante todos y cada uno de los periodos históricos reales — exactamente la prueba "¿me bastan 600.000€?" de la que parte este análisis. No usa carrera, sueldo ni fiscalidad; es solo capital inicial → retirada → cuántos de los ~<span id="btPeriodCount">—</span> periodos históricos reales disponibles para la cartera elegida habrían sobrevivido.</p>
     <div class="ctrl">
       <div class="row"><label for="btPortfolio">Cartera</label><output id="btPortfolio_o" for="btPortfolio"></output></div>
       <input type="range" id="btPortfolio" min="0" max="2" step="1">
@@ -450,7 +450,7 @@ body:not(.pro) .pro-only{display:none}
       <input type="range" id="btYears" min="10" max="40" step="1">
     </div>
     <div id="btResults"></div>
-    <p class="hint">Los datos son históricos reales de EE.UU. 1928-2025 (bolsa: S&amp;P 500 — el mismo que usa el interruptor "rentabilidades históricas reales" de Mercado; bonos: Treasury a 10 años; oro; cash: letras del Tesoro a 3 meses), rebalanceados una vez al año. No son bolsa mundial ni ninguna cartera concreta de ningún estudio externo, así que las cifras no van a coincidir exactamente con las de una fuente que use otros índices — pero la comparación entre carteras (100% bolsa vs. 60/40 vs. permanente) sí es representativa de cómo diversificar reduce el capital necesario. "Capital para no arruinarte" es el mínimo que habría aguantado sin agotarse en TODOS los periodos probados; "capital perpetuo" exige además terminar cada periodo con el poder adquisitivo del capital inicial intacto, no solo sin llegar a cero. Aviso sobre el oro: hasta agosto de 1971 su precio estuvo fijado por ley (patrón oro de Bretton Woods), así que no pudo actuar como cobertura frente a la inflación — por eso los periodos que empiezan antes de 1971 penalizan a la cartera permanente más de lo que lo haría hoy en día; muchos análisis de esta cartera arrancan directamente en 1970-1972 por este motivo.</p>
+    <p class="hint">Los datos son históricos reales de EE.UU. 1928-2025 (bolsa: S&amp;P 500 — el mismo que usa el interruptor "rentabilidades históricas reales" de Mercado; bonos: Treasury a 10 años; oro; cash: letras del Tesoro a 3 meses), rebalanceados una vez al año. No son bolsa mundial ni ninguna cartera concreta de ningún estudio externo, así que las cifras no van a coincidir exactamente con las de una fuente que use otros índices — pero la comparación entre carteras (100% bolsa vs. 60/40 vs. permanente) sí es representativa de cómo diversificar reduce el capital necesario. "Capital para no arruinarte" es el mínimo que habría aguantado sin agotarse en TODOS los periodos probados; "capital perpetuo" exige además terminar cada periodo con el poder adquisitivo del capital inicial intacto, no solo sin llegar a cero. Aviso sobre el oro: hasta agosto de 1971 su precio estuvo fijado por ley (patrón oro de Bretton Woods), así que no pudo actuar como cobertura frente a la inflación en esos años — por eso la cartera permanente solo usa periodos que empiezan en 1971 o después (bolsa 100% y 60/40 sí usan todo el rango 1928-2025), igual que hacen la mayoría de análisis de esta cartera.</p>
   </section>
 
   <section>
@@ -961,9 +961,12 @@ const HIST_GOLD_REAL_RETURNS = [0.0185,-0.0015,0.025,-0.0923,0.3456,0.3411,0.278
 // exact for a portfolio rebalanced once at the start of each year, which is
 // the standard convention these backtests use).
 const BT_PORTFOLIOS = [
-  {label:'Bolsa 100% (S&P 500)', weights:{stocks:1, bonds:0, gold:0, cash:0}},
-  {label:'60/40 (60% bolsa / 40% bonos)', weights:{stocks:0.6, bonds:0.4, gold:0, cash:0}},
-  {label:'Cartera permanente (25% bolsa / 25% bonos / 25% oro / 25% cash)', weights:{stocks:0.25, bonds:0.25, gold:0.25, cash:0.25}},
+  {label:'Bolsa 100% (S&P 500)', weights:{stocks:1, bonds:0, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
+  {label:'60/40 (60% bolsa / 40% bonos)', weights:{stocks:0.6, bonds:0.4, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
+  // Restringida a 1971+: hasta agosto de 1971 el oro estuvo fijado por ley
+  // (patrón oro de Bretton Woods) y no podía actuar como cobertura, así que
+  // los periodos anteriores no reflejan cómo se comporta esta cartera hoy.
+  {label:'Cartera permanente (25% bolsa / 25% bonos / 25% oro / 25% cash)', weights:{stocks:0.25, bonds:0.25, gold:0.25, cash:0.25}, minStartYear:1971},
 ];
 
 // Spanish savings-income ("base del ahorro") tax brackets — orientativo, 2025.
@@ -1063,12 +1066,14 @@ const ageOfDate = (y,m=12) => Math.floor(DEFAULTS.ageNow + ((y-START_YEAR)+(m-ST
 // Walks each ELIGIBLE starting year in HIST_EQ_REAL_RETURNS exactly once
 // (no bootstrapping, no wraparound) — a strict historical replay, matching
 // how these "X of Y historical retirements failed" studies are normally run.
-function runHistoricalBacktest(capital, annualSpend, years, weights){
-  const w=weights||BT_PORTFOLIOS[0].weights;
+function runHistoricalBacktest(capital, annualSpend, years, portfolio){
+  const p=portfolio||BT_PORTFOLIOS[0];
+  const w=p.weights;
   const monthlySpend=annualSpend/12;
   const n=HIST_EQ_REAL_RETURNS.length;
+  const minStart=Math.max(0, (p.minStartYear||HIST_START_YEAR)-HIST_START_YEAR);
   const results=[];
-  for(let start=0; start+years<=n; start++){
+  for(let start=minStart; start+years<=n; start++){
     let bal=capital;
     for(let y=0; y<years && bal>0; y++){
       const idx=start+y;
@@ -1096,9 +1101,9 @@ function summarizeBacktest(results){
 // ended every period with at least the original real capital intact" — the
 // "tasa perpetua" from the video). Monotonic in capital (more money is never
 // worse for either criterion), so bisection is safe.
-function capitalNeededFor(annualSpend, years, requirePerpetual, weights){
+function capitalNeededFor(annualSpend, years, requirePerpetual, portfolio){
   const passes=cap=>{
-    const results=runHistoricalBacktest(cap, annualSpend, years, weights);
+    const results=runHistoricalBacktest(cap, annualSpend, years, portfolio);
     return results.every(r=> requirePerpetual ? (!r.ruined && r.finalBal>=cap) : !r.ruined);
   };
   let hi=Math.max(annualSpend*years, 100000);
@@ -2600,13 +2605,12 @@ function renderBacktest(){
   const gasto=parseFloat(document.getElementById('btGasto').value);
   const years=parseFloat(document.getElementById('btYears').value);
   const portfolio=BT_PORTFOLIOS[Math.round(parseFloat(document.getElementById('btPortfolio').value))];
-  const weights=portfolio.weights;
-  const results=runHistoricalBacktest(capital, gasto, years, weights);
+  const results=runHistoricalBacktest(capital, gasto, years, portfolio);
   const summary=summarizeBacktest(results);
   const survived=summary.n-summary.failedYears.length;
   document.getElementById('btPeriodCount').textContent=summary.n;
-  const capitalSurvive=capitalNeededFor(gasto, years, false, weights);
-  const capitalPerpetual=capitalNeededFor(gasto, years, true, weights);
+  const capitalSurvive=capitalNeededFor(gasto, years, false, portfolio);
+  const capitalPerpetual=capitalNeededFor(gasto, years, true, portfolio);
   document.getElementById('btResults').innerHTML=
     '<p class="calc">'+survived+' de '+summary.n+' periodos históricos de '+years+' años sobrevivieron con este capital ('+Math.round(survived/summary.n*100)+' %). '+
     (summary.failedYears.length ? 'Fallaron los que empezaron en: '+summary.failedYears.join(', ')+'.' : 'Ningún periodo se quedó sin dinero con este capital.')+
