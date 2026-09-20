@@ -195,11 +195,16 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 .ctrl .row{
   display:flex;justify-content:space-between;align-items:baseline;gap:10px;
   margin-bottom:5px;
+  /* The value can't wrap (white-space:nowrap below, so figures never break
+     mid-number), so on a narrow screen let it drop to its own line instead of
+     pushing the whole page wider than the viewport. */
+  flex-wrap:wrap;
 }
 .ctrl label{font-size:13.5px;color:var(--ink)}
 .ctrl output{
   display:inline-block;
   min-width:84px;
+  margin-left:auto; /* keeps the value right-aligned once it wraps to its own line */
   font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;
   color:var(--route);font-variant-numeric:tabular-nums;white-space:nowrap;
   text-align:right;
@@ -1193,7 +1198,7 @@ function paintLabels(p){
   set('captDelay',p.captDelay.toFixed(1)+' años');
   set('startDelay',p.startDelay.toFixed(0)+' meses');
   set('salG',p.salG.toFixed(1)+' %');
-  set('profitShareWeeks',p.profitShareWeeks.toFixed(1)+' semanas · hasta '+(p.profitShareWeeks*1.923).toFixed(0)+' % del básico anual');
+  set('profitShareWeeks',p.profitShareWeeks.toFixed(1)+' semanas · hasta '+(p.profitShareWeeks*1.923).toFixed(0)+' % del básico');
   set('ret',p.ret.toFixed(1)+' %');
   set('vol',p.vol.toFixed(1)+' %');
   set('vida',eur(p.vida)+'/mes');
@@ -2654,10 +2659,12 @@ function renderBacktest(){
   // otherwise the comparison is apples to oranges.
   const commonFrom=Math.max(...BT_PORTFOLIOS.map(btStartIndex));
   document.getElementById('btPortfolioStats').innerHTML=
-    '<table><thead><tr><th>Cartera</th><th>Media anual</th><th>Volatilidad</th><th>Peor año</th><th>Periodo</th></tr></thead><tbody>'+
+    // Four columns, like every other table here: a fifth one no longer fits on
+    // a 320px phone. The period rides along under the portfolio name instead.
+    '<table><thead><tr><th>Cartera</th><th>Media anual</th><th>Volatilidad</th><th>Peor año</th></tr></thead><tbody>'+
     BT_PORTFOLIOS.map(p=>{
       const s=portfolioStats(p);
-      return '<tr'+(p===portfolio?' class="hit"':'')+'><td>'+p.short+'</td><td>'+fmtPct(s.cagr)+'</td><td>'+fmtPct(s.vol)+'</td><td>'+fmtPct(s.worstRet)+' <span class="age">'+s.worstYear+'</span></td><td>'+s.fromYear+'-'+s.toYear+'</td></tr>';
+      return '<tr'+(p===portfolio?' class="hit"':'')+'><td>'+p.short+'<br><span class="age">'+s.fromYear+'-'+s.toYear+'</span></td><td>'+fmtPct(s.cagr)+'</td><td>'+fmtPct(s.vol)+'</td><td>'+fmtPct(s.worstRet)+' <span class="age">'+s.worstYear+'</span></td></tr>';
     }).join('')+
     '</tbody></table>'+
     '<p class="hint">Rentabilidad <em>real</em> (ya descontada la inflación) y compuesta: el ritmo al que habría crecido el capital de verdad, no la media aritmética de los años sueltos. Cada cartera se mide en su propio periodo, así que para compararlas de forma justa, todas sobre '+(HIST_START_YEAR+commonFrom)+'-'+portfolioStats(BT_PORTFOLIOS[0]).toYear+': '+
