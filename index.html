@@ -86,6 +86,13 @@ h2{
   margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid var(--rule);
 }
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+/* Columns are right-aligned with no horizontal padding, so on a phone the
+   figures of adjacent columns end up touching ("€2.48M€237k€4.16M"). */
+thead th + th, tbody td + td{padding-left:10px}
+/* The portfolio comparison is the one table too wide to compress onto a 320px
+   phone once the columns are separated, so it scrolls inside its own box
+   rather than widening the page. Anything wider fits and shows no scrollbar. */
+#btPortfolioStats{overflow-x:auto}
 thead th{
   font-family:'Barlow Condensed',sans-serif;
   font-size:11px;letter-spacing:.14em;text-transform:uppercase;
