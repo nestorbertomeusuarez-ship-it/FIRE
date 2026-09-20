@@ -2685,7 +2685,7 @@ function renderBacktest(){
     (summary.failedYears.length ? 'Fallaron los que empezaron en: '+summary.failedYears.join(', ')+'.' : 'Ningún periodo se quedó sin dinero con este capital.')+
     '</p>'+
     '<table><thead><tr><th>Capital final tras '+years+' años</th><th>Mediana</th><th>P10</th><th>P90</th></tr></thead><tbody>'+
-    '<tr><td>De los '+summary.n+' periodos probados</td><td>'+eurK(summary.p50)+'</td><td>'+eurK(summary.p10)+'</td><td>'+eurK(summary.p90)+'</td></tr>'+
+    '<tr><td>De los '+summary.n+' periodos</td><td>'+eurK(summary.p50)+'</td><td>'+eurK(summary.p10)+'</td><td>'+eurK(summary.p90)+'</td></tr>'+
     '</tbody></table>'+
     '<table><thead><tr><th>Objetivo</th><th>Capital necesario</th></tr></thead><tbody>'+
     '<tr><td>No arruinarte en ningún periodo probado</td><td>'+eurK(capitalSurvive)+'</td></tr>'+
