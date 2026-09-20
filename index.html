@@ -436,6 +436,7 @@ body:not(.pro) .pro-only{display:none}
       <div class="row"><label for="btPortfolio">Cartera</label><output id="btPortfolio_o" for="btPortfolio"></output></div>
       <input type="range" id="btPortfolio" min="0" max="2" step="1">
     </div>
+    <div id="btPortfolioStats"></div>
     <div class="ctrl">
       <div class="row"><label for="btCapital">Capital inicial (€)</label><output id="btCapital_o" for="btCapital"></output></div>
       <input type="range" id="btCapital" min="50000" max="2000000" step="10000">
@@ -961,12 +962,12 @@ const HIST_GOLD_REAL_RETURNS = [0.0185,-0.0015,0.025,-0.0923,0.3456,0.3411,0.278
 // exact for a portfolio rebalanced once at the start of each year, which is
 // the standard convention these backtests use).
 const BT_PORTFOLIOS = [
-  {label:'Bolsa 100% (S&P 500)', weights:{stocks:1, bonds:0, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
-  {label:'60/40 (60% bolsa / 40% bonos)', weights:{stocks:0.6, bonds:0.4, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
+  {label:'Bolsa 100% (S&P 500)', short:'Bolsa 100%', weights:{stocks:1, bonds:0, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
+  {label:'60/40 (60% bolsa / 40% bonos)', short:'60/40', weights:{stocks:0.6, bonds:0.4, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
   // Restringida a 1971+: hasta agosto de 1971 el oro estuvo fijado por ley
   // (patrón oro de Bretton Woods) y no podía actuar como cobertura, así que
   // los periodos anteriores no reflejan cómo se comporta esta cartera hoy.
-  {label:'Cartera permanente (25% bolsa / 25% bonos / 25% oro / 25% cash)', weights:{stocks:0.25, bonds:0.25, gold:0.25, cash:0.25}, minStartYear:1971},
+  {label:'Cartera permanente (25% bolsa / 25% bonos / 25% oro / 25% cash)', short:'Cartera permanente', weights:{stocks:0.25, bonds:0.25, gold:0.25, cash:0.25}, minStartYear:1971},
 ];
 
 // Spanish savings-income ("base del ahorro") tax brackets — orientativo, 2025.
@@ -1047,6 +1048,7 @@ ids.forEach(k => { el[k] = document.getElementById(k); out[k] = document.getElem
 
 const eur = n => '€'+Math.round(n).toLocaleString('es-ES');
 const eurK = n => n >= 1e6 ? '€'+(n/1e6).toFixed(2)+'M' : '€'+Math.round(n/1000)+'k';
+const fmtPct = n => (n*100).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})+' %';
 const monthIndex = (y,m) => (y-START_YEAR)*12 + (m-START_MONTH);
 const dateFromIndex = i => {
   const d = new Date(START_YEAR, START_MONTH-1+i, 1);
@@ -1066,19 +1068,20 @@ const ageOfDate = (y,m=12) => Math.floor(DEFAULTS.ageNow + ((y-START_YEAR)+(m-ST
 // Walks each ELIGIBLE starting year in HIST_EQ_REAL_RETURNS exactly once
 // (no bootstrapping, no wraparound) — a strict historical replay, matching
 // how these "X of Y historical retirements failed" studies are normally run.
+// Weighted sum of one historical year's real returns — exact for a portfolio
+// rebalanced once at the start of each year, the convention these backtests use.
+const blendedRealReturn=(w,i)=>w.stocks*HIST_EQ_REAL_RETURNS[i]+w.bonds*HIST_BOND_REAL_RETURNS[i]+w.gold*HIST_GOLD_REAL_RETURNS[i]+w.cash*HIST_TBILL_REAL_RETURNS[i];
+const btStartIndex=p=>Math.max(0, (p.minStartYear||HIST_START_YEAR)-HIST_START_YEAR);
 function runHistoricalBacktest(capital, annualSpend, years, portfolio){
   const p=portfolio||BT_PORTFOLIOS[0];
   const w=p.weights;
   const monthlySpend=annualSpend/12;
   const n=HIST_EQ_REAL_RETURNS.length;
-  const minStart=Math.max(0, (p.minStartYear||HIST_START_YEAR)-HIST_START_YEAR);
   const results=[];
-  for(let start=minStart; start+years<=n; start++){
+  for(let start=btStartIndex(p); start+years<=n; start++){
     let bal=capital;
     for(let y=0; y<years && bal>0; y++){
-      const idx=start+y;
-      const annualR=w.stocks*HIST_EQ_REAL_RETURNS[idx]+w.bonds*HIST_BOND_REAL_RETURNS[idx]+w.gold*HIST_GOLD_REAL_RETURNS[idx]+w.cash*HIST_TBILL_REAL_RETURNS[idx];
-      const monthlyR=Math.pow(1+annualR,1/12)-1;
+      const monthlyR=Math.pow(1+blendedRealReturn(w,start+y),1/12)-1;
       for(let m=0; m<12; m++){
         bal*=1+monthlyR;
         bal-=monthlySpend;
@@ -1088,6 +1091,30 @@ function runHistoricalBacktest(capital, annualSpend, years, portfolio){
     results.push({startYear:HIST_START_YEAR+start, finalBal:bal, ruined:bal<=0});
   }
   return results;
+}
+// Compound (geometric) mean annual real return and volatility of a preset.
+// Geometric, not arithmetic: it's the rate that actually turns a starting
+// capital into the ending one, which is what matters for a withdrawal plan
+// (the arithmetic mean always flatters a volatile portfolio). `fromIdx`
+// overrides the preset's own start so the three can be compared over one
+// common period. Memoized: it only depends on constants.
+const btStatsCache=new Map();
+function portfolioStats(p, fromIdx){
+  const from=fromIdx===undefined ? btStartIndex(p) : fromIdx;
+  const key=p.short+'@'+from;
+  if(btStatsCache.has(key)) return btStatsCache.get(key);
+  const n=HIST_EQ_REAL_RETURNS.length;
+  const rs=[];
+  let growth=1, sum=0;
+  for(let i=from;i<n;i++){ const r=blendedRealReturn(p.weights,i); rs.push(r); growth*=1+r; sum+=r; }
+  const mean=sum/rs.length;
+  const stats={
+    cagr:Math.pow(growth,1/rs.length)-1,
+    vol:Math.sqrt(rs.reduce((a,r)=>a+(r-mean)*(r-mean),0)/(rs.length-1)),
+    fromYear:HIST_START_YEAR+from, toYear:HIST_START_YEAR+n-1,
+  };
+  btStatsCache.set(key, stats);
+  return stats;
 }
 function summarizeBacktest(results){
   const n=results.length;
@@ -1107,7 +1134,11 @@ function capitalNeededFor(annualSpend, years, requirePerpetual, portfolio){
     return results.every(r=> requirePerpetual ? (!r.ruined && r.finalBal>=cap) : !r.ruined);
   };
   let hi=Math.max(annualSpend*years, 100000);
-  while(!passes(hi)) hi*=1.6;
+  // Returns null when no capital can ever pass: as capital grows the withdrawal
+  // becomes negligible and the end/start ratio tends to the window's raw
+  // cumulative growth, so if any window lost real value (e.g. 1999-2008 in
+  // stocks) no amount of money preserves purchasing power through it.
+  while(!passes(hi)){ hi*=1.6; if(hi>1e12) return null; }
   let lo=0;
   for(let i=0;i<40;i++){
     const mid=(lo+hi)/2;
@@ -2611,6 +2642,20 @@ function renderBacktest(){
   document.getElementById('btPeriodCount').textContent=summary.n;
   const capitalSurvive=capitalNeededFor(gasto, years, false, portfolio);
   const capitalPerpetual=capitalNeededFor(gasto, years, true, portfolio);
+  // Each preset's own period differs (the permanent one starts in 1971), so
+  // alongside each row's own figures give the three over one common period —
+  // otherwise the comparison is apples to oranges.
+  const commonFrom=Math.max(...BT_PORTFOLIOS.map(btStartIndex));
+  document.getElementById('btPortfolioStats').innerHTML=
+    '<table><thead><tr><th>Cartera</th><th>Media anual real</th><th>Volatilidad</th><th>Periodo</th></tr></thead><tbody>'+
+    BT_PORTFOLIOS.map(p=>{
+      const s=portfolioStats(p);
+      return '<tr'+(p===portfolio?' class="hit"':'')+'><td>'+p.short+'</td><td>'+fmtPct(s.cagr)+'</td><td>'+fmtPct(s.vol)+'</td><td>'+s.fromYear+'-'+s.toYear+'</td></tr>';
+    }).join('')+
+    '</tbody></table>'+
+    '<p class="hint">Rentabilidad <em>real</em> (ya descontada la inflación) y compuesta: el ritmo al que habría crecido el capital de verdad, no la media aritmética de los años sueltos. Cada cartera se mide en su propio periodo, así que para compararlas de forma justa, todas sobre '+(HIST_START_YEAR+commonFrom)+'-'+portfolioStats(BT_PORTFOLIOS[0]).toYear+': '+
+    BT_PORTFOLIOS.map(p=>p.short+' '+fmtPct(portfolioStats(p,commonFrom).cagr)+' (volatilidad '+fmtPct(portfolioStats(p,commonFrom).vol)+')').join(' · ')+
+    '. Fíjate en que la cartera con más rentabilidad no es la que necesita menos capital: lo que manda en una retirada es aguantar los malos periodos, y ahí pesa tanto la volatilidad como la media.</p>';
   document.getElementById('btResults').innerHTML=
     '<p class="calc">'+survived+' de '+summary.n+' periodos históricos de '+years+' años sobrevivieron con este capital ('+Math.round(survived/summary.n*100)+' %). '+
     (summary.failedYears.length ? 'Fallaron los que empezaron en: '+summary.failedYears.join(', ')+'.' : 'Ningún periodo se quedó sin dinero con este capital.')+
@@ -2620,8 +2665,12 @@ function renderBacktest(){
     '</tbody></table>'+
     '<table><thead><tr><th>Objetivo</th><th>Capital necesario</th></tr></thead><tbody>'+
     '<tr><td>No arruinarte en ningún periodo probado</td><td>'+eurK(capitalSurvive)+'</td></tr>'+
-    '<tr><td>Conservar el poder adquisitivo (tasa perpetua)</td><td>'+eurK(capitalPerpetual)+'</td></tr>'+
-    '</tbody></table>';
+    '<tr><td>Conservar el poder adquisitivo (tasa perpetua)</td>'+
+      (capitalPerpetual===null ? '<td class="na">Imposible</td>' : '<td>'+eurK(capitalPerpetual)+'</td>')+'</tr>'+
+    '</tbody></table>'+
+    (capitalPerpetual===null
+      ? '<p class="hint">"Imposible" no es un error de cálculo: en '+years+' años hubo periodos en los que esta cartera perdió poder adquisitivo aunque no retiraras ni un euro, así que no hay capital inicial que los termine con el poder adquisitivo intacto. Alarga el plazo o elige una cartera más estable y volverá a salir una cifra.</p>'
+      : '');
 }
 {
   const btEls=['btPortfolio','btCapital','btGasto','btYears'].map(k=>document.getElementById(k));
