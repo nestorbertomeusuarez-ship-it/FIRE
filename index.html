@@ -430,6 +430,26 @@ body:not(.pro) .pro-only{display:none}
   </section>
 
   <section>
+    <h2>Backtest histórico secuencial (retirada)</h2>
+    <p class="grouphint">Una prueba distinta a todo lo de arriba: en vez de simular tu carrera hasta el FIRE, imagina que YA tienes un capital hoy y quieres saber si habría aguantado retirando una cantidad fija (ajustada a inflación) durante todos y cada uno de los periodos históricos reales — exactamente la prueba "¿me bastan 600.000€?" de la que parte este análisis. No usa carrera, sueldo ni fiscalidad; es solo capital inicial → retirada → cuántos de los ~<span id="btPeriodCount">—</span> periodos reales de 1928-2025 habrían sobrevivido.</p>
+    <div class="ctrl">
+      <div class="row"><label for="btCapital">Capital inicial (€)</label><output id="btCapital_o" for="btCapital"></output></div>
+      <input type="range" id="btCapital" min="50000" max="2000000" step="10000">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label for="btGasto">Retirada anual, real (€)</label><output id="btGasto_o" for="btGasto"></output></div>
+      <p class="hint">Se mantiene constante en poder adquisitivo — como todo en este simulador, ya está en euros reales, así que aquí no hace falta ajustarla a mano por inflación cada año.</p>
+      <input type="range" id="btGasto" min="12000" max="120000" step="1000">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label for="btYears">Duración de la retirada (años)</label><output id="btYears_o" for="btYears"></output></div>
+      <input type="range" id="btYears" min="10" max="40" step="1">
+    </div>
+    <div id="btResults"></div>
+    <p class="hint">Los datos son el mismo histórico real de bolsa de EE.UU. (S&amp;P 500, rentabilidad real 1928-2025) que usa el interruptor "rentabilidades históricas reales" de Mercado — no bolsa mundial ni ninguna otra cartera, así que las cifras no van a coincidir exactamente con las de un estudio que use un índice distinto. "Capital para no arruinarte" es el mínimo que habría aguantado sin agotarse en TODOS los periodos probados; "capital perpetuo" exige además terminar cada periodo con el poder adquisitivo del capital inicial intacto, no solo sin llegar a cero.</p>
+  </section>
+
+  <section>
     <h2>Parámetros</h2>
 
     <div class="proRow">
@@ -882,6 +902,7 @@ body:not(.pro) .pro-only{display:none}
 // historical returns dataset; US CPI inflation — officialdata.org. Used only
 // by the "Mercado" historical-bootstrap toggle below; orientativo (datos de
 // 2025), no se actualiza automáticamente.
+const HIST_START_YEAR = 1928; // calendar year of HIST_EQ_REAL_RETURNS[0]
 const HIST_EQ_REAL_RETURNS = [0.4633,-0.083,-0.2333,-0.383,0.0136,0.5806,-0.0414,0.4353,0.3004,-0.3759,
 0.3203,0.0032,-0.1131,-0.1692,0.0748,0.1784,0.1701,0.3281,-0.1547,-0.0801,
 -0.0219,0.1979,0.2918,0.1465,0.1592,-0.0195,0.5142,0.3309,0.0586,-0.1333,
@@ -939,6 +960,13 @@ const DEFAULTS = {
   baristaOn:true, baristaIncome:12000, baristaYears:5
 };
 
+// Backtest histórico secuencial: a standalone tool with its own tiny defaults
+// object, deliberately kept OUT of DEFAULTS/ids — those auto-wire every input
+// into the expensive main Monte Carlo run() pipeline, but this tool doesn't
+// touch the career/tax simulation at all, so it gets its own lightweight
+// init/listeners instead of triggering a full recalculation on every drag.
+const BT_DEFAULTS = {btCapital:600000, btGasto:24000, btYears:30};
+
 // Full-precision runs use an adaptive path count instead of a fixed one: cost per
 // path varies a lot with which PRO features are on, so a fixed number is either
 // wasteful (simple mode) or too slow (PRO fully loaded). See runFullPrecision().
@@ -975,6 +1003,58 @@ const yearFrac = i => {
 };
 const ageAt = i => DEFAULTS.ageNow + yearFrac(i);
 const ageOfDate = (y,m=12) => Math.floor(DEFAULTS.ageNow + ((y-START_YEAR)+(m-START_MONTH)/12));
+
+// ---- Backtest histórico secuencial ----
+// A deliberately separate, much simpler tool than simulate(): no career, no
+// salary, no taxes — just "I already have this capital, I withdraw this real
+// amount every year, would it have survived every real historical window."
+// Walks each ELIGIBLE starting year in HIST_EQ_REAL_RETURNS exactly once
+// (no bootstrapping, no wraparound) — a strict historical replay, matching
+// how these "X of Y historical retirements failed" studies are normally run.
+function runHistoricalBacktest(capital, annualSpend, years){
+  const monthlySpend=annualSpend/12;
+  const n=HIST_EQ_REAL_RETURNS.length;
+  const results=[];
+  for(let start=0; start+years<=n; start++){
+    let bal=capital;
+    for(let y=0; y<years && bal>0; y++){
+      const monthlyR=Math.pow(1+HIST_EQ_REAL_RETURNS[start+y],1/12)-1;
+      for(let m=0; m<12; m++){
+        bal*=1+monthlyR;
+        bal-=monthlySpend;
+        if(bal<=0){ bal=0; break; }
+      }
+    }
+    results.push({startYear:HIST_START_YEAR+start, finalBal:bal, ruined:bal<=0});
+  }
+  return results;
+}
+function summarizeBacktest(results){
+  const n=results.length;
+  const failed=results.filter(r=>r.ruined);
+  const finals=Float64Array.from(results.map(r=>r.finalBal)).sort();
+  const q=p=>finals[Math.floor((n-1)*p)];
+  return {n, failedYears:failed.map(r=>r.startYear), p10:q(.10), p50:q(.50), p90:q(.90)};
+}
+// Binary search on initial capital for the smallest amount that passes
+// `allPass` (either "never ran out" or, more strictly, "never ran out AND
+// ended every period with at least the original real capital intact" — the
+// "tasa perpetua" from the video). Monotonic in capital (more money is never
+// worse for either criterion), so bisection is safe.
+function capitalNeededFor(annualSpend, years, requirePerpetual){
+  const passes=cap=>{
+    const results=runHistoricalBacktest(cap, annualSpend, years);
+    return results.every(r=> requirePerpetual ? (!r.ruined && r.finalBal>=cap) : !r.ruined);
+  };
+  let hi=Math.max(annualSpend*years, 100000);
+  while(!passes(hi)) hi*=1.6;
+  let lo=0;
+  for(let i=0;i<40;i++){
+    const mid=(lo+hi)/2;
+    if(passes(mid)) hi=mid; else lo=mid;
+  }
+  return hi;
+}
 
 // Precomputed once at load: dateFromIndex(i) is deterministic and path-independent,
 // so calling it ~1.6M times inside simulate()'s per-path monthly loop was pure waste.
@@ -2457,6 +2537,45 @@ document.getElementById('runSensitivity').addEventListener('click', async () => 
     btn.disabled=false; loadingEl.style.display='none';
   }
 });
+// Backtest histórico secuencial: cheap and synchronous (no Worker needed —
+// ~40 bisection steps × ~69 historical windows × up to 40 years is trivial
+// compared to the main Monte Carlo), so it just redraws on every input.
+function renderBacktest(){
+  const capital=parseFloat(document.getElementById('btCapital').value);
+  const gasto=parseFloat(document.getElementById('btGasto').value);
+  const years=parseFloat(document.getElementById('btYears').value);
+  const results=runHistoricalBacktest(capital, gasto, years);
+  const summary=summarizeBacktest(results);
+  const survived=summary.n-summary.failedYears.length;
+  document.getElementById('btPeriodCount').textContent=summary.n;
+  const capitalSurvive=capitalNeededFor(gasto, years, false);
+  const capitalPerpetual=capitalNeededFor(gasto, years, true);
+  document.getElementById('btResults').innerHTML=
+    '<p class="calc">'+survived+' de '+summary.n+' periodos históricos de '+years+' años sobrevivieron con este capital ('+Math.round(survived/summary.n*100)+' %). '+
+    (summary.failedYears.length ? 'Fallaron los que empezaron en: '+summary.failedYears.join(', ')+'.' : 'Ningún periodo se quedó sin dinero con este capital.')+
+    '</p>'+
+    '<table><thead><tr><th>Capital final tras '+years+' años</th><th>Mediana</th><th>P10</th><th>P90</th></tr></thead><tbody>'+
+    '<tr><td>De los '+summary.n+' periodos probados</td><td>'+eurK(summary.p50)+'</td><td>'+eurK(summary.p10)+'</td><td>'+eurK(summary.p90)+'</td></tr>'+
+    '</tbody></table>'+
+    '<table><thead><tr><th>Objetivo</th><th>Capital necesario</th></tr></thead><tbody>'+
+    '<tr><td>No arruinarte en ningún periodo probado</td><td>'+eurK(capitalSurvive)+'</td></tr>'+
+    '<tr><td>Conservar el poder adquisitivo (tasa perpetua)</td><td>'+eurK(capitalPerpetual)+'</td></tr>'+
+    '</tbody></table>';
+}
+{
+  const btEls=['btCapital','btGasto','btYears'].map(k=>document.getElementById(k));
+  btEls.forEach(n=>{ n.value=BT_DEFAULTS[n.id]; });
+  const paintBtLabels=()=>{
+    document.getElementById('btCapital_o').textContent=eur(parseFloat(document.getElementById('btCapital').value));
+    document.getElementById('btGasto_o').textContent=eur(parseFloat(document.getElementById('btGasto').value))+'/año';
+    const y=parseFloat(document.getElementById('btYears').value);
+    document.getElementById('btYears_o').textContent=y+(y===1?' año':' años');
+  };
+  paintBtLabels();
+  renderBacktest();
+  btEls.forEach(n=>n.addEventListener('input', ()=>{ paintBtLabels(); renderBacktest(); }));
+}
+
 document.getElementById('scenarioList').addEventListener('click', e=>{
   const btn=e.target.closest('button[data-act]');
   if(!btn) return;
