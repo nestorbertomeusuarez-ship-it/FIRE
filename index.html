@@ -93,6 +93,14 @@ thead th + th, tbody td + td{padding-left:10px}
    phone once the columns are separated, so it scrolls inside its own box
    rather than widening the page. Anything wider fits and shows no scrollbar. */
 #btPortfolioStats{overflow-x:auto}
+/* Under ~350px the four columns no longer fit, and a clipped column nobody can
+   tell is scrollable is worse than one fewer column: drop volatility, the most
+   expendable of the four (the paragraph below still gives it for all three
+   portfolios). overflow-x above stays as the safety net. */
+@media (max-width:349px){
+  #btPortfolioStats thead th:nth-child(3),
+  #btPortfolioStats tbody td:nth-child(3){display:none}
+}
 thead th{
   font-family:'Barlow Condensed',sans-serif;
   font-size:11px;letter-spacing:.14em;text-transform:uppercase;
