@@ -1048,7 +1048,9 @@ ids.forEach(k => { el[k] = document.getElementById(k); out[k] = document.getElem
 
 const eur = n => '€'+Math.round(n).toLocaleString('es-ES');
 const eurK = n => n >= 1e6 ? '€'+(n/1e6).toFixed(2)+'M' : '€'+Math.round(n/1000)+'k';
-const fmtPct = n => (n*100).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})+' %';
+// Non-breaking space before the % so a value never wraps mid-number on narrow
+// screens (and because that's the correct Spanish typography anyway).
+const fmtPct = n => (n*100).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})+' %';
 const monthIndex = (y,m) => (y-START_YEAR)*12 + (m-START_MONTH);
 const dateFromIndex = i => {
   const d = new Date(START_YEAR, START_MONTH-1+i, 1);
@@ -1105,12 +1107,17 @@ function portfolioStats(p, fromIdx){
   if(btStatsCache.has(key)) return btStatsCache.get(key);
   const n=HIST_EQ_REAL_RETURNS.length;
   const rs=[];
-  let growth=1, sum=0;
-  for(let i=from;i<n;i++){ const r=blendedRealReturn(p.weights,i); rs.push(r); growth*=1+r; sum+=r; }
+  let growth=1, sum=0, worstRet=Infinity, worstYear=null;
+  for(let i=from;i<n;i++){
+    const r=blendedRealReturn(p.weights,i);
+    rs.push(r); growth*=1+r; sum+=r;
+    if(r<worstRet){ worstRet=r; worstYear=HIST_START_YEAR+i; }
+  }
   const mean=sum/rs.length;
   const stats={
     cagr:Math.pow(growth,1/rs.length)-1,
     vol:Math.sqrt(rs.reduce((a,r)=>a+(r-mean)*(r-mean),0)/(rs.length-1)),
+    worstRet, worstYear,
     fromYear:HIST_START_YEAR+from, toYear:HIST_START_YEAR+n-1,
   };
   btStatsCache.set(key, stats);
@@ -2647,14 +2654,17 @@ function renderBacktest(){
   // otherwise the comparison is apples to oranges.
   const commonFrom=Math.max(...BT_PORTFOLIOS.map(btStartIndex));
   document.getElementById('btPortfolioStats').innerHTML=
-    '<table><thead><tr><th>Cartera</th><th>Media anual real</th><th>Volatilidad</th><th>Periodo</th></tr></thead><tbody>'+
+    '<table><thead><tr><th>Cartera</th><th>Media anual</th><th>Volatilidad</th><th>Peor año</th><th>Periodo</th></tr></thead><tbody>'+
     BT_PORTFOLIOS.map(p=>{
       const s=portfolioStats(p);
-      return '<tr'+(p===portfolio?' class="hit"':'')+'><td>'+p.short+'</td><td>'+fmtPct(s.cagr)+'</td><td>'+fmtPct(s.vol)+'</td><td>'+s.fromYear+'-'+s.toYear+'</td></tr>';
+      return '<tr'+(p===portfolio?' class="hit"':'')+'><td>'+p.short+'</td><td>'+fmtPct(s.cagr)+'</td><td>'+fmtPct(s.vol)+'</td><td>'+fmtPct(s.worstRet)+' <span class="age">'+s.worstYear+'</span></td><td>'+s.fromYear+'-'+s.toYear+'</td></tr>';
     }).join('')+
     '</tbody></table>'+
     '<p class="hint">Rentabilidad <em>real</em> (ya descontada la inflación) y compuesta: el ritmo al que habría crecido el capital de verdad, no la media aritmética de los años sueltos. Cada cartera se mide en su propio periodo, así que para compararlas de forma justa, todas sobre '+(HIST_START_YEAR+commonFrom)+'-'+portfolioStats(BT_PORTFOLIOS[0]).toYear+': '+
-    BT_PORTFOLIOS.map(p=>p.short+' '+fmtPct(portfolioStats(p,commonFrom).cagr)+' (volatilidad '+fmtPct(portfolioStats(p,commonFrom).vol)+')').join(' · ')+
+    BT_PORTFOLIOS.map(p=>{
+      const s=portfolioStats(p,commonFrom);
+      return p.short+' '+fmtPct(s.cagr)+' (volatilidad '+fmtPct(s.vol)+', peor año '+fmtPct(s.worstRet)+' en '+s.worstYear+')';
+    }).join(' · ')+
     '. Fíjate en que la cartera con más rentabilidad no es la que necesita menos capital: lo que manda en una retirada es aguantar los malos periodos, y ahí pesa tanto la volatilidad como la media.</p>';
   document.getElementById('btResults').innerHTML=
     '<p class="calc">'+survived+' de '+summary.n+' periodos históricos de '+years+' años sobrevivieron con este capital ('+Math.round(survived/summary.n*100)+' %). '+
