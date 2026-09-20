@@ -1,0 +1,2747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Plan FIRE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F3F2;
+  --paper-2:#E6E9E8;
+  --ink:#14181B;
+  --ink-2:#4A5257;
+  --rule:#14181B;
+  --hair:rgba(20,24,27,.22);
+  --route:#C6187E;      /* magenta de ruta activa, como en un EFIS */
+  --band:#8FA6B2;       /* dispersión */
+  --caution:#B8791B;
+  --ok:#1F7A4D;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 64px}
+
+/* ---------- cabecera tipo faja de plan de vuelo ---------- */
+.masthead{
+  border-bottom:2px solid var(--rule);
+  padding:20px 0 10px;
+  margin-bottom:0;
+}
+.masthead .kicker{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink-2);margin:0 0 2px;
+}
+.masthead h1{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:38px;line-height:1;letter-spacing:-.01em;
+  margin:0;text-transform:uppercase;
+}
+.masthead .sub{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;color:var(--ink-2);margin:8px 0 0;letter-spacing:.04em;
+}
+
+/* ---------- lectura principal ---------- */
+.readout{
+  display:flex;gap:0;border-bottom:1px solid var(--hair);
+  margin-bottom:0;
+}
+.readout .cell{
+  flex:1;padding:18px 0 16px;
+}
+.readout .cell + .cell{border-left:1px solid var(--hair);padding-left:16px}
+.readout .lbl{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);
+  margin-bottom:2px;
+}
+.readout .big{
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:56px;line-height:.9;color:var(--route);
+  font-variant-numeric:tabular-nums;
+}
+.readout .big.dim{color:var(--ink-2)}
+.readout .unit{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-2);
+  margin-top:6px;
+}
+
+/* ---------- navlog de waypoints ---------- */
+section{padding:26px 0 4px}
+h2{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:14px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;
+  margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid var(--rule);
+}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+/* Columns are right-aligned with no horizontal padding, so on a phone the
+   figures of adjacent columns end up touching ("€2.48M€237k€4.16M"). */
+thead th + th, tbody td + td{padding-left:10px}
+/* The portfolio comparison is the one table too wide to compress onto a 320px
+   phone once the columns are separated, so it scrolls inside its own box
+   rather than widening the page. Anything wider fits and shows no scrollbar. */
+#btPortfolioStats{overflow-x:auto}
+/* Under ~350px the four columns no longer fit, and a clipped column nobody can
+   tell is scrollable is worse than one fewer column: drop volatility, the most
+   expendable of the four (the paragraph below still gives it for all three
+   portfolios). overflow-x above stays as the safety net. */
+@media (max-width:349px){
+  #btPortfolioStats thead th:nth-child(3),
+  #btPortfolioStats tbody td:nth-child(3){display:none}
+}
+thead th{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-2);text-align:right;font-weight:500;
+  padding:0 0 6px;border-bottom:1px solid var(--hair);
+}
+thead th:first-child{text-align:left}
+tbody td{
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+  padding:9px 0;text-align:right;border-bottom:1px solid var(--hair);
+}
+tbody td:first-child{
+  text-align:left;font-family:'Barlow Condensed',sans-serif;
+  font-size:17px;font-weight:600;letter-spacing:.02em;
+}
+tbody tr.hit td:first-child{color:var(--route)}
+td .age{color:var(--ink-2);font-size:11px}
+td.na{color:var(--caution)}
+
+/* ---------- gráfico ---------- */
+.chartHead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--rule);padding-bottom:6px;margin-bottom:12px;
+}
+.chartHead h2{border:none;margin:0;padding:0}
+.chartTools{display:flex;align-items:center;gap:14px}
+.zoomReset,.expandBtn,.closeBtn{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
+  color:var(--route);background:none;border:1px solid var(--route);
+  padding:4px 9px;cursor:pointer;text-decoration:none;white-space:nowrap;
+}
+.expandBtn:hover,.closeBtn:hover,.zoomReset:hover{background:var(--route);color:var(--paper)}
+.chartbox{position:relative;margin-top:4px}
+canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
+.chart-tip{
+  position:absolute;display:none;pointer-events:none;z-index:5;
+  background:var(--ink);color:var(--paper);
+  font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.55;
+  padding:6px 9px;white-space:nowrap;
+}
+.chart-tip b{color:var(--paper);font-family:'Barlow Condensed',sans-serif;font-size:12.5px}
+.legend{
+  display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-2);
+}
+.legend i{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:5px}
+.legend .b{height:9px;opacity:.32;background:var(--band)}
+.legend .r{background:var(--route)}
+.legend .t{background:var(--caution);height:0;border-top:2px dashed var(--caution)}
+
+.chartModal{
+  border:2px solid var(--rule);background:var(--paper);color:var(--ink);
+  padding:18px;max-width:min(96vw,1100px);width:100%;
+}
+.chartModal::backdrop{background:rgba(20,24,27,.55)}
+.chartModalHead{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--rule);padding-bottom:6px;margin-bottom:12px;
+}
+.chartModalHead h2{border:none;margin:0;padding:0}
+
+/* ---------- comparar escenarios ---------- */
+.scenarioSave{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.scenarioSave input[type=text]{
+  flex:1;min-width:160px;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);
+  background:var(--paper);border:1px solid var(--hair);padding:9px 10px;
+}
+.scenarioSave input[type=text]:focus-visible{outline:2px solid var(--route);outline-offset:1px}
+.scenarioList{list-style:none;margin:0;padding:0}
+.scenarioItem{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 0;border-bottom:1px solid var(--hair);
+}
+.scenarioItem .swatch{width:12px;height:12px;border-radius:50%;flex:none;background:var(--sc-color)}
+.scenarioItem .name{font-size:13.5px;font-weight:500;flex:1;min-width:120px}
+.scenarioItem .stats{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-2);white-space:nowrap;
+}
+.scenarioItem button{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;
+  background:none;border:1px solid var(--hair);color:var(--ink);
+  padding:4px 9px;cursor:pointer;
+}
+.scenarioItem button:hover{border-color:var(--route);color:var(--route)}
+.scenarioItem input[type=checkbox]{accent-color:var(--sc-color);width:16px;height:16px;flex:none}
+.scenarioEmpty{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-2)}
+
+/* ---------- sensibilidad ---------- */
+.sensList{margin-top:14px}
+.sensRow{padding:9px 0;border-bottom:1px solid var(--hair)}
+.sensRow .sensHead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:5px}
+.sensRow .sensLabel{font-size:13.5px;font-weight:500}
+.sensRow .sensRange{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-2);white-space:nowrap}
+.sensTrack{position:relative;height:8px;background:var(--hair)}
+.sensBar{position:absolute;top:0;bottom:0;background:var(--route)}
+.sensEmpty{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-2)}
+
+/* ---------- panel de parámetros ---------- */
+.group{margin-bottom:22px}
+.group > h3{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-2);font-weight:600;margin:0 0 10px;
+}
+.ctrl{margin-bottom:15px}
+.ctrl .row{
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  margin-bottom:5px;
+  /* The value can't wrap (white-space:nowrap below, so figures never break
+     mid-number), so on a narrow screen let it drop to its own line instead of
+     pushing the whole page wider than the viewport. */
+  flex-wrap:wrap;
+}
+.ctrl label{font-size:13.5px;color:var(--ink)}
+.ctrl output{
+  display:inline-block;
+  min-width:84px;
+  margin-left:auto; /* keeps the value right-aligned once it wraps to its own line */
+  font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;
+  color:var(--route);font-variant-numeric:tabular-nums;white-space:nowrap;
+  text-align:right;
+}
+input[type=range]{
+  -webkit-appearance:none;-moz-appearance:none;appearance:none;width:100%;height:26px;
+  background:transparent;margin:0;cursor:pointer;display:block;
+}
+input[type=range]:focus-visible{outline:2px solid var(--route);outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{
+  height:2px;background:var(--rule);
+}
+input[type=range]::-moz-range-track{height:2px;background:var(--rule)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;margin-top:-9px;
+  background:var(--paper);border:2px solid var(--route);border-radius:50%;
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;background:var(--paper);
+  border:2px solid var(--route);border-radius:50%;
+}
+.toggle{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 0;border-bottom:1px solid var(--hair);
+}
+.toggle input{width:19px;height:19px;accent-color:var(--route);margin:0}
+.toggle label{font-size:13.5px}
+
+.note{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.65;
+  color:var(--ink-2);border-left:2px solid var(--caution);
+  padding:2px 0 2px 12px;margin:14px 0 0;
+}
+.actions{margin-top:22px;padding-top:16px;border-top:2px solid var(--rule)}
+button.reset{
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;
+  background:none;border:1px solid var(--rule);color:var(--ink);
+  padding:10px 20px;cursor:pointer;
+}
+button.reset:hover{background:var(--ink);color:var(--paper)}
+button.reset:focus-visible{outline:2px solid var(--route);outline-offset:2px}
+.calc{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-2);
+  margin-top:10px;
+}
+.calcLoading{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--route);
+  margin-top:4px;
+}
+@media (max-width:520px){
+  .masthead h1{font-size:30px}
+  .readout .big{font-size:44px}
+  .readout{flex-wrap:wrap}
+  .readout .cell{min-width:45%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- modo PRO ---------- */
+.proRow{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 0;border-bottom:2px solid var(--rule);margin-bottom:22px;
+}
+.proRow input{width:19px;height:19px;accent-color:var(--route);margin:0}
+.proRow label{
+  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;
+  letter-spacing:.04em;color:var(--ink);
+}
+.proRow .tag{
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;
+  color:var(--route);border:1px solid var(--route);padding:1px 6px;margin-left:2px;
+}
+body:not(.pro) .pro-only{display:none}
+.subhead{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
+  color:var(--ink-2);margin:0 0 10px;text-transform:none;
+}
+.grouphint{
+  font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.55;
+  color:var(--ink-2);margin:-4px 0 16px;
+}
+.hint{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;
+  color:var(--ink-2);margin:-2px 0 8px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="kicker">Simulador de independencia financiera</p>
+    <h1>Mi Plan FIRE</h1>
+    <p class="sub">INICIO JUN-2027 · EUROS REALES DE 2026 · MONTE CARLO MENSUAL · FIRST-PASSAGE FIRE + RETIRADA</p>
+  </header>
+
+  <div class="readout">
+    <div class="cell">
+      <div class="lbl">Edad FIRE</div>
+      <div class="big" id="ageMed">—</div>
+      <div class="unit" id="yearMed">mediana</div>
+    </div>
+    <div class="cell">
+      <div class="lbl">FIRE conservador</div>
+      <div class="big dim" id="ageP10">—</div>
+      <div class="unit" id="yearP10">P90 de fechas FIRE exitosas</div>
+    </div>
+    <div class="cell">
+      <div class="lbl">Capital objetivo</div>
+      <div class="big dim" id="targetCap" style="font-size:34px">—</div>
+      <div class="unit" id="targetNote">gasto ÷ tasa de retiro</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Waypoints de patrimonio</h2>
+    <table>
+      <thead>
+        <tr><th>Hito</th><th>Mediana</th><th>P10</th><th>P90</th></tr>
+      </thead>
+      <tbody id="wpts"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Riesgo de ruina tras el FIRE</h2>
+    <table>
+      <thead>
+        <tr><th>Años tras FIRE</th><th>% arruinadas</th></tr>
+      </thead>
+      <tbody id="ruinTable"></tbody>
+    </table>
+    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación (2092), sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
+  </section>
+
+  <section>
+    <div class="chartHead">
+      <h2>Trayectoria</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomReset" style="display:none">Restablecer zoom</a>
+        <button type="button" class="expandBtn" id="expandChart">⤢ Ampliar</button>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="chart" width="1400" height="800"></canvas>
+      <div class="chart-tip" id="chartTip"></div>
+    </div>
+    <div class="legend" id="legend">
+      <span><i class="b"></i>P10–P90</span>
+      <span><i class="r"></i>Mediana</span>
+      <span><i class="t"></i>Objetivo</span>
+    </div>
+    <p class="hint">El eje Y es logarítmico (por eso las líneas no están equiespaciadas): con 60+ años de horizonte, algunas rutas crecen muchísimo por interés compuesto, y una escala lineal aplastaría los primeros años —donde ocurre el FIRE— contra el fondo. Pasa el ratón o el dedo por el gráfico para ver los valores exactos de cada año. Para hacer zoom, rueda del ratón o pellizca con dos dedos; arrastra para desplazarte, o pulsa "Ampliar" para una vista más grande.</p>
+  </section>
+
+  <section>
+    <div class="chartHead">
+      <h2>Aportado vs. rendimiento</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomResetContrib" style="display:none">Restablecer zoom</a>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="contribChart" width="1400" height="700"></canvas>
+      <div class="chart-tip" id="contribChartTip"></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#2E6F9E"></i>Aportado (tu dinero)</span>
+      <span><i style="background:#1F7A4D"></i>Rendimiento (lo generan las inversiones)</span>
+      <span><i class="t"></i>Objetivo</span>
+    </div>
+    <p class="hint">De la ruta mediana: "aportado" es el efectivo neto que metes (o retiras) tú — sueldo ahorrado, bonus variable, ingresos puntuales, menos gasto e hipoteca; "rendimiento" es lo que crece por sí solo con el mercado, encima de eso. A diferencia del gráfico de arriba, este usa escala lineal a propósito: el objetivo es ver cómo el rendimiento acaba superando a lo aportado, no leer cifras exactas de la cola lejana. Pasa el ratón o el dedo para ver los valores de cada año; para hacer zoom, rueda del ratón o pellizca con dos dedos; arrastra para desplazarte.</p>
+  </section>
+
+  <section>
+    <div class="chartHead">
+      <h2>Probabilidad acumulada de ruina desde el FIRE</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomResetRuin" style="display:none">Restablecer zoom</a>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="ruinChartCanvas" width="1400" height="700"></canvas>
+      <div class="chart-tip" id="ruinChartTip"></div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#B8791B"></i>% de rutas FIRE ya arruinadas</span>
+    </div>
+    <p class="hint">La misma tabla de arriba, pero como curva continua año a año en vez de solo unos hitos — así se ve la forma completa: si el riesgo crece deprisa nada más jubilarte o se acumula despacio con el tiempo. La curva se corta donde quedan demasiadas pocas rutas con suficiente horizonte restante para seguir midiendo con fiabilidad, en vez de inventar una cola. Pasa el ratón o el dedo para ver el año exacto; para hacer zoom, rueda del ratón o pellizca con dos dedos; arrastra para desplazarte.</p>
+  </section>
+
+  <dialog class="chartModal" id="chartModal">
+    <div class="chartModalHead">
+      <h2>Trayectoria — vista ampliada</h2>
+      <div class="chartTools">
+        <a href="#" class="zoomReset" id="zoomResetModal" style="display:none">Restablecer zoom</a>
+        <button type="button" class="closeBtn" id="closeChartModal">✕ Cerrar</button>
+      </div>
+    </div>
+    <div class="chartbox">
+      <canvas id="chartModalCanvas" width="1600" height="900"></canvas>
+      <div class="chart-tip" id="chartTipModal"></div>
+    </div>
+    <div class="legend" id="legendModal">
+      <span><i class="b"></i>P10–P90</span>
+      <span><i class="r"></i>Mediana</span>
+      <span><i class="t"></i>Objetivo</span>
+    </div>
+  </dialog>
+
+  <section>
+    <h2>Comparar escenarios</h2>
+    <div class="scenarioSave">
+      <input type="text" id="scenarioName" placeholder="Nombre (ej. Con Beckham)" maxlength="30">
+      <button type="button" class="reset" id="saveScenario">Guardar escenario actual</button>
+    </div>
+    <p class="calcLoading" id="scenarioMsg" style="display:none"></p>
+    <ul class="scenarioList" id="scenarioList"></ul>
+    <p class="hint">Guarda hasta 4 configuraciones distintas para superponer sus medianas en el gráfico de arriba. "Cargar" restaura esos parámetros en todos los sliders; "Eliminar" solo lo quita de la lista. Se guardan en este navegador, así que siguen aquí si recargas la página.</p>
+  </section>
+
+  <section>
+    <h2>Sensibilidad</h2>
+    <button type="button" class="reset" id="runSensitivity">Calcular sensibilidad</button>
+    <p class="calcLoading" id="sensLoading" style="display:none">Calculando…</p>
+    <div class="sensList" id="sensList"></div>
+    <p class="hint">Prueba, uno a uno, cuánto cambia la edad mediana de FIRE al mover cada parámetro un margen razonable arriba y abajo del valor actual, dejando el resto tal cual está. Ordenado de mayor a menor impacto — te dice dónde merece la pena afinar la estimación (o dejar margen de seguridad) y dónde da igual acertar al milímetro. Usa la misma precisión máxima que el cálculo principal (no una vista previa), así que puede tardar bastante — de varios segundos a un par de minutos según el dispositivo, porque las 16 simulaciones corren una detrás de otra.</p>
+  </section>
+
+  <section>
+    <h2>Backtest histórico secuencial (retirada)</h2>
+    <p class="grouphint">Una prueba distinta a todo lo de arriba: en vez de simular tu carrera hasta el FIRE, imagina que YA tienes un capital hoy y quieres saber si habría aguantado retirando una cantidad fija (ajustada a inflación) durante todos y cada uno de los periodos históricos reales — exactamente la prueba "¿me bastan 600.000€?" de la que parte este análisis. No usa carrera, sueldo ni fiscalidad; es solo capital inicial → retirada → cuántos de los ~<span id="btPeriodCount">—</span> periodos históricos reales disponibles para la cartera elegida habrían sobrevivido.</p>
+    <div class="ctrl">
+      <div class="row"><label for="btPortfolio">Cartera</label><output id="btPortfolio_o" for="btPortfolio"></output></div>
+      <input type="range" id="btPortfolio" min="0" max="2" step="1">
+    </div>
+    <div id="btPortfolioStats"></div>
+    <div class="ctrl">
+      <div class="row"><label for="btCapital">Capital inicial (€)</label><output id="btCapital_o" for="btCapital"></output></div>
+      <input type="range" id="btCapital" min="50000" max="2000000" step="10000">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label for="btGasto">Retirada anual, real (€)</label><output id="btGasto_o" for="btGasto"></output></div>
+      <p class="hint">Se mantiene constante en poder adquisitivo — como todo en este simulador, ya está en euros reales, así que aquí no hace falta ajustarla a mano por inflación cada año.</p>
+      <input type="range" id="btGasto" min="12000" max="120000" step="1000">
+    </div>
+    <div class="ctrl">
+      <div class="row"><label for="btYears">Duración de la retirada (años)</label><output id="btYears_o" for="btYears"></output></div>
+      <input type="range" id="btYears" min="10" max="40" step="1">
+    </div>
+    <div id="btResults"></div>
+    <p class="hint">Los datos son históricos reales de EE.UU. 1928-2025 (bolsa: S&amp;P 500 — el mismo que usa el interruptor "rentabilidades históricas reales" de Mercado; bonos: Treasury a 10 años; oro; cash: letras del Tesoro a 3 meses), rebalanceados una vez al año. No son bolsa mundial ni ninguna cartera concreta de ningún estudio externo, así que las cifras no van a coincidir exactamente con las de una fuente que use otros índices — pero la comparación entre carteras (100% bolsa vs. 60/40 vs. permanente) sí es representativa de cómo diversificar reduce el capital necesario. "Capital para no arruinarte" es el mínimo que habría aguantado sin agotarse en TODOS los periodos probados; "capital perpetuo" exige además terminar cada periodo con el poder adquisitivo del capital inicial intacto, no solo sin llegar a cero. Aviso sobre el oro: hasta agosto de 1971 su precio estuvo fijado por ley (patrón oro de Bretton Woods), así que no pudo actuar como cobertura frente a la inflación en esos años — por eso la cartera permanente solo usa periodos que empiezan en 1971 o después (bolsa 100% y 60/40 sí usan todo el rango 1928-2025), igual que hacen la mayoría de análisis de esta cartera.</p>
+  </section>
+
+  <section>
+    <h2>Parámetros</h2>
+
+    <div class="proRow">
+      <input type="checkbox" id="proMode">
+      <label for="proMode">Modo PRO <span class="tag">fiscalidad · FX/inflación estocásticos · guardrails · activos y glide path</span></label>
+    </div>
+
+    <div class="group">
+      <h3>Carrera</h3>
+      <p class="grouphint">Cuánto ganas y cuándo asciendes no son fechas fijas: se simulan como probabilidades, no como certezas.</p>
+      <div class="ctrl">
+        <div class="row"><label for="fx">Tipo de cambio (si cobras en otra moneda)</label><output id="fx_o" for="fx"></output></div>
+        <input type="range" id="fx" min="0.5" max="2" step="0.01">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="salFO">Salario actual (bruto, /año)</label><output id="salFO_o" for="salFO"></output></div>
+        <input type="range" id="salFO" min="15000" max="150000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="salCA">Salario tras ascenso/cambio de trabajo (opcional, /año)</label><output id="salCA_o" for="salCA"></output></div>
+        <input type="range" id="salCA" min="15000" max="250000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="captY">Año del ascenso o cambio de trabajo (opcional)</label><output id="captY_o" for="captY"></output></div>
+        <input type="range" id="captY" min="2030" max="2042" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="captDelay">Dispersión del ascenso (años, σ)</label><output id="captDelay_o" for="captDelay"></output></div>
+        <p class="hint">σ (sigma) es la dispersión típica alrededor del año central: no es un rango garantizado, es cuánto suele variar en la práctica. En 0 no hay incertidumbre, el ascenso ocurre justo en el año elegido.</p>
+        <input type="range" id="captDelay" min="0" max="5" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="startDelay">Riesgo de retraso de entrada (meses, σ)</label><output id="startDelay_o" for="startDelay"></output></div>
+        <p class="hint">Misma idea que la σ del ascenso, aplicada a cuándo empiezas realmente en tu nuevo trabajo.</p>
+        <input type="range" id="startDelay" min="0" max="18" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="salG">Subida salarial real anual</label><output id="salG_o" for="salG"></output></div>
+        <input type="range" id="salG" min="-1" max="2.5" step="0.1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="profitShareWeeks">Bonus variable máximo (semanas de salario base/año)</label><output id="profitShareWeeks_o" for="profitShareWeeks"></output></div>
+        <p class="hint">Muchas empresas pagan un bonus variable discrecional, por ejemplo entre el 0 % y el 30 % del salario base anual (≈0-15,6 semanas), decidido de cero cada año según resultados — aquí se sortea un valor distinto cada diciembre, entre 0 y el máximo que fijes, en vez de asumir un importe fijo. Con 0 semanas, no cambia nada respecto a no tenerlo en cuenta.</p>
+        <input type="range" id="profitShareWeeks" min="0" max="15.6" step="0.2">
+      </div>
+      <p class="note">El ascenso se modela como una distribución alrededor del año central: una sola fecha fija crea falsa precisión. Las horas mínimas no sustituyen la incertidumbre de antigüedad, necesidades de compañía y timing real.</p>
+    </div>
+
+    <div class="group">
+      <h3>Mercado</h3>
+      <p class="grouphint">Estos dos números definen cómo se comporta la bolsa mes a mes en la simulación: cuánto sube de media y cuánto oscila alrededor de esa media.</p>
+      <div class="ctrl">
+        <div class="row"><label for="ret">Rentabilidad real media</label><output id="ret_o" for="ret"></output></div>
+        <input type="range" id="ret" min="2" max="9" step="0.1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="vol">Volatilidad anual</label><output id="vol_o" for="vol"></output></div>
+        <p class="hint">Cuánto se desvía un año típico de la media. Con 17 %, en torno a 1 de cada 3 años el resultado se aleja de la rentabilidad media en más de ese porcentaje, para bien o para mal.</p>
+        <input type="range" id="vol" min="0" max="26" step="0.5">
+      </div>
+      <p class="note">Renta variable global: ~5,5 % real con ~17 % de volatilidad. Bajar la volatilidad no reduce el riesgo, solo lo esconde.</p>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="histMarketOn">
+        <label for="histMarketOn">Usar rentabilidades históricas reales (bootstrap) en vez de la curva teórica</label>
+      </div>
+      <p class="hint">En vez de sortear cada mes con la media/volatilidad de arriba, cada ruta elige un año al azar dentro del historial real de la bolsa (S&amp;P 500, rentabilidad real 1928-2025) y camina hacia delante con la secuencia tal y como ocurrió — si llega al final de la serie, vuelve a empezar por el principio. Así se conservan caídas y recuperaciones reales (y el riesgo de mala suerte justo al jubilarte) que una distribución teórica no reproduce. Solo afecta a la renta variable tradicional: Bitcoin y oro siguen con su propio modelo, y su correlación con la bolsa (más abajo) se desactiva en este modo. Si además activas el shock de inflación estocástica (Modo PRO), se sigue aplicando encima de estas rentabilidades que ya son reales — no están pensados para combinarse.</p>
+    </div>
+
+    <div class="group">
+      <h3>Gastos</h3>
+      <div class="ctrl">
+        <div class="row"><label for="vida">Coste de vida actual (€/mes, sin vivienda)</label><output id="vida_o" for="vida"></output></div>
+        <input type="range" id="vida" min="1800" max="7000" step="50">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="vidaG">Crecimiento real del gasto</label><output id="vidaG_o" for="vidaG"></output></div>
+        <input type="range" id="vidaG" min="0" max="3" step="0.1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="hip">Hipoteca (€/mes)</label><output id="hip_o" for="hip"></output></div>
+        <input type="range" id="hip" min="0" max="1400" step="10">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="hipEnd">Fin de hipoteca</label><output id="hipEnd_o" for="hipEnd"></output></div>
+        <input type="range" id="hipEnd" min="2027" max="2065" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="nur">Guardería por hijo (€/año)</label><output id="nur_o" for="nur"></output></div>
+        <input type="range" id="nur" min="0" max="20000" step="250">
+      </div>
+      <p class="note">La simulación es mensual y el gasto se aplica durante los meses reales de carrera. Revisa manualmente la cronología de colegio/guardería: sin fechas de nacimiento exactas no conviene fingir precisión.</p>
+    </div>
+
+    <div class="group">
+      <h3>Liquidaciones</h3>
+      <div class="ctrl">
+        <div class="row"><label for="burr">Ingreso puntual 1, neto (€)</label><output id="burr_o" for="burr"></output></div>
+        <input type="range" id="burr" min="0" max="130000" step="1000">
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="brOn">
+        <label for="brOn">Activar ingreso puntual 2 (opcional)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="brNet">Ingreso puntual 2, neto de impuestos (€)</label><output id="brNet_o" for="brNet"></output></div>
+        <input type="range" id="brNet" min="0" max="450000" step="5000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="brStart">Año del ingreso puntual 2</label><output id="brStart_o" for="brStart"></output></div>
+        <input type="range" id="brStart" min="2027" max="2045" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="brYears">Años para liquidarlo todo</label><output id="brYears_o" for="brYears"></output></div>
+        <input type="range" id="brYears" min="1" max="18" step="1">
+      </div>
+      <p class="note">Usa esto para cualquier ingreso puntual futuro que no sea sueldo: venta de un activo, una indemnización, una herencia… El primero llega de golpe al empezar tu carrera; el segundo se reparte en varios años a partir del año que elijas — desactiva el interruptor si no aplica en tu caso.</p>
+    </div>
+
+    <div class="group">
+      <h3>Cartera hoy</h3>
+      <p class="grouphint">Lo que ya tienes ahorrado, repartido en dos cestas con comportamiento distinto: renta variable tradicional y Bitcoin.</p>
+      <div class="ctrl">
+        <div class="row"><label for="startEq">Cash + renta variable (€)</label><output id="startEq_o" for="startEq"></output></div>
+        <input type="range" id="startEq" min="0" max="400000" step="2500">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="startBtc">Bitcoin (€)</label><output id="startBtc_o" for="startBtc"></output></div>
+        <input type="range" id="startBtc" min="0" max="150000" step="500">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcRet">Rentabilidad real media de BTC</label><output id="btcRet_o" for="btcRet"></output></div>
+        <input type="range" id="btcRet" min="-10" max="20" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcVol">Volatilidad de BTC</label><output id="btcVol_o" for="btcVol"></output></div>
+        <input type="range" id="btcVol" min="20" max="110" step="2">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o" for="btcRho"></output></div>
+        <p class="hint">Va de -1 a 1: 0 significa que se mueven sin relación entre sí, 1 que suben y bajan siempre juntos, -1 que cuando uno sube el otro baja. Con 0,40 (el valor por defecto), tienden a moverse en la misma dirección pero sin ir pegados.</p>
+        <input type="range" id="btcRho" min="-20" max="90" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="btcAporte">Del ahorro nuevo, a BTC</label><output id="btcAporte_o" for="btcAporte"></output></div>
+        <input type="range" id="btcAporte" min="0" max="40" step="1">
+      </div>
+      <p class="note">La rentabilidad futura de BTC no la sabe nadie: el 5 % que viene por defecto es una suposición, no un dato. Prueba a ponerlo en 0 % y en negativo — si el plan solo funciona con BTC subiendo, no es un plan.</p>
+    </div>
+
+    <div class="group">
+      <h3>Fondo de previsión</h3>
+      <div class="toggle">
+        <input type="checkbox" id="provOn">
+        <label for="provOn">Contar el plan de empresa/pensiones</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="basicFO">Salario base 1, para el plan de empresa (/mes)</label><output id="basicFO_o" for="basicFO"></output></div>
+        <input type="range" id="basicFO" min="1000" max="10000" step="50">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="basicCA">Salario base 2, tras ascenso (opcional, /mes)</label><output id="basicCA_o" for="basicCA"></output></div>
+        <input type="range" id="basicCA" min="1000" max="15000" step="50">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="provCo">Aportación del empleador (%)</label><output id="provCo_o" for="provCo"></output></div>
+        <input type="range" id="provCo" min="0" max="20" step="0.5">
+      </div>
+      <p class="note">La empresa aporta el % que fijes del salario base (aquí, con una mejora automática al 15 % a partir de 10 años de antigüedad — ajusta el código si tu plan no funciona así) y tú aportas un 5 % adicional de tu nómina. Solo se cobra al dejar la empresa — y como dejarla es justo lo que significa jubilarte, cuenta para el objetivo. No se modela vesting parcial: se asume que te llevas el 100 % de lo aportado por la empresa.</p>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="gratuityYears">Años de servicio con indemnización por antigüedad (opcional)</label><output id="gratuityYears_o" for="gratuityYears"></output></div>
+        <p class="hint">Algunos países o planes de empresa pagan una indemnización por antigüedad al dejar la empresa, calculada como unos días de salario base por año trabajado — aquí, 21 días/año los primeros 5 años y 30 días/año a partir del sexto, con un tope de 2 años de salario base (ajusta estas cifras en el código si tu caso es distinto). Se cobra en un único pago al jubilarte, sobre el salario base vigente en ese momento. Con 0 años (valor por defecto) no cambia nada.</p>
+        <input type="range" id="gratuityYears" min="0" max="15" step="0.5">
+      </div>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Fiscalidad España</h3>
+      <p class="grouphint">Si vives fuera de España sin pagar impuestos sobre la renta y en algún momento vuelves a residir aquí, eso cambia: al dejar de ser no residente, Hacienda puede gravar tanto lo que retiras de tu cartera como el patrimonio que acumulas.</p>
+      <div class="toggle">
+        <input type="checkbox" id="taxOn">
+        <label for="taxOn">Tributar plusvalías al repatriar capital</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="taxRate">Tipo medio efectivo sobre plusvalías</label><output id="taxRate_o" for="taxRate"></output></div>
+        <p class="hint">Para que te quede X € netos en el bolsillo, hay que vender más de X € en bruto: la simulación "engorda" cada retirada para compensar lo que se queda Hacienda. Se aplica a la cartera gravable: renta variable, BTC, oro, el cubo conservador e inmobiliario.</p>
+        <input type="range" id="taxRate" min="0" max="30" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="taxRateProv">Tipo medio efectivo sobre el plan de empresa</label><output id="taxRateProv_o" for="taxRateProv"></output></div>
+        <p class="hint">El plan de empresa no es una plusvalía: al retirarlo, Hacienda lo trata como rendimiento del trabajo (tramos generales de IRPF), normalmente con un tipo más alto que el de plusvalías de arriba. Como cada cubo puede tener su propio tipo, el simulador retira automáticamente primero del que salga más barato — con los valores por defecto (mismo tipo en los dos) esto no cambia nada, es exactamente el orden de siempre.</p>
+        <input type="range" id="taxRateProv" min="0" max="47" step="0.5">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="taxBracketsOn">
+        <label for="taxBracketsOn">Usar tramos reales del ahorro (IRPF) en vez de un tipo medio</label>
+      </div>
+      <p class="hint">La base del ahorro tributa por tramos progresivos (19% hasta 6.000 €, 21% hasta 50.000 €, 23% hasta 200.000 €, 27% hasta 300.000 € y 30% a partir de ahí — orientativo, 2025), no a un tipo fijo: retirar una cantidad grande de golpe en un año paga de media más que la misma cantidad repartida en varios años, porque una parte mayor cae en tramos altos. Con esto activo, el "tipo medio efectivo sobre plusvalías" de arriba deja de usarse para la cartera gravable — el tipo emerge de cuánto se retira cada año natural, no de una cifra fija. Solo afecta a la cartera gravable; el plan de empresa sigue con su tipo medio de arriba, porque sus tramos reales (renta del trabajo) son mucho más complejos.</p>
+      <div class="ctrl">
+        <div class="row"><label for="taxRepatDelay">Años tras el FIRE hasta residencia fiscal en España</label><output id="taxRepatDelay_o" for="taxRepatDelay"></output></div>
+        <p class="hint">Se cuenta desde la fecha en que cada ruta alcanza el FIRE, no desde un año de calendario fijo: como el FIRE varía de una ruta a otra, no tendría sentido fijarlo en el tiempo.</p>
+        <input type="range" id="taxRepatDelay" min="0" max="20" step="1">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="beckhamOn">
+        <label for="beckhamOn">Acogido a la Ley Beckham (régimen de impatriados)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="beckhamYears">Duración del régimen (años)</label><output id="beckhamYears_o" for="beckhamYears"></output></div>
+        <p class="hint">Mientras dura (el año del cambio de residencia y los cinco siguientes, 6 en total), tributas como no residente: solo se gravan rentas y bienes situados en España. Como este simulador asume que tu cartera está fuera de España, mientras el régimen esté activo se suspenden tanto el IRPF sobre plusvalías como el impuesto de patrimonio.</p>
+        <input type="range" id="beckhamYears" min="1" max="6" step="1">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="wealthTaxOn">
+        <label for="wealthTaxOn">Aplicar impuesto de patrimonio</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="ccaaPreset">Comunidad autónoma (rellena mínimo/bonificación)</label><output id="ccaaPreset_o" for="ccaaPreset"></output></div>
+        <p class="hint">Un atajo, no una fuente de verdad: al elegir una comunidad se rellenan los dos sliders de abajo con cifras orientativas de 2025, pero puedes seguir ajustándolos a mano. La normativa autonómica cambia con frecuencia — verifica siempre el valor vigente.</p>
+        <input type="range" id="ccaaPreset" min="0" max="4" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="wealthExempt">Mínimo exento (€)</label><output id="wealthExempt_o" for="wealthExempt"></output></div>
+        <p class="hint">El impuesto de patrimonio es un pago anual sobre lo que posees (no sobre lo que ganas), por encima de un mínimo exento. Se cobra cada diciembre mientras seas residente fiscal en España.</p>
+        <input type="range" id="wealthExempt" min="500000" max="3000000" step="50000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="wealthRate">Tipo medio anual sobre el exceso</label><output id="wealthRate_o" for="wealthRate"></output></div>
+        <input type="range" id="wealthRate" min="0" max="3.5" step="0.05">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="wealthBonusPct">Bonificación sobre la cuota</label><output id="wealthBonusPct_o" for="wealthBonusPct"></output></div>
+        <p class="hint">Varias comunidades (Madrid, Andalucía, Cantabria, Extremadura) no cambian el mínimo exento sino que bonifican el 100 % de la cuota resultante — el impuesto sale a pagar 0 € aunque tengas mucho patrimonio.</p>
+        <input type="range" id="wealthBonusPct" min="0" max="100" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="mortgageBalance">Hipoteca pendiente (saldo actual, €)</label><output id="mortgageBalance_o" for="mortgageBalance"></output></div>
+        <p class="hint">La base del impuesto de patrimonio es tu patrimonio neto (bienes menos deudas), no el bruto. Este saldo se amortiza en línea recta hasta 0 en el año de "Fin de hipoteca" que fijaste en Gastos.</p>
+        <input type="range" id="mortgageBalance" min="0" max="500000" step="5000">
+      </div>
+      <p class="note">El "año de repatriación" se cuenta desde la fecha FIRE de cada ruta, no como un año fijo: el FIRE es first-passage y varía ruta a ruta. Los impuestos se detraen directamente de la cartera, así que todas las cifras que ves arriba ya quedan netas. Los mínimos/bonificaciones por comunidad son orientativos (2025): Madrid/Andalucía/Cantabria/Extremadura bonifican el 100 %, Cataluña fija 500.000 € de mínimo, Comunidad Valenciana 1.000.000 € — confírmalo con tu asesor antes de tomar decisiones.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Inflación y FX estocásticos</h3>
+      <p class="grouphint">El resto del simulador usa tasas reales fijas para simplificar. Aquí, en cambio, el tipo de cambio y la inflación se dejan fluctuar mes a mes como en la vida real, en vez de asumir que se mantienen constantes.</p>
+      <div class="toggle">
+        <input type="checkbox" id="fxVolOn">
+        <label for="fxVolOn">Tipo de cambio aleatorio (en vez de fijo)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="fxVol">Volatilidad anual del tipo de cambio</label><output id="fxVol_o" for="fxVol"></output></div>
+        <input type="range" id="fxVol" min="0" max="15" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="fxMeanRevert">Reversión anual hacia el tipo base</label><output id="fxMeanRevert_o" for="fxMeanRevert"></output></div>
+        <p class="hint">"Reversión a la media" significa que, aunque el tipo de cambio se desvíe algún mes, tiende a volver hacia el valor base que fijaste arriba (Tipo de cambio) en vez de alejarse sin límite. Cuanto más alto el %, más rápido vuelve.</p>
+        <input type="range" id="fxMeanRevert" min="0" max="100" step="5">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="inflOn">
+        <label for="inflOn">Sorpresas de inflación EUR (en vez de tasas reales fijas)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="inflVol">Volatilidad anual de la sorpresa de inflación</label><output id="inflVol_o" for="inflVol"></output></div>
+        <input type="range" id="inflVol" min="0" max="4" step="0.1">
+      </div>
+      <p class="note">El modelo ya trabaja en euros reales de 2026. Esto no reintroduce una base nominal completa: añade ruido alrededor de esa base real, erosionando algo el retorno de mercado y abaratando en términos reales la hipoteca nominal fija cuando la inflación sorprende al alza.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Estrategia de retirada</h3>
+      <p class="grouphint">En el modo simple, una vez jubilado retiras siempre la misma cantidad cada año. Aquí puedes probar alternativas que ajustan el gasto según cómo le va a la cartera o según la edad.</p>
+      <div class="ctrl">
+        <div class="row"><label for="wdStrategy">Estrategia</label><output id="wdStrategy_o" for="wdStrategy"></output></div>
+        <input type="range" id="wdStrategy" min="0" max="2" step="1">
+      </div>
+      <p class="subhead">Guyton-Klinger (guardrails)</p>
+      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más.</p>
+      <div class="ctrl">
+        <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o" for="gkGuard"></output></div>
+        <input type="range" id="gkGuard" min="10" max="30" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="gkCut">Recorte de gasto al tocar el techo</label><output id="gkCut_o" for="gkCut"></output></div>
+        <input type="range" id="gkCut" min="5" max="15" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="gkRaise">Subida de gasto al tocar el suelo</label><output id="gkRaise_o" for="gkRaise"></output></div>
+        <input type="range" id="gkRaise" min="5" max="15" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="gkFreq">Frecuencia de revisión (meses)</label><output id="gkFreq_o" for="gkFreq"></output></div>
+        <input type="range" id="gkFreq" min="6" max="24" step="6">
+      </div>
+      <p class="subhead">Fases go-go / slow-go / no-go</p>
+      <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go).</p>
+      <div class="ctrl">
+        <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o" for="goGoMult"></output></div>
+        <input type="range" id="goGoMult" min="80" max="150" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goGoYears">Duración go-go (años)</label><output id="goGoYears_o" for="goGoYears"></output></div>
+        <input type="range" id="goGoYears" min="0" max="20" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="slowGoMult">Gasto fase slow-go (% del base)</label><output id="slowGoMult_o" for="slowGoMult"></output></div>
+        <input type="range" id="slowGoMult" min="60" max="120" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="slowGoYears">Duración slow-go (años)</label><output id="slowGoYears_o" for="slowGoYears"></output></div>
+        <input type="range" id="slowGoYears" min="0" max="20" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="noGoMult">Gasto fase no-go (% del base)</label><output id="noGoMult_o" for="noGoMult"></output></div>
+        <input type="range" id="noGoMult" min="50" max="110" step="5">
+      </div>
+      <p class="note">Con "SWR fijo" el gasto es idéntico al modo simple. Guyton-Klinger ajusta el gasto anual cuando la tasa de retiro efectiva se sale de la banda alrededor del SWR objetivo. Las fases aplican un multiplicador al gasto base según los años transcurridos desde el FIRE de cada ruta.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Activos y allocation adicionales</h3>
+      <p class="grouphint">Además de acciones y BTC, puedes añadir más clases de activo con su propio comportamiento, y decidir si la cartera se vuelve más conservadora a medida que se acerca el FIRE.</p>
+      <p class="subhead">Oro</p>
+      <div class="ctrl">
+        <div class="row"><label for="startGold">Oro hoy (€)</label><output id="startGold_o" for="startGold"></output></div>
+        <input type="range" id="startGold" min="0" max="100000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldRet">Rentabilidad real media</label><output id="goldRet_o" for="goldRet"></output></div>
+        <input type="range" id="goldRet" min="-5" max="10" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldVol">Volatilidad anual</label><output id="goldVol_o" for="goldVol"></output></div>
+        <input type="range" id="goldVol" min="5" max="30" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldRho">Correlación oro ↔ bolsa</label><output id="goldRho_o" for="goldRho"></output></div>
+        <p class="hint">Igual que con BTC: de -1 a 1. Un valor negativo (como el -0,10 por defecto) significa que el oro tiende ligeramente a moverse en dirección contraria a la bolsa — el motivo clásico para tenerlo como amortiguador.</p>
+        <input type="range" id="goldRho" min="-50" max="50" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="goldAporte">Del ahorro nuevo, a oro</label><output id="goldAporte_o" for="goldAporte"></output></div>
+        <input type="range" id="goldAporte" min="0" max="30" step="1">
+      </div>
+      <p class="subhead">Inmueble en alquiler</p>
+      <div class="toggle">
+        <input type="checkbox" id="reOn">
+        <label for="reOn">Contar un inmueble en alquiler</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="reValue">Valor del inmueble (€)</label><output id="reValue_o" for="reValue"></output></div>
+        <input type="range" id="reValue" min="0" max="500000" step="5000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="reYield">Rentabilidad neta de alquiler</label><output id="reYield_o" for="reYield"></output></div>
+        <input type="range" id="reYield" min="0" max="8" step="0.25">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="reAppr">Revalorización real anual</label><output id="reAppr_o" for="reAppr"></output></div>
+        <input type="range" id="reAppr" min="-2" max="5" step="0.25">
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="reCountsFire">
+        <label for="reCountsFire">Contar el inmueble como capital FIRE</label>
+      </div>
+      <p class="subhead">Glide path (des-arriesgar al acercarte al FIRE)</p>
+      <p class="hint">Un "glide path" traslada progresivamente parte de la cartera de activos de riesgo (acciones, BTC, oro) a una cartera conservadora a medida que se acerca la fecha de jubilación, para reducir el impacto de un mal año de mercado justo antes de retirarte.</p>
+      <div class="toggle">
+        <input type="checkbox" id="glideOn">
+        <label for="glideOn">Activar glide path</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o" for="glideTargetYear"></output></div>
+        <input type="range" id="glideTargetYear" min="2027" max="2092" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="glideStartYears">Años antes de empezar a des-arriesgar</label><output id="glideStartYears_o" for="glideStartYears"></output></div>
+        <input type="range" id="glideStartYears" min="1" max="15" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="glideEqFloor">Mínimo en riesgo al llegar la fecha</label><output id="glideEqFloor_o" for="glideEqFloor"></output></div>
+        <input type="range" id="glideEqFloor" min="20" max="90" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="consRet">Cartera conservadora, rentabilidad real</label><output id="consRet_o" for="consRet"></output></div>
+        <input type="range" id="consRet" min="0" max="4" step="0.25">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="consVol">Cartera conservadora, volatilidad</label><output id="consVol_o" for="consVol"></output></div>
+        <input type="range" id="consVol" min="0" max="8" step="0.5">
+      </div>
+      <p class="note">"Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
+    </div>
+
+    <div class="group pro-only">
+      <h3>PRO · Esperanza de vida y FIRE parcial</h3>
+      <p class="grouphint">Por defecto el dinero tiene que durar hasta una edad muy alta (~94 años) aunque no vayas a vivir tanto, y se asume que al jubilarte el ingreso cae a cero de golpe. Aquí puedes acotar el horizonte a tu esperanza de vida real y modelar que sigas ganando algo tras el FIRE.</p>
+      <div class="toggle">
+        <input type="checkbox" id="lifeExpOn">
+        <label for="lifeExpOn">Limitar el horizonte a tu esperanza de vida</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="lifeExp">Esperanza de vida (edad)</label><output id="lifeExp_o" for="lifeExp"></output></div>
+        <p class="hint">A partir de esa edad, cada ruta deja de necesitar retirar dinero de la cartera — lo que quede sigue invertido, como una herencia. "Ruina" pasa a significar quedarte sin fondos antes de esa edad, no antes de 2092.</p>
+        <input type="range" id="lifeExp" min="70" max="100" step="1">
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="baristaOn">
+        <label for="baristaOn">Ingreso parcial tras el FIRE (Barista FIRE)</label>
+      </div>
+      <div class="ctrl" style="margin-top:14px">
+        <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o" for="baristaIncome"></output></div>
+        <input type="range" id="baristaIncome" min="0" max="40000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="baristaYears">Duración del ingreso parcial (años tras el FIRE)</label><output id="baristaYears_o" for="baristaYears"></output></div>
+        <p class="hint">Trabajo a tiempo parcial, consultoría, o cualquier ingreso que sigas teniendo tras dejar tu trabajo actual: se resta directamente de lo que hay que sacar de la cartera cada mes durante estos años, y no cuenta como capital nuevo que ahorrar.</p>
+        <input type="range" id="baristaYears" min="0" max="30" step="1">
+      </div>
+      <p class="note">El ingreso parcial se trata como una cifra real (no crece con el tiempo), igual que el resto de cifras "reales" del simulador — súbelo o bájalo a mano si crees que cambiará mucho de un año a otro.</p>
+    </div>
+
+    <div class="group">
+      <h3>Objetivo</h3>
+      <div class="ctrl">
+        <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o" for="gasto"></output></div>
+        <input type="range" id="gasto" min="25000" max="130000" step="1000">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="swr">Tasa de retiro segura</label><output id="swr_o" for="swr"></output></div>
+        <p class="hint">SWR ("safe withdrawal rate"): el % de tu capital que puedes gastar cada año con baja probabilidad de quedarte sin fondos. La referencia más conocida es la "regla del 4 %".</p>
+        <input type="range" id="swr" min="2.4" max="4.6" step="0.05">
+      </div>
+      <p class="note">El objetivo es una primera criba. La simulación además cambia cada ruta a fase de retirada al cruzarlo y comprueba si sobrevive hasta el horizonte. La vivienda habitual no cuenta como capital FIRE mientras sea de uso propio.</p>
+    </div>
+
+    <div class="actions">
+      <button class="reset" id="reset">Restaurar valores base</button>
+      <p class="calc" id="calc"></p>
+      <p class="calcLoading" id="calcLoading" style="display:none">Calculando con el máximo de rutas que caben en ~3-5s…</p>
+    </div>
+  </section>
+</div>
+
+
+<script>
+// S&P 500 annual REAL (inflation-adjusted) total return, 1928-2025, one entry
+// per calendar year in order. Real return computed as (1+nominal)/(1+CPI)-1
+// from: nominal total return (incl. dividends) — Aswath Damodaran/NYU Stern
+// historical returns dataset; US CPI inflation — officialdata.org. Used only
+// by the "Mercado" historical-bootstrap toggle below; orientativo (datos de
+// 2025), no se actualiza automáticamente.
+const HIST_START_YEAR = 1928; // calendar year of HIST_EQ_REAL_RETURNS[0]
+const HIST_EQ_REAL_RETURNS = [0.4633,-0.083,-0.2333,-0.383,0.0136,0.5806,-0.0414,0.4353,0.3004,-0.3759,
+0.3203,0.0032,-0.1131,-0.1692,0.0748,0.1784,0.1701,0.3281,-0.1547,-0.0801,
+-0.0219,0.1979,0.2918,0.1465,0.1592,-0.0195,0.5142,0.3309,0.0586,-0.1333,
+0.3974,0.1129,-0.0136,0.2537,-0.0971,0.2101,0.1491,0.1062,-0.1247,0.2009,
+0.0635,-0.1299,-0.0204,0.0943,0.1507,-0.1933,-0.3327,0.2554,0.1709,-0.1266,
+-0.01,0.0644,0.1607,-0.1361,0.1343,0.1854,0.0175,0.2673,0.1633,0.0208,
+0.1191,0.2543,-0.0803,0.2497,0.0435,0.0678,-0.012,0.3342,0.1916,0.3012,
+0.2637,0.1828,-0.1199,-0.1429,-0.2318,0.255,0.0787,0.0139,0.1199,0.0256,
+-0.389,0.264,0.1297,-0.0103,0.1354,0.3025,0.1171,0.0126,0.1038,0.1907,
+-0.0656,0.2894,0.1659,0.227,-0.2411,0.2107,0.2137,0.1462];
+
+// 10-year US Treasury bond annual REAL total return, same years/methodology
+// as HIST_EQ_REAL_RETURNS (nominal from Damodaran/NYU Stern, CPI from
+// officialdata.org). Used by the "60/40" and "cartera permanente" presets in
+// the historical backtest below.
+const HIST_BOND_REAL_RETURNS = [0.026,0.042,0.0704,0.0705,0.207,0.0735,0.0473,0.0218,0.0351,-0.0214,
+0.0642,0.0591,0.0465,-0.0669,-0.0775,-0.0343,0.0084,0.015,-0.048,-0.1175,
+-0.0566,0.0597,-0.0082,-0.0758,0.0034,0.0336,0.0252,-0.0097,-0.0369,0.0338,
+-0.0481,-0.0332,0.0975,0.0104,0.0464,0.0036,0.0239,-0.0088,0.0005,-0.0453,
+-0.0088,-0.0993,0.1043,0.0518,-0.0038,-0.0241,-0.0815,-0.0506,0.0966,-0.0489,
+-0.0778,-0.0959,-0.1453,-0.0192,0.251,-0.0001,0.0902,0.2139,0.2201,-0.0831,
+0.0392,0.1228,0.008,0.1035,0.0616,0.1089,-0.1034,0.2008,-0.0148,0.0748,
+0.1315,-0.1023,0.1287,0.0264,0.1333,-0.0186,0.0178,-0.005,-0.0123,0.0716,
+0.1566,-0.108,0.0671,0.1249,0.0088,-0.1041,0.0898,0.0116,-0.0056,0.0066,
+-0.0245,0.0774,0.0998,-0.0871,-0.2392,-0.0023,-0.044,0.049];
+// 3-month US Treasury bill ("cash") annual REAL return, same years/methodology.
+const HIST_TBILL_REAL_RETURNS = [0.0488,0.0316,0.0706,0.124,0.1214,0.064,-0.0272,-0.0202,-0.0127,-0.032,
+0.022,0.0149,-0.0068,-0.0464,-0.0951,-0.0542,-0.0133,-0.0185,-0.0734,-0.1203,
+-0.065,0.0239,-0.0006,-0.059,-0.002,0.0113,0.0019,0.021,0.0111,-0.0009,
+-0.0105,0.0268,0.0113,0.0133,0.0175,0.0182,0.0221,0.023,0.0194,0.0116,
+0.011,0.0115,0.0063,-0.0005,0.0082,0.0077,-0.0287,-0.0306,-0.0074,-0.0116,
+-0.0038,-0.0117,-0.0186,0.0337,0.0464,0.0556,0.0537,0.0402,0.0421,0.0223,
+0.0264,0.0341,0.0223,0.0128,0.0049,0.0008,0.0176,0.0275,0.0214,0.0284,
+0.033,0.0251,0.0255,0.0061,0.0006,-0.0122,-0.0123,-0.0016,0.0157,0.0158,
+-0.0235,0.0051,-0.0148,-0.0301,-0.0194,-0.0138,-0.0156,-0.0007,-0.0093,-0.0116,
+-0.0051,0.0034,-0.0086,-0.0445,-0.0547,0.0111,0.0223,0.0141];
+// Gold annual REAL return, same years/methodology. Near-zero 1928-1970 is not
+// a data error — gold was pegged to a fixed USD price under Bretton Woods
+// until August 1971.
+const HIST_GOLD_REAL_RETURNS = [0.0185,-0.0015,0.025,-0.0923,0.3456,0.3411,0.2781,-0.0177,-0.0135,-0.037,
+0.023,0.0019,-0.0236,-0.0476,-0.0981,-0.0578,-0.017,0.0026,-0.0769,-0.1256,
+-0.0747,-0.0755,0.082,-0.073,-0.0223,-0.0006,-0.0018,0.0034,-0.0158,-0.0331,
+-0.0235,-0.0069,-0.0122,-0.0106,-0.0105,-0.017,-0.0126,-0.0153,-0.0275,-0.0349,
+0.0795,-0.0043,-0.1435,0.1179,0.4415,0.6283,0.4963,-0.3109,-0.0932,0.1515,
+0.2734,1.0346,0.0149,-0.3891,0.0891,-0.1939,-0.2272,0.0236,0.1679,0.2014,
+-0.1863,-0.0731,-0.0807,-0.1225,-0.0848,0.1426,-0.0461,-0.018,-0.0732,-0.2317,
+-0.0235,-0.0133,-0.0851,-0.0204,0.2362,0.1722,0.0194,0.1391,0.1935,0.2826,
+0.0046,0.2549,0.2715,0.0859,0.0354,-0.2865,-0.0148,-0.1222,0.0675,0.1031,
+-0.0334,0.1702,0.2266,-0.0807,-0.069,0.0878,0.2242,0.6176];
+// Portfolio presets for the historical backtest: annually-rebalanced weighted
+// blend of the four series above (weighted sum of that year's real returns —
+// exact for a portfolio rebalanced once at the start of each year, which is
+// the standard convention these backtests use).
+const BT_PORTFOLIOS = [
+  {label:'Bolsa 100% (S&P 500)', short:'Bolsa 100%', weights:{stocks:1, bonds:0, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
+  {label:'60/40 (60% bolsa / 40% bonos)', short:'60/40', weights:{stocks:0.6, bonds:0.4, gold:0, cash:0}, minStartYear:HIST_START_YEAR},
+  // Restringida a 1971+: hasta agosto de 1971 el oro estuvo fijado por ley
+  // (patrón oro de Bretton Woods) y no podía actuar como cobertura, así que
+  // los periodos anteriores no reflejan cómo se comporta esta cartera hoy.
+  {label:'Cartera permanente (25% bolsa / 25% bonos / 25% oro / 25% cash)', short:'Cartera permanente', weights:{stocks:0.25, bonds:0.25, gold:0.25, cash:0.25}, minStartYear:1971},
+];
+
+// Spanish savings-income ("base del ahorro") tax brackets — orientativo, 2025.
+// upTo is the cumulative gross amount at which each marginal rate stops
+// applying (Hacienda taxes the whole tax year together, so this is a running
+// total across a calendar year, not per withdrawal). Used only by the
+// "tramos reales" toggle under Fiscalidad España — the flat "tipo medio
+// efectivo" slider stays the default.
+const SAVINGS_TAX_BRACKETS=[
+  {upTo:6000,     rate:0.19},
+  {upTo:50000,    rate:0.21},
+  {upTo:200000,   rate:0.23},
+  {upTo:300000,   rate:0.27},
+  {upTo:Infinity, rate:0.30},
+];
+
+const DEFAULTS = {
+  ageNow:28,
+  fx:1, salFO:35000, salCA:55000, captY:2030, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
+  ret:5.5, vol:17, histMarketOn:true, vida:1400, vidaG:1.0, hip:500, hipEnd:2046, nur:5000,
+  burr:0, brOn:false, brNet:0, brStart:2030, brYears:5,
+  gasto:24000, swr:3.25,
+  startEq:3000, startBtc:15000,
+  btcRet:5, btcVol:70, btcRho:40, btcAporte:0,
+  basicFO:2500, basicCA:4000, provCo:5, provOn:true, gratuityYears:0,
+
+  // ---- Modo PRO ----
+  proMode:true,
+  // fiscalidad España
+  taxOn:true, taxRate:19, taxRateProv:19, taxBracketsOn:true, taxRepatDelay:2,
+  beckhamOn:true, beckhamYears:6,
+  wealthTaxOn:true, ccaaPreset:3, wealthExempt:500000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
+  // inflación / FX estocásticos
+  fxVolOn:true, fxVol:4, fxMeanRevert:20,
+  inflOn:true, inflVol:1.2,
+  // estrategia de retirada
+  wdStrategy:1,
+  gkGuard:20, gkCut:10, gkRaise:10, gkFreq:12,
+  goGoMult:115, goGoYears:10, slowGoMult:90, slowGoYears:10, noGoMult:100,
+  // activos y allocation adicionales
+  startGold:0, goldRet:1.5, goldVol:15, goldRho:-10, goldAporte:0,
+  reOn:false, reValue:0, reYield:3.5, reAppr:1, reCountsFire:false,
+  glideOn:true, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4,
+  // esperanza de vida y FIRE parcial
+  lifeExpOn:true, lifeExp:90,
+  baristaOn:true, baristaIncome:12000, baristaYears:5
+};
+
+// Backtest histórico secuencial: a standalone tool with its own tiny defaults
+// object, deliberately kept OUT of DEFAULTS/ids — those auto-wire every input
+// into the expensive main Monte Carlo run() pipeline, but this tool doesn't
+// touch the career/tax simulation at all, so it gets its own lightweight
+// init/listeners instead of triggering a full recalculation on every drag.
+const BT_DEFAULTS = {btCapital:600000, btGasto:24000, btYears:30, btPortfolio:0};
+
+// Full-precision runs use an adaptive path count instead of a fixed one: cost per
+// path varies a lot with which PRO features are on, so a fixed number is either
+// wasteful (simple mode) or too slow (PRO fully loaded). See runFullPrecision().
+const PATHS_FULL_MIN = 2000;
+const PATHS_FULL_MAX = 60000;
+const CALIB_N1 = 100, CALIB_N2 = 900;
+// The nominal target is lower than the real wall-clock time we want: sorting
+// each of the 67 annual snapshots is O(paths log paths), so real cost grows a
+// bit faster than the calibration's linear extrapolation predicts once paths
+// scales up by 10-20x from the calibration sample. Empirically this constant
+// needs to be ~65% of the actually-desired wait to land in that range.
+const FULL_TIME_BUDGET_MS = 2600; // targets ~3.5-5s of real wait for maximum precision
+const PATHS_PREVIEW = 250;
+const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
+const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
+const END_YEAR = 2092, END_MONTH = 12;          // long retirement horizon
+const FS1_GAP = 10400;
+const MONTHS = (END_YEAR-START_YEAR)*12+(END_MONTH-START_MONTH)+1;
+
+const ids = Object.keys(DEFAULTS);
+const el = {}, out = {};
+ids.forEach(k => { el[k] = document.getElementById(k); out[k] = document.getElementById(k+'_o'); });
+
+const eur = n => '€'+Math.round(n).toLocaleString('es-ES');
+const eurK = n => n >= 1e6 ? '€'+(n/1e6).toFixed(2)+'M' : '€'+Math.round(n/1000)+'k';
+// Non-breaking space before the % so a value never wraps mid-number on narrow
+// screens (and because that's the correct Spanish typography anyway).
+const fmtPct = n => (n*100).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})+' %';
+const monthIndex = (y,m) => (y-START_YEAR)*12 + (m-START_MONTH);
+const dateFromIndex = i => {
+  const d = new Date(START_YEAR, START_MONTH-1+i, 1);
+  return {y:d.getFullYear(), m:d.getMonth()+1};
+};
+const yearFrac = i => {
+  const d=dateFromIndex(i);
+  return (d.y-START_YEAR)+(d.m-START_MONTH)/12;
+};
+const ageAt = i => DEFAULTS.ageNow + yearFrac(i);
+const ageOfDate = (y,m=12) => Math.floor(DEFAULTS.ageNow + ((y-START_YEAR)+(m-START_MONTH)/12));
+
+// ---- Backtest histórico secuencial ----
+// A deliberately separate, much simpler tool than simulate(): no career, no
+// salary, no taxes — just "I already have this capital, I withdraw this real
+// amount every year, would it have survived every real historical window."
+// Walks each ELIGIBLE starting year in HIST_EQ_REAL_RETURNS exactly once
+// (no bootstrapping, no wraparound) — a strict historical replay, matching
+// how these "X of Y historical retirements failed" studies are normally run.
+// Weighted sum of one historical year's real returns — exact for a portfolio
+// rebalanced once at the start of each year, the convention these backtests use.
+const blendedRealReturn=(w,i)=>w.stocks*HIST_EQ_REAL_RETURNS[i]+w.bonds*HIST_BOND_REAL_RETURNS[i]+w.gold*HIST_GOLD_REAL_RETURNS[i]+w.cash*HIST_TBILL_REAL_RETURNS[i];
+const btStartIndex=p=>Math.max(0, (p.minStartYear||HIST_START_YEAR)-HIST_START_YEAR);
+function runHistoricalBacktest(capital, annualSpend, years, portfolio){
+  const p=portfolio||BT_PORTFOLIOS[0];
+  const w=p.weights;
+  const monthlySpend=annualSpend/12;
+  const n=HIST_EQ_REAL_RETURNS.length;
+  const results=[];
+  for(let start=btStartIndex(p); start+years<=n; start++){
+    let bal=capital;
+    for(let y=0; y<years && bal>0; y++){
+      const monthlyR=Math.pow(1+blendedRealReturn(w,start+y),1/12)-1;
+      for(let m=0; m<12; m++){
+        bal*=1+monthlyR;
+        bal-=monthlySpend;
+        if(bal<=0){ bal=0; break; }
+      }
+    }
+    results.push({startYear:HIST_START_YEAR+start, finalBal:bal, ruined:bal<=0});
+  }
+  return results;
+}
+// Compound (geometric) mean annual real return and volatility of a preset.
+// Geometric, not arithmetic: it's the rate that actually turns a starting
+// capital into the ending one, which is what matters for a withdrawal plan
+// (the arithmetic mean always flatters a volatile portfolio). `fromIdx`
+// overrides the preset's own start so the three can be compared over one
+// common period. Memoized: it only depends on constants.
+const btStatsCache=new Map();
+function portfolioStats(p, fromIdx){
+  const from=fromIdx===undefined ? btStartIndex(p) : fromIdx;
+  const key=p.short+'@'+from;
+  if(btStatsCache.has(key)) return btStatsCache.get(key);
+  const n=HIST_EQ_REAL_RETURNS.length;
+  const rs=[];
+  let growth=1, sum=0, worstRet=Infinity, worstYear=null;
+  for(let i=from;i<n;i++){
+    const r=blendedRealReturn(p.weights,i);
+    rs.push(r); growth*=1+r; sum+=r;
+    if(r<worstRet){ worstRet=r; worstYear=HIST_START_YEAR+i; }
+  }
+  const mean=sum/rs.length;
+  const stats={
+    cagr:Math.pow(growth,1/rs.length)-1,
+    vol:Math.sqrt(rs.reduce((a,r)=>a+(r-mean)*(r-mean),0)/(rs.length-1)),
+    worstRet, worstYear,
+    fromYear:HIST_START_YEAR+from, toYear:HIST_START_YEAR+n-1,
+  };
+  btStatsCache.set(key, stats);
+  return stats;
+}
+function summarizeBacktest(results){
+  const n=results.length;
+  const failed=results.filter(r=>r.ruined);
+  const finals=Float64Array.from(results.map(r=>r.finalBal)).sort();
+  const q=p=>finals[Math.floor((n-1)*p)];
+  return {n, failedYears:failed.map(r=>r.startYear), p10:q(.10), p50:q(.50), p90:q(.90)};
+}
+// Binary search on initial capital for the smallest amount that passes
+// `allPass` (either "never ran out" or, more strictly, "never ran out AND
+// ended every period with at least the original real capital intact" — the
+// "tasa perpetua" from the video). Monotonic in capital (more money is never
+// worse for either criterion), so bisection is safe.
+function capitalNeededFor(annualSpend, years, requirePerpetual, portfolio){
+  const passes=cap=>{
+    const results=runHistoricalBacktest(cap, annualSpend, years, portfolio);
+    return results.every(r=> requirePerpetual ? (!r.ruined && r.finalBal>=cap) : !r.ruined);
+  };
+  let hi=Math.max(annualSpend*years, 100000);
+  // Returns null when no capital can ever pass: as capital grows the withdrawal
+  // becomes negligible and the end/start ratio tends to the window's raw
+  // cumulative growth, so if any window lost real value (e.g. 1999-2008 in
+  // stocks) no amount of money preserves purchasing power through it.
+  while(!passes(hi)){ hi*=1.6; if(hi>1e12) return null; }
+  let lo=0;
+  for(let i=0;i<40;i++){
+    const mid=(lo+hi)/2;
+    if(passes(mid)) hi=mid; else lo=mid;
+  }
+  return hi;
+}
+
+// Precomputed once at load: dateFromIndex(i) is deterministic and path-independent,
+// so calling it ~1.6M times inside simulate()'s per-path monthly loop was pure waste.
+const MONTH_DATES = (() => {
+  const arr = new Array(MONTHS);
+  for (let i = 0; i < MONTHS; i++) {
+    const d = dateFromIndex(i);
+    arr[i] = { y: d.y, m: d.m, isSnap: (d.m === 12 || i === MONTHS - 1) };
+  }
+  return arr;
+})();
+
+function readParams(){
+  const p={};
+  ids.forEach(k => { const n=el[k]; p[k]=n?(n.type==='checkbox'?n.checked:parseFloat(n.value)):DEFAULTS[k]; });
+  return p;
+}
+
+function initVisibleLabels(){
+  try { paintLabels(readParams()); }
+  catch(e) {
+    ids.forEach(k => {
+      if(out[k] && !out[k].textContent) {
+        const n=el[k];
+        out[k].textContent = n && n.type==='checkbox' ? (n.checked?'Sí':'No') : (n ? String(n.value) : '—');
+      }
+    });
+  }
+}
+
+function paintLabels(p){
+  const set=(k,t)=>{ if(out[k]) out[k].textContent=t; };
+  set('ageNow', p.ageNow+' años');
+  set('fx',p.fx.toFixed(3));
+  set('salFO',eur(p.salFO*p.fx)+'/año');
+  set('salCA',eur(p.salCA*p.fx)+'/año');
+  set('captY',p.captY+' · edad '+(p.ageNow+p.captY-START_YEAR));
+  set('captDelay',p.captDelay.toFixed(1)+' años');
+  set('startDelay',p.startDelay.toFixed(0)+' meses');
+  set('salG',p.salG.toFixed(1)+' %');
+  set('profitShareWeeks',p.profitShareWeeks.toFixed(1)+' semanas · hasta '+(p.profitShareWeeks*1.923).toFixed(0)+' % del básico');
+  set('ret',p.ret.toFixed(1)+' %');
+  set('vol',p.vol.toFixed(1)+' %');
+  set('vida',eur(p.vida)+'/mes');
+  set('vidaG',p.vidaG.toFixed(1)+' %');
+  set('hip',eur(p.hip)+'/mes');
+  set('hipEnd',String(p.hipEnd));
+  set('nur',eur(p.nur)+'/año');
+  set('burr',eur(p.burr));
+  set('brNet',eur(p.brNet));
+  set('brStart',String(p.brStart));
+  set('brYears',p.brYears+(p.brYears===1?' año':' años'));
+  set('gasto',eur(p.gasto)+'/año');
+  set('swr',p.swr.toFixed(2)+' %');
+  const tot=p.startEq+p.startBtc;
+  set('startEq',eur(p.startEq));
+  set('startBtc',eur(p.startBtc)+(tot?' · '+Math.round(p.startBtc/tot*100)+' % de la cartera':''));
+  set('btcRet',p.btcRet.toFixed(1)+' %');
+  set('btcVol',p.btcVol.toFixed(0)+' %');
+  set('btcRho',(p.btcRho/100).toFixed(2));
+  set('btcAporte',p.btcAporte.toFixed(0)+' %');
+  set('basicFO',eur(p.basicFO*p.fx)+'/mes · '+eur(p.basicFO*12*p.fx)+'/año');
+  set('basicCA',eur(p.basicCA*p.fx)+'/mes · '+eur(p.basicCA*12*p.fx)+'/año');
+  set('provCo',p.provCo.toFixed(1)+' % (15 % desde 10 años)');
+  set('gratuityYears',p.gratuityYears===0?'0 años · sin efecto':p.gratuityYears.toFixed(1)+' años');
+
+  // ---- Modo PRO ----
+  set('taxRate',p.taxRate.toFixed(1)+' %');
+  set('taxRateProv',p.taxRateProv.toFixed(1)+' %');
+  set('taxRepatDelay',p.taxRepatDelay+(p.taxRepatDelay===1?' año':' años'));
+  set('beckhamYears',p.beckhamYears+(p.beckhamYears===1?' año':' años'));
+  set('ccaaPreset',['General (sin bonificación)','Madrid','Andalucía','Cataluña','C. Valenciana'][Math.round(p.ccaaPreset)]);
+  set('wealthExempt',eur(p.wealthExempt));
+  set('wealthRate',p.wealthRate.toFixed(2)+' %/año');
+  set('wealthBonusPct',p.wealthBonusPct.toFixed(0)+' %');
+  set('mortgageBalance',eur(p.mortgageBalance));
+  set('fxVol',p.fxVol.toFixed(1)+' %/año');
+  set('fxMeanRevert',p.fxMeanRevert.toFixed(0)+' %/año');
+  set('inflVol',p.inflVol.toFixed(1)+' %/año');
+  set('wdStrategy',['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'][Math.round(p.wdStrategy)]);
+  set('gkGuard','±'+p.gkGuard.toFixed(0)+' %');
+  set('gkCut',p.gkCut.toFixed(0)+' %');
+  set('gkRaise',p.gkRaise.toFixed(0)+' %');
+  set('gkFreq',p.gkFreq.toFixed(0)+' meses');
+  set('goGoMult',p.goGoMult.toFixed(0)+' %');
+  set('goGoYears',p.goGoYears+(p.goGoYears===1?' año':' años'));
+  set('slowGoMult',p.slowGoMult.toFixed(0)+' %');
+  set('slowGoYears',p.slowGoYears+(p.slowGoYears===1?' año':' años'));
+  set('noGoMult',p.noGoMult.toFixed(0)+' %');
+  set('startGold',eur(p.startGold));
+  set('goldRet',p.goldRet.toFixed(1)+' %');
+  set('goldVol',p.goldVol.toFixed(0)+' %');
+  set('goldRho',(p.goldRho/100).toFixed(2));
+  set('goldAporte',p.goldAporte.toFixed(0)+' %');
+  set('reValue',eur(p.reValue));
+  set('reYield',p.reYield.toFixed(2)+' %/año');
+  set('reAppr',p.reAppr.toFixed(2)+' %/año');
+  set('glideTargetYear',String(p.glideTargetYear));
+  set('glideStartYears',p.glideStartYears+(p.glideStartYears===1?' año':' años'));
+  set('glideEqFloor',p.glideEqFloor.toFixed(0)+' %');
+  set('consRet',p.consRet.toFixed(2)+' %');
+  set('consVol',p.consVol.toFixed(1)+' %');
+  set('lifeExp',p.lifeExp+' años');
+  set('baristaIncome',eur(p.baristaIncome)+'/año');
+  set('baristaYears',p.baristaYears+(p.baristaYears===1?' año':' años'));
+}
+
+let spare=null;
+function gauss(){
+  if(spare!==null){ const s=spare; spare=null; return s; }
+  let u,v,q;
+  do{u=Math.random()*2-1;v=Math.random()*2-1;q=u*u+v*v;}while(q===0||q>=1);
+  const f=Math.sqrt(-2*Math.log(q)/q); spare=v*f; return u*f;
+}
+function normal(mu,sd){ return mu+sd*gauss(); }
+function logParams(mean,vol){
+  const m=1+mean;
+  const s2=Math.log(1+(vol*vol)/(m*m));
+  return {mu:Math.log(m)-s2/2,sd:Math.sqrt(s2)};
+}
+function ymdLabel(i){
+  const d=dateFromIndex(i);
+  return d.m===12?String(d.y):String(d.y)+'-'+String(d.m).padStart(2,'0');
+}
+
+/*
+ Each path is monthly. FIRE date is a path-level first-passage event.
+ Once the path crosses target, it enters withdrawal mode immediately.
+ A FIRE date is counted only if that route survives to END_YEAR.
+ This avoids mistaking "touching the number" for "financially viable retirement".
+*/
+function simulate(p, paths){
+  const months=MONTHS;
+  const eq=logParams(Math.pow(1+p.ret/100,1/12)-1, p.vol/100/Math.sqrt(12));
+  const btc=logParams(Math.pow(1+p.btcRet/100,1/12)-1, p.btcVol/100/Math.sqrt(12));
+  const rho=p.btcRho/100, rhoC=Math.sqrt(Math.max(0,1-rho*rho));
+  const annualRetGrowth=Math.pow(1+p.salG/100,1/12)-1;
+  const annualSpendGrowth=Math.pow(1+p.vidaG/100,1/12)-1;
+  // monthsSinceCareer is deterministic given i and a path's careerStart (no randomness
+  // in the exponent itself), so precompute the growth curve once per simulate() call
+  // instead of calling Math.pow ~paths*months times for a value that only has `months`
+  // distinct outcomes.
+  const retGrowthPow=new Float64Array(months);
+  const spendGrowthPow=new Float64Array(months);
+  for(let n=0;n<months;n++){
+    retGrowthPow[n]=Math.pow(1+annualRetGrowth,n);
+    spendGrowthPow[n]=Math.pow(1+annualSpendGrowth,n);
+  }
+  const target=p.gasto/(p.swr/100);
+
+  // ---- Modo PRO: activación por sub-feature (siempre condicionada a p.proMode) ----
+  const goldActive=p.proMode && (p.startGold>0 || p.goldAporte>0);
+  const reActive=p.proMode && p.reOn;
+  const glideActive=p.proMode && p.glideOn;
+  const taxActive=p.proMode && p.taxOn;
+  const taxBracketsActive=taxActive && p.taxBracketsOn;
+  const wealthTaxActive=p.proMode && p.wealthTaxOn;
+  const beckhamActive=p.proMode && p.beckhamOn;
+  const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
+  const fxVolActive=p.proMode && p.fxVolOn;
+  const inflActive=p.proMode && p.inflOn;
+  // Not PRO-gated, like profitShareWeeks/gratuityYears: off by default, lives
+  // in the base "Mercado" group next to the theoretical return/vol sliders it
+  // replaces for the equity leg.
+  const histActive=p.histMarketOn;
+  // Mortgage balance amortizes in a straight line to 0 by the end of hipEnd's year.
+  const mortgageMonths=Math.max(1, monthIndex(p.hipEnd,12)+1);
+  const strat=p.proMode ? Math.round(p.wdStrategy) : 0;
+  const lifeActive=p.proMode && p.lifeExpOn;
+  // yearFrac(i) is exactly i/12 by construction of monthIndex, so the month a given
+  // age is reached is just (age-ageNow)*12 — no need to walk MONTH_DATES for this.
+  const lifeMonth=lifeActive ? Math.round((p.lifeExp-p.ageNow)*12) : Infinity;
+  const baristaActive=p.proMode && p.baristaOn;
+  // Profit sharing is a core career assumption (like the salary sliders it sits
+  // next to), not a Modo PRO toggle: with the default of 0 weeks it's simply off.
+  const profitShareActive=p.profitShareWeeks>0;
+  // End-of-service severance (tenure-based) for pre-employer-plan years: 21 days of basic
+  // pay/year for the first 5 years, 30 days/year beyond that, capped at 2 years
+  // (730 days). Deterministic given p, so precomputed once — same "0 = off" pattern
+  // as profit sharing above.
+  const gratuityActive=p.gratuityYears>0;
+  const gratuityCappedDays=Math.min(Math.min(p.gratuityYears,5)*21+Math.max(0,p.gratuityYears-5)*30, 730);
+
+  // Tax-aware withdrawal helpers (used by the retirement drawdown cascade below).
+  // Plain functions with no closure over path/month state, so they stay cheap to
+  // call inside the hot per-path×per-month loop without allocating anything.
+  function takeGross(bal, needNet, ratePct){
+    if(needNet<=0 || bal<=0) return bal;
+    const grossWanted = ratePct>0 ? needNet/(1-ratePct/100) : needNet;
+    return bal - Math.min(bal, grossWanted);
+  }
+  function netTaken(oldBal, newBal, ratePct){
+    const gross=oldBal-newBal;
+    return ratePct>0 ? gross*(1-ratePct/100) : gross;
+  }
+
+  // Marginal rate for the next euro of gravable withdrawal, given how much
+  // gross has already come out of that bucket this calendar year — used both
+  // to tax the progressive-bracket cascade and (as a stand-in for the flat
+  // rate) to decide whether the employer plan or the gravable bucket is cheaper to
+  // draw from first this month.
+  function marginalRate(grossSoFar, brackets){
+    for(const b of brackets) if(grossSoFar<b.upTo) return b.rate;
+    return brackets[brackets.length-1].rate;
+  }
+  // Same job as takeGross+netTaken but progressive: consumes needNet starting
+  // from wherever this year's cumulative gravable withdrawal (yearSoFarGross)
+  // already sits in the bracket table, walking forward through brackets at
+  // their own marginal rate instead of a single flat one. Hacienda taxes the
+  // whole tax year together, not each withdrawal separately, so a small
+  // monthly draw and a single annual lump sum of the same total size end up
+  // taxed identically here — which is the point: only concentrating a much
+  // bigger total into fewer, richer years pushes more of it into high brackets.
+  function withdrawProgressive(bal, needNet, yearSoFarGross, brackets){
+    let netNeed=needNet, grossTaken=0, cursor=yearSoFarGross;
+    for(const {upTo,rate} of brackets){
+      if(netNeed<=0 || cursor>=upTo) continue;
+      const netPerGross=1-rate;
+      const roomNet = upTo===Infinity ? Infinity : (upTo-cursor)*netPerGross;
+      const netHere=Math.min(netNeed, roomNet, (bal-grossTaken)*netPerGross);
+      const grossHere=netPerGross>0 ? netHere/netPerGross : 0;
+      grossTaken+=grossHere; cursor+=grossHere; netNeed-=netHere;
+    }
+    return {grossTaken, netGot:needNet-netNeed, newCursor:cursor};
+  }
+  // Draws from a gravable (capital-gains-taxed) bucket, dispatching to the
+  // progressive or flat model depending on useBrackets (passed in per call
+  // rather than read from an outer flag, since whether brackets actually
+  // apply this month also depends on residency/Ley Beckham timing, not just
+  // whether the toggle is checked).
+  function drawGravable(bal, needNet, gravRate, yearSoFarGross, useBrackets){
+    if(useBrackets){
+      const res=withdrawProgressive(bal, needNet, yearSoFarGross, SAVINGS_TAX_BRACKETS);
+      return {bal:bal-res.grossTaken, netGot:res.netGot, yearSoFarGross:res.newCursor};
+    }
+    const nb=takeGross(bal, needNet, gravRate);
+    return {bal:nb, netGot:netTaken(bal,nb,gravRate), yearSoFarGross};
+  }
+
+  const gold=goldActive ? logParams(Math.pow(1+p.goldRet/100,1/12)-1, p.goldVol/100/Math.sqrt(12)) : null;
+  const goldRho=p.goldRho/100, goldRhoC=Math.sqrt(Math.max(0,1-goldRho*goldRho));
+  const consMonthlyRet=Math.pow(1+p.consRet/100,1/12)-1;
+  const consVolM=p.consVol/100/Math.sqrt(12);
+  const reApprM=Math.pow(1+p.reAppr/100,1/12)-1;
+  const fxVolM=p.fxVol/100/Math.sqrt(12);
+  const fxRevM=p.fxMeanRevert/100/12;
+  const inflVolM=p.inflVol/100/Math.sqrt(12);
+  const eqInflBeta=0.3; // fracción del shock de inflación que el mercado absorbe el mismo mes
+
+  const annualSnapshots=[];
+  for(let i=0;i<months;i++){
+    if(MONTH_DATES[i].isSnap) annualSnapshots.push(i);
+  }
+  const snapVals=annualSnapshots.map(()=>new Float64Array(paths));
+  const contribVals=annualSnapshots.map(()=>new Float64Array(paths));
+  const fireMonth=new Int32Array(paths); fireMonth.fill(-1);
+  const ruined=new Uint8Array(paths);
+  // Month a route actually goes broke, so callers can ask "how many years
+  // after FIRE" rather than just whether it happened at all. -1 until set;
+  // ruin is an absorbing state (retired never goes back to true afterward),
+  // so this is written at most once per path.
+  const ruinMonth=new Int32Array(paths); ruinMonth.fill(-1);
+  const finalVal=new Float64Array(paths);
+
+  for(let k=0;k<paths;k++){
+    let vEq=p.startEq, vBtc=p.startBtc, vProv=0;
+    let vGold=goldActive?p.startGold:0, vCons=0, vRE=reActive?p.reValue:0;
+    let retired=false, ruinedPath=false;
+    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1;
+    // Tracks pure market-driven growth (returns compounding on whatever balance
+    // already existed), independent of contributions/withdrawals — so "aportado"
+    // (net cash you put in) can be recovered as totalWealth-cumGrowth without
+    // having to intercept every single cash-flow line separately.
+    let cumGrowth=0;
+    const startBase=monthIndex(CAREER_YEAR,CAREER_MONTH);
+    // non-negative truncated delays; central date remains the user's selected value
+    const startDelay=Math.max(0,Math.round(normal(0,p.startDelay)));
+    const careerStart=startBase+startDelay;
+    const captCentral=monthIndex(p.captY,1);
+    const captMonth=Math.max(careerStart, Math.round(normal(captCentral, p.captDelay*12)));
+    // Historical bootstrap: each path picks a random starting year in the real
+    // series and walks forward through the actual recorded sequence (wrapping
+    // around circularly once it runs past the end), instead of drawing i.i.d.
+    // lognormal shocks — this preserves real crashes/recoveries and sequence-
+    // of-returns risk that a parametric model can't reproduce.
+    let histPos=histActive ? Math.floor(Math.random()*HIST_EQ_REAL_RETURNS.length) : 0;
+    let histMonthlyR=histActive ? Math.pow(1+HIST_EQ_REAL_RETURNS[histPos],1/12)-1 : 0;
+    // Gross gravable-bucket withdrawals so far this calendar year, for the
+    // progressive-bracket withdrawal mode — Hacienda taxes savings income per
+    // tax year, not per transaction, so which bracket a given euro falls into
+    // depends on how much has already been withdrawn since January.
+    let curYearGrossGravable=0;
+
+    let snap=0;
+    for(let i=0;i<months;i++){
+      const d=MONTH_DATES[i];
+      const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+      if(d.m===1) curYearGrossGravable=0;
+      if(histActive && i>0 && d.m===1){
+        histPos=(histPos+1)%HIST_EQ_REAL_RETURNS.length;
+        histMonthlyR=Math.pow(1+HIST_EQ_REAL_RETURNS[histPos],1/12)-1;
+      }
+      const z1=gauss(), z2=gauss();
+      const rEq=histActive ? histMonthlyR : Math.exp(eq.mu+eq.sd*z1)-1;
+      // The real series only covers equities: there's no matching multi-decade
+      // BTC history to bootstrap alongside it, so btcRho (correlation with
+      // equity) doesn't apply in historical mode — BTC falls back to its own
+      // independent shock instead of being driven by z1.
+      const rBtc=Math.exp(btc.mu+btc.sd*(histActive ? z2 : (rho*z1+rhoC*z2)))-1;
+
+      let inflShockM=0;
+      if(inflActive){ inflShockM=normal(0,inflVolM); cumInfl+=inflShockM; }
+      const rEqEff=inflActive ? rEq-inflShockM*(1-eqInflBeta) : rEq;
+      const rBtcEff=inflActive ? rBtc-inflShockM*(1-eqInflBeta) : rBtc;
+
+      vEq*=1+rEqEff; vBtc*=1+rBtcEff; vProv*=1+rEqEff;
+      if(goldActive){
+        const z3=gauss();
+        const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
+        vGold*=1+rGold;
+      }
+      if(glideActive) vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
+      if(reActive) vRE*=1+reApprM;
+      cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
+
+      if(fxVolActive){
+        fxCur+=fxRevM*(p.fx-fxCur)+fxCur*normal(0,fxVolM);
+        if(fxCur<0.05) fxCur=0.05;
+      }
+      const fxEff=fxVolActive ? fxCur : p.fx;
+
+      const isWorking=!retired && i>=careerStart;
+      let net=0, aporProv=0;
+
+      if(isWorking){
+        const monthsSinceCareer=i-careerStart;
+        const captain=i>=captMonth;
+        const salaryAED=(captain?p.salCA:p.salFO)/12*retGrowthPow[Math.max(0,monthsSinceCareer)];
+        const salaryEUR=salaryAED*fxEff;
+
+        const monthsSinceStart=monthsSinceCareer;
+        const basicAED=(captain?p.basicCA:p.basicFO);
+        // 6-month waiting period; 12%/15% company + 5% employee thereafter
+        if(p.provOn && monthsSinceStart>=6){
+          const yearsService=monthsSinceStart/12;
+          const coRate=yearsService>=10?0.15:p.provCo/100;
+          const basicEUR=basicAED*fxEff;
+          aporProv=basicEUR*(coRate+0.05);
+          vProv+=aporProv;
+          net-=basicEUR*0.05;
+        }
+        net+=salaryEUR;
+
+        // Profit sharing: discretionary, decided fresh each year (0-30% of básico,
+        // ≈0-15.6 weeks of básico pay) — drawn independently per year, not smoothed
+        // or correlated with anything else, since the company's payout isn't public.
+        if(profitShareActive && d.m===12){
+          const weeksThisYear=Math.random()*p.profitShareWeeks;
+          net+=weeksThisYear*(basicAED*12/52)*fxEff;
+        }
+      }
+
+      // Real estate: net rental income enters cash flow every month it's held.
+      if(reActive) net+=vRE*(p.reYield/100)/12;
+
+      // Living costs only begin once the simulated career phase starts.
+      // Pre-career Spanish cash flow is intentionally NOT invented.
+      if(i>=careerStart && !retired){
+        const monthsSinceCareer=i-careerStart;
+        const living=p.vida*spendGrowthPow[Math.max(0,monthsSinceCareer)];
+        net-=living;
+        const hipReal=inflActive ? p.hip*Math.exp(-cumInfl) : p.hip;
+        if(d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12)) net-=hipReal;
+
+        // Legacy childcare assumptions retained but explicitly not treated as exact birthdays.
+        if(d.y===2027 || d.y===2028) net-=p.nur/12;
+        if(d.y===2029) net-=FS1_GAP/12;
+        if(d.y===2029 || d.y===2030) net-=p.nur/12;
+        if(d.y===2031) net-=FS1_GAP/12;
+      }
+
+      // Windfall 1: midpoint timing instead of giving a full return before career entry.
+      if(d.y===2027 && d.m===12) net+=p.burr;
+
+      // Brazil: monthly receipts across the chosen liquidation window, not an annual lump.
+      if(p.brOn && d.y>=p.brStart && d.y<p.brStart+p.brYears) net+=p.brNet/(p.brYears*12);
+
+      // Computed here (not just inside the retirement branch below) so the wealth
+      // tax check further down — which runs regardless of the retired/working
+      // branch, and even past the esperanza de vida cutoff — can also see whether
+      // the Ley Beckham window is still open.
+      const inBeckham=beckhamActive && spanishResidentMonth>=0 && (i-spanishResidentMonth)<p.beckhamYears*12;
+
+      if(!retired){
+        if(net>=0){
+          let wBtc=p.btcAporte/100;
+          let wGold=goldActive?p.goldAporte/100:0;
+          // Slider caps (40%/30%) can't sum past 100% today, but derive wEq
+          // defensively anyway: if they ever did, wEq would floor at 0 while
+          // wBtc+wGold still summed past 1, investing more than the net cash
+          // actually coming in that month.
+          const totalW=wBtc+wGold;
+          if(totalW>1){ wBtc/=totalW; wGold/=totalW; }
+          const wEq=Math.max(0,1-wBtc-wGold);
+          vEq+=net*wEq;
+          vBtc+=net*wBtc;
+          if(goldActive) vGold+=net*wGold;
+        } else {
+          // Deficits use liquid assets; never create negative ETF wealth.
+          let deficit=-net;
+          const fromEq=Math.min(vEq,deficit); vEq-=fromEq; deficit-=fromEq;
+          const fromBtc=Math.min(vBtc,deficit); vBtc-=fromBtc; deficit-=fromBtc;
+          if(deficit>0) ruinedPath=true;
+        }
+
+        const total=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        // Gratuity is realized right when you leave the company, so it can count
+        // toward crossing the target that same month — a real departure lump sum,
+        // not money you already had.
+        const gratuityEUR=gratuityActive ? gratuityCappedDays*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
+        if(total+gratuityEUR>=target && !ruinedPath){
+          retired=true;
+          fireMonth[k]=i;
+          if(gratuityActive) vEq+=gratuityEUR;
+          curSpendAnnual=p.gasto;
+        }
+      } else if(!lifeActive || i<=lifeMonth){
+        // Retirement phase: real annual retirement spend, inflation already stripped.
+        // Past lifeMonth (esperanza de vida) this whole block is skipped: no more
+        // withdrawals, no more ruin risk — the balance just keeps compounding, like
+        // an inheritance, because you don't need money you'll never spend.
+        const yearsSinceFire=(i-fireMonth[k])/12;
+        let wd;
+        if(strat===0){
+          wd=p.gasto/12; // idéntico al comportamiento original
+        } else if(strat===1){
+          const monthsSinceRetire=i-fireMonth[k];
+          const totalNow=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+          if(totalNow>0 && monthsSinceRetire>0 && monthsSinceRetire%p.gkFreq===0){
+            const currentWR=curSpendAnnual/totalNow, anchorWR=p.swr/100;
+            const upper=anchorWR*(1+p.gkGuard/100), lower=anchorWR*(1-p.gkGuard/100);
+            if(currentWR>upper) curSpendAnnual*=(1-p.gkCut/100);
+            else if(currentWR<lower) curSpendAnnual*=(1+p.gkRaise/100);
+          }
+          wd=curSpendAnnual/12;
+        } else {
+          let mult;
+          if(yearsSinceFire<p.goGoYears) mult=p.goGoMult/100;
+          else if(yearsSinceFire<p.goGoYears+p.slowGoYears) mult=p.slowGoMult/100;
+          else mult=p.noGoMult/100;
+          wd=(p.gasto/12)*mult;
+        }
+
+        // Barista/FIRE parcial: ingreso real que reduce directamente la retirada
+        // necesaria durante los primeros baristaYears tras el FIRE de esa ruta.
+        if(baristaActive && yearsSinceFire<p.baristaYears){
+          wd=Math.max(0, wd-p.baristaIncome/12);
+        }
+
+        if(fiscalityActive && !spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12){
+          spanishResident=true;
+          spanishResidentMonth=i;
+        }
+        // Ley Beckham: taxed as a non-resident for its window (year of the move + 5
+        // more) — foreign-sourced income/wealth (this model's whole portfolio) is
+        // excluded, so both the capital-gains gross-up and the wealth tax pause here.
+        //
+        // Each bucket can carry its own tax treatment now (the employer plan is
+        // taxed as earned income in Spain, not as a capital gain like the rest of
+        // the portfolio) — instead of grossing up the whole withdrawal once with a
+        // single rate and then draining buckets in a fixed physical order, drain
+        // whichever bucket is cheaper (lower configured rate) first. With equal
+        // rates (the default) provFirst is false and the order is exactly the
+        // original vCons→vEq→vProv→vGold→vBtc→vRE cascade.
+        const taxNow=taxActive && spanishResident && !inBeckham;
+        const bracketsNow=taxNow && taxBracketsActive;
+        const gravRate=taxNow ? p.taxRate : 0;
+        const provRate=taxNow ? p.taxRateProv : 0;
+        // With progressive brackets there's no single "the" gravable rate —
+        // use the marginal rate on the next euro (given what's already come
+        // out of that bucket this calendar year) as the stand-in for deciding
+        // whether the employer plan is cheaper to draw from first this month.
+        const gravRateForOrder=bracketsNow ? marginalRate(curYearGrossGravable, SAVINGS_TAX_BRACKETS) : gravRate;
+        const provFirst=provRate<gravRateForOrder;
+
+        let deficit=wd, nb, gres;
+        if(provFirst){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        gres=drawGravable(vCons,deficit,gravRate,curYearGrossGravable,bracketsNow); vCons=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross;
+        if(deficit>0){ gres=drawGravable(vEq,deficit,gravRate,curYearGrossGravable,bracketsNow); vEq=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
+        if(deficit>0 && goldActive){ gres=drawGravable(vGold,deficit,gravRate,curYearGrossGravable,bracketsNow); vGold=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
+        if(deficit>0){ gres=drawGravable(vBtc,deficit,gravRate,curYearGrossGravable,bracketsNow); vBtc=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
+        if(deficit>0 && reActive && p.reCountsFire){ gres=drawGravable(vRE,deficit,gravRate,curYearGrossGravable,bracketsNow); vRE=gres.bal; deficit-=gres.netGot; curYearGrossGravable=gres.yearSoFarGross; }
+        if(!provFirst && deficit>0){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        // Each cascade step round-trips through a gross-up/net-back division and
+        // multiplication, so a fully-covered deficit can land on a tiny positive
+        // float (e.g. 5e-14) instead of exactly 0 — a cent-scale tolerance keeps
+        // that noise from being misread as a genuine shortfall and ruining the path.
+        if(deficit>1e-6){ ruinedPath=true; retired=false; ruinMonth[k]=i; }
+      }
+
+      // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
+      if(wealthTaxActive && spanishResident && !inBeckham && d.isSnap){
+        const totalWealth=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        // Debts reduce the taxable base (patrimonio neto, Ley 19/1991 art. 9): the
+        // mortgage balance amortizes in a straight line to 0 by hipEnd.
+        const debtNow=p.mortgageBalance>0 ? p.mortgageBalance*Math.max(0,1-i/mortgageMonths) : 0;
+        const netWealth=Math.max(0, totalWealth-debtNow);
+        const excess=Math.max(0,netWealth-p.wealthExempt);
+        if(excess>0){
+          let due=excess*(p.wealthRate/100)*(1-p.wealthBonusPct/100);
+          const fromCons=Math.min(vCons,due); vCons-=fromCons; due-=fromCons;
+          const fromEq=Math.min(vEq,due); vEq-=fromEq; due-=fromEq;
+          const fromGold=Math.min(vGold,due); vGold-=fromGold; due-=fromGold;
+          const fromBtc=Math.min(vBtc,due); vBtc-=fromBtc; due-=fromBtc;
+        }
+      }
+
+      // Glide path: rebalanceo anual entre activos de riesgo (equity+BTC+oro) y la cartera conservadora.
+      if(glideActive && d.isSnap){
+        const yearsToTarget=(monthIndex(p.glideTargetYear,1)-i)/12;
+        let riskyShare;
+        if(yearsToTarget>=p.glideStartYears) riskyShare=1;
+        else if(yearsToTarget<=0) riskyShare=p.glideEqFloor/100;
+        else riskyShare=p.glideEqFloor/100+(1-p.glideEqFloor/100)*(yearsToTarget/p.glideStartYears);
+
+        const risky=vEq+vBtc+(goldActive?vGold:0);
+        const totalRC=risky+vCons;
+        const targetRisky=totalRC*riskyShare;
+        const diff=risky-targetRisky;
+        if(Math.abs(diff)>1){
+          if(diff>0 && risky>0){
+            const frac=diff/risky;
+            vCons+=diff; vEq-=vEq*frac; vBtc-=vBtc*frac; if(goldActive) vGold-=vGold*frac;
+          } else if(diff<0 && vCons>0){
+            const move=Math.min(vCons,-diff);
+            vCons-=move;
+            const riskySum=(vEq+vBtc+(goldActive?vGold:0))||1;
+            vEq+=move*(vEq/riskySum||1);
+            vBtc+=move*(vBtc/riskySum);
+            if(goldActive) vGold+=move*(vGold/riskySum);
+          }
+        }
+      }
+
+      if(d.isSnap){
+        const totalNow=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        snapVals[snap][k]=Math.max(0,totalNow);
+        contribVals[snap][k]=totalNow-cumGrowth;
+        snap++;
+      }
+    }
+    ruined[k]=ruinedPath?1:0;
+    finalVal[k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0));
+  }
+
+  const series=annualSnapshots.map((idx,j)=>{
+    const a=Float64Array.from(snapVals[j]).sort();
+    const cSorted=Float64Array.from(contribVals[j]).sort();
+    return {idx, year:MONTH_DATES[idx].y,
+      p10:a[Math.floor((paths-1)*0.10)],
+      p25:a[Math.floor((paths-1)*0.25)],
+      p50:a[Math.floor((paths-1)*0.50)],
+      p75:a[Math.floor((paths-1)*0.75)],
+      p90:a[Math.floor((paths-1)*0.90)],
+      // Median of cumulative net contributions across paths — an independent
+      // measurement, not derived from p50 above, so it can occasionally run a
+      // touch higher than p50 for the same year; the chart clamps for display.
+      contrib50:cSorted[Math.floor((paths-1)*0.50)]
+    };
+  });
+
+  // Only successful retirements count as FIRE dates. Preallocated at `paths`
+  // (the worst case, every route succeeding) and returned as a subarray view
+  // instead of a growable plain-array .push() — keeps this a TypedArray all
+  // the way out, alongside fireMonth itself, so both can be handed back as
+  // zero-copy Transferable Objects instead of structured-cloned plain arrays.
+  const successBuf=new Int32Array(paths);
+  let successCount=0;
+  for(let k=0;k<paths;k++) if(fireMonth[k]>=0 && !ruined[k]) successBuf[successCount++]=fireMonth[k];
+  const successful=successBuf.subarray(0,successCount);
+
+  return {series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots};
+}
+
+function firstYear(series,key,target){
+  for(const x of series) if(x[key]>=target) return x.year;
+  return null;
+}
+function fireQuantileMonth(fireMonths,q){
+  if(!fireMonths.length) return null;
+  const a=Int32Array.from(fireMonths).sort();
+  return a[Math.floor((a.length-1)*q)];
+}
+
+const RUIN_MAX_YEARS=45; // reasonable retirement span; beyond this too few routes have enough runway left before END_YEAR to say anything
+const RUIN_MILESTONES=[1,5,10,15,20,25,30];
+
+// Cumulative probability of ruin by each year since FIRE, among routes that
+// actually reached FIRE. Ruin is an absorbing state (a route never goes back
+// to "retired" once ruined), so a route's ruined-by-year-y status is exactly
+// knowable whenever its own horizon runway covers year y — no need for a
+// Kaplan-Meier-style estimator, just restrict each year's denominator to the
+// routes with enough runway ("at risk") instead of pretending routes that
+// simply ran out of simulated time survived.
+function buildRuinCurve(r, pathsUsed){
+  const minSample=Math.max(30, Math.round(pathsUsed*0.01));
+  const curve=[];
+  for(let y=1;y<=RUIN_MAX_YEARS;y++){
+    let atRisk=0, ruinedByY=0;
+    for(let k=0;k<pathsUsed;k++){
+      const fm=r.fireMonthAll[k];
+      if(fm<0) continue;
+      const cutoff=fm+y*12;
+      if(cutoff>MONTHS-1) continue; // this route's simulated horizon doesn't reach year y post-FIRE
+      atRisk++;
+      if(r.ruinMonth[k]>=0 && r.ruinMonth[k]<=cutoff) ruinedByY++;
+    }
+    curve.push({y, atRisk, pct: atRisk>=minSample ? ruinedByY/atRisk : null});
+  }
+  return curve;
+}
+
+function renderRuinTable(curve){
+  const el=document.getElementById('ruinTable');
+  if(!el) return;
+  el.innerHTML=RUIN_MILESTONES.map(y=>{
+    const row=curve.find(c=>c.y===y);
+    const cell = row && row.pct!==null
+      ? `<td>${(row.pct*100).toFixed(0)} %<br><span class="age">n=${row.atRisk.toLocaleString('es-ES')}</span></td>`
+      : '<td class="na">muestra insuficiente</td>';
+    return `<tr><td>${y} ${y===1?'año':'años'}</td>${cell}</tr>`;
+  }).join('');
+}
+
+// "Nice" reference values for a log-scale axis: 1x and 3x each power of ten
+// (…10k, 30k, 100k, 300k, 1M…), filtered to the visible [floor,max] range. Wide
+// ranges (paths can span from thousands to tens of millions over 60+ years of
+// compounding) drop the 3x step so the axis doesn't get crowded with labels.
+function logGridValues(floor, max){
+  const minExp=Math.floor(Math.log10(floor)), maxExp=Math.ceil(Math.log10(max));
+  const mults=(maxExp-minExp)>4.5 ? [1] : [1,3];
+  const vals=[];
+  for(let e=minExp;e<=maxExp;e++){
+    for(const m of mults){
+      const v=m*Math.pow(10,e);
+      if(v>=floor*0.999 && v<=max*1.001) vals.push(v);
+    }
+  }
+  return vals;
+}
+
+// Renderer shared by the inline chart and the "ampliar" modal chart.
+// view={lo,hi} is the visible slice of snapshot indices (zoom/pan); hoverIdx draws
+// a crosshair + point markers at that index (or null for none). Returns the plot
+// geometry so pointer math (hover/zoom/pan) can hit-test without duplicating margins.
+function renderChart(canvas, s, target, view, hoverIdx, extra){
+  if(!canvas || !s || !s.length) return null;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const cssW=canvas.parentElement.clientWidth || 300;
+  const cssH=Math.min(Math.round(cssW*.5), 380);
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
+  const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
+  const L=52,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
+
+  const lo=Math.round(Math.max(0,Math.min(view.lo, s.length-2)));
+  const hi=Math.round(Math.max(lo+1,Math.min(view.hi, s.length-1)));
+  const vis=s.slice(lo,hi+1);
+
+  let max=Math.max(target*1.15,1);
+  vis.forEach(v=>max=Math.max(max,v.p90));
+  if(extra) extra.forEach(ex=>{ if(ex.series) ex.series.slice(lo,hi+1).forEach(v=>{ if(v) max=Math.max(max,v.p50); }); });
+
+  // Log scale: 60+ years of compounding means the tail (P90 late in the horizon)
+  // can be 10-40x the values that actually matter (where FIRE happens, in the
+  // first couple of decades). A linear axis crushes that useful range against the
+  // bottom; log space keeps both the near-term and the long tail readable at once.
+  const floor=1000;
+  const logFloor=Math.log(floor), logMax=Math.log(Math.max(max,floor*1.001));
+  const X=i=>L+((i-lo)/(hi-lo))*w;
+  const Y=v=>T+h-Math.max(0,Math.min(1,(Math.log(Math.max(v,floor))-logFloor)/(logMax-logFloor)))*h;
+
+  c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
+  c.font='10px "IBM Plex Mono", monospace'; c.fillStyle='#4A5257';
+  logGridValues(floor,max).forEach(v=>{
+    const y=Y(v); c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();
+    c.textAlign='right';c.textBaseline='middle';c.fillText(eurK(v),L-7,y);
+  });
+  c.textAlign='center';c.textBaseline='top';
+  const span=hi-lo;
+  const yearStep = span>40?10:span>15?5:1;
+  for(let i=lo;i<=hi;i++){
+    const v=s[i];
+    if(v.year%yearStep===0){
+      c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+      c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+    }
+  }
+
+  c.beginPath(); vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p90)):c.moveTo(X(i),Y(v.p90));});
+  for(let idx=vis.length-1;idx>=0;idx--){const i=lo+idx; c.lineTo(X(i),Y(vis[idx].p10));}
+  c.closePath();c.fillStyle='rgba(143,166,178,.32)';c.fill();
+
+  c.save();c.setLineDash([6,5]);c.strokeStyle='#B8791B';c.lineWidth=2;
+  c.beginPath();c.moveTo(L,Y(target));c.lineTo(L+w,Y(target));c.stroke();c.restore();
+
+  // Saved comparison scenarios: median only, thinner than the live line below so
+  // the current scenario stays the visual focus even when lines overlap.
+  if(extra) extra.forEach(ex=>{
+    if(!ex.series || !ex.series.length) return;
+    const exVis=ex.series.slice(lo,Math.min(hi,ex.series.length-1)+1);
+    c.strokeStyle=ex.color;c.lineWidth=1.8;c.lineJoin='round';c.beginPath();
+    exVis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));});
+    c.stroke();
+  });
+
+  c.strokeStyle='#C6187E';c.lineWidth=2.5;c.lineJoin='round';c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));});c.stroke();
+  c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
+
+  if(hoverIdx!=null && hoverIdx>=lo && hoverIdx<=hi){
+    const v=s[hoverIdx], x=X(hoverIdx);
+    c.save();
+    c.strokeStyle='rgba(20,24,27,.45)';c.lineWidth=1;c.setLineDash([3,3]);
+    c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();
+    c.restore();
+    const dot=(val,color)=>{c.beginPath();c.arc(x,Y(val),3.5,0,Math.PI*2);c.fillStyle=color;c.fill();c.strokeStyle='#F1F3F2';c.lineWidth=1.5;c.stroke();};
+    dot(v.p10,'#8FA6B2'); dot(v.p90,'#8FA6B2'); dot(v.p50,'#C6187E');
+  }
+
+  return {L,T,w,h,lo,hi};
+}
+
+// Shows, for the median route, how much of the total is money you put in
+// ("aportado", stacked bottom) vs. pure market growth ("rendimiento", stacked
+// on top). Deliberately LINEAR scale, unlike renderChart()'s log scale: the
+// whole point here is to let growth visibly dwarf contributions over the
+// decades, which a log scale would flatten out. Shares the same view/hoverIdx/
+// geom contract as renderChart() so it can be driven by the same
+// makeChartController() (zoom/pan/tooltip) instead of a bespoke one.
+function renderContribChart(canvas, series, target, view, hoverIdx){
+  if(!canvas || !series || !series.length) return null;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const cssW=canvas.parentElement.clientWidth || 300;
+  const cssH=Math.min(Math.round(cssW*.5), 380);
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
+  const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
+  const L=52,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
+
+  view = view || {lo:0, hi:series.length-1};
+  const lo=Math.round(Math.max(0,Math.min(view.lo, series.length-2)));
+  const hi=Math.round(Math.max(lo+1,Math.min(view.hi, series.length-1)));
+  const vis=series.slice(lo,hi+1);
+
+  let max=Math.max(target*1.15,1);
+  vis.forEach(v=>max=Math.max(max,v.p50));
+  const X=i=>L+((i-lo)/(hi-lo))*w, Y=v=>T+h-Math.max(0,Math.min(1,v/max))*h;
+  // Contributions can't exceed the total for the same path in reality; the two
+  // medians are measured independently so clamp for display, never for the data.
+  const contribFor=v=>Math.max(0,Math.min(v.contrib50,v.p50));
+
+  c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
+  c.font='10px "IBM Plex Mono", monospace'; c.fillStyle='#4A5257';
+  const step=max/4;
+  for(let i=0;i<=4;i++){
+    const v=i*step, y=Y(v);
+    c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();
+    c.textAlign='right';c.textBaseline='middle';c.fillText(eurK(v),L-7,y);
+  }
+  c.textAlign='center';c.textBaseline='top';
+  const span=hi-lo;
+  const yearStep = span>40?10:span>15?5:1;
+  for(let i=lo;i<=hi;i++){
+    const v=series[i];
+    if(v.year%yearStep===0){
+      c.fillText(v.year,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+      c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+    }
+  }
+
+  // Aportado (bottom band, 0 → contrib50)
+  c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v)));});
+  for(let idx=vis.length-1;idx>=0;idx--) c.lineTo(X(lo+idx),Y(0));
+  c.closePath(); c.fillStyle='rgba(46,111,158,.35)'; c.fill();
+  c.strokeStyle='#2E6F9E'; c.lineWidth=1.5; c.lineJoin='round'; c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(contribFor(v))):c.moveTo(X(i),Y(contribFor(v)));}); c.stroke();
+
+  // Rendimiento (stacked on top, contrib50 → p50)
+  c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));});
+  for(let idx=vis.length-1;idx>=0;idx--){ const i=lo+idx; c.lineTo(X(i),Y(contribFor(vis[idx]))); }
+  c.closePath(); c.fillStyle='rgba(31,122,77,.35)'; c.fill();
+  c.strokeStyle='#1F7A4D'; c.lineWidth=1.5; c.lineJoin='round'; c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.p50)):c.moveTo(X(i),Y(v.p50));}); c.stroke();
+
+  c.save();c.setLineDash([6,5]);c.strokeStyle='#B8791B';c.lineWidth=2;
+  c.beginPath();c.moveTo(L,Y(target));c.lineTo(L+w,Y(target));c.stroke();c.restore();
+
+  c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
+
+  if(hoverIdx!=null && hoverIdx>=lo && hoverIdx<=hi){
+    const v=series[hoverIdx], x=X(hoverIdx);
+    c.save();
+    c.strokeStyle='rgba(20,24,27,.45)';c.lineWidth=1;c.setLineDash([3,3]);
+    c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();
+    c.restore();
+    const dot=(val,color)=>{c.beginPath();c.arc(x,Y(val),3.5,0,Math.PI*2);c.fillStyle=color;c.fill();c.strokeStyle='#F1F3F2';c.lineWidth=1.5;c.stroke();};
+    dot(contribFor(v),'#2E6F9E'); dot(v.p50,'#1F7A4D');
+  }
+
+  return {L,T,w,h,lo,hi};
+}
+
+// Cumulative probability of ruin by years since FIRE (renderRuinTable's
+// companion chart). Deliberately linear 0-100% Y axis — this is already a
+// bounded percentage, nothing to gain from a log scale. `curve` entries with
+// pct===null (not enough at-risk routes left — see buildRuinCurve) only ever
+// form a trailing run, since the at-risk count shrinks monotonically as the
+// required years-since-FIRE runway grows, so the chart simply stops drawing
+// there rather than extrapolating a number that isn't statistically real.
+function renderRuinChart(canvas, curve, target, view, hoverIdx){
+  if(!canvas || !curve || !curve.length) return null;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const cssW=canvas.parentElement.clientWidth || 300;
+  const cssH=Math.min(Math.round(cssW*.5), 380);
+  canvas.width=cssW*dpr; canvas.height=cssH*dpr; canvas.style.height=cssH+'px';
+  const c=canvas.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,cssW,cssH);
+  const L=44,R=8,T=12,B=26,w=cssW-L-R,h=cssH-T-B;
+
+  let validLen=curve.findIndex(v=>v.pct===null);
+  if(validLen===-1) validLen=curve.length;
+  const data=curve.slice(0,validLen);
+  if(data.length<2) return null; // not enough sample even for year 1 — nothing meaningful to plot
+
+  view = view || {lo:0, hi:data.length-1};
+  const lo=Math.round(Math.max(0,Math.min(view.lo, Math.max(0,data.length-2))));
+  const hi=Math.round(Math.max(lo+1,Math.min(view.hi, data.length-1)));
+  const vis=data.slice(lo,hi+1);
+
+  const X=i=>L+((i-lo)/(hi-lo))*w, Y=pct=>T+h-Math.max(0,Math.min(1,pct/100))*h;
+
+  c.strokeStyle='rgba(20,24,27,.14)'; c.lineWidth=1;
+  c.font='10px "IBM Plex Mono", monospace'; c.fillStyle='#4A5257';
+  [0,25,50,75,100].forEach(mark=>{
+    const y=Y(mark);
+    c.beginPath();c.moveTo(L,y);c.lineTo(L+w,y);c.stroke();
+    c.textAlign='right';c.textBaseline='middle';c.fillText(mark+' %',L-7,y);
+  });
+  c.textAlign='center';c.textBaseline='top';
+  const span=hi-lo;
+  const yearStep = span>30?10:span>10?5:1;
+  for(let i=lo;i<=hi;i++){
+    const v=data[i];
+    if(v.y%yearStep===0){
+      c.fillText(v.y,X(i),T+h+7);c.strokeStyle='rgba(20,24,27,.09)';
+      c.beginPath();c.moveTo(X(i),T);c.lineTo(X(i),T+h);c.stroke();
+    }
+  }
+
+  c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.pct*100)):c.moveTo(X(i),Y(v.pct*100));});
+  for(let idx=vis.length-1;idx>=0;idx--) c.lineTo(X(lo+idx),Y(0));
+  c.closePath(); c.fillStyle='rgba(184,121,27,.28)'; c.fill();
+  c.strokeStyle='#B8791B'; c.lineWidth=2; c.lineJoin='round'; c.beginPath();
+  vis.forEach((v,idx)=>{const i=lo+idx; idx?c.lineTo(X(i),Y(v.pct*100)):c.moveTo(X(i),Y(v.pct*100));}); c.stroke();
+
+  c.strokeStyle='#14181B';c.lineWidth=1.5;c.beginPath();c.moveTo(L,T);c.lineTo(L,T+h);c.lineTo(L+w,T+h);c.stroke();
+
+  if(hoverIdx!=null && hoverIdx>=lo && hoverIdx<=hi){
+    const v=data[hoverIdx], x=X(hoverIdx);
+    c.save();
+    c.strokeStyle='rgba(20,24,27,.45)';c.lineWidth=1;c.setLineDash([3,3]);
+    c.beginPath();c.moveTo(x,T);c.lineTo(x,T+h);c.stroke();
+    c.restore();
+    c.beginPath();c.arc(x,Y(v.pct*100),3.5,0,Math.PI*2);c.fillStyle='#B8791B';c.fill();c.strokeStyle='#F1F3F2';c.lineWidth=1.5;c.stroke();
+  }
+
+  return {L,T,w,h,lo,hi};
+}
+
+// Wires hover-tooltip, wheel-zoom and drag-to-pan onto one canvas, keeping its own
+// view/hover state so the inline chart, the "ampliar" modal chart, and the
+// contributions chart all act independently. `renderFn` defaults to renderChart
+// (trajectory chart's log-scale P10-P90 band) but any function sharing its
+// (canvas, series, target, view, hoverIdx, extra) => geom contract works — the
+// contributions chart passes renderContribChart instead. `tipHtml(v)` likewise
+// defaults to the trajectory chart's P90/mediana/P10 tooltip text.
+function makeChartController(canvas, tipEl, resetLinkEl, renderFn, tipHtml){
+  renderFn = renderFn || renderChart;
+  tipHtml = tipHtml || (v => '<b>'+v.year+'</b><br>P90 · '+eurK(v.p90)+'<br>Mediana · '+eurK(v.p50)+'<br>P10 · '+eurK(v.p10));
+  const state = { series:null, target:0, view:null, hoverIdx:null, geom:null, extra:[] };
+
+  function fullView(){ return {lo:0, hi:state.series.length-1}; }
+
+  function redraw(){
+    if(!state.series || !state.series.length) return;
+    state.geom = renderFn(canvas, state.series, state.target, state.view, state.hoverIdx, state.extra);
+    if(resetLinkEl){
+      const isFull = state.view.lo===0 && state.view.hi===state.series.length-1;
+      resetLinkEl.style.display = isFull ? 'none' : 'inline-block';
+    }
+  }
+
+  function update(series, target){
+    state.series=series; state.target=target;
+    if(!state.view) state.view=fullView();
+    else state.view={lo:Math.max(0,Math.min(state.view.lo,series.length-2)), hi:Math.max(state.view.lo+1,Math.min(state.view.hi,series.length-1))};
+    redraw();
+  }
+  function setView(v){ if(v && state.series) state.view={...v}; redraw(); }
+  function getView(){ return state.view ? {...state.view} : null; }
+  function setExtra(list){ state.extra=list||[]; redraw(); }
+
+  function indexFromClientX(clientX){
+    if(!state.geom) return null;
+    const rect=canvas.getBoundingClientRect();
+    const {L,w,lo,hi}=state.geom;
+    const t=(clientX-rect.left-L)/w;
+    return Math.max(lo, Math.min(hi, Math.round(lo+t*(hi-lo))));
+  }
+
+  function showTip(clientX, clientY, idx){
+    if(!tipEl || !state.series || !state.series[idx]) return;
+    const v=state.series[idx];
+    tipEl.innerHTML=tipHtml(v);
+    const rect=canvas.getBoundingClientRect();
+    let x=clientX-rect.left+12, y=clientY-rect.top+12;
+    if(x+150>rect.width) x=clientX-rect.left-162;
+    tipEl.style.left=Math.max(0,x)+'px'; tipEl.style.top=Math.max(0,y)+'px';
+    tipEl.style.display='block';
+  }
+  function hideTip(){ if(tipEl) tipEl.style.display='none'; }
+
+  // Zooms state.view around a center data-index by `factor` (<1 zooms in, >1 zooms out),
+  // shared by the desktop wheel handler and the touch pinch handler below.
+  function zoomAt(centerIdx, factor){
+    const {lo,hi}=state.view, span=hi-lo;
+    const maxHi=state.series.length-1;
+    let newSpan=Math.max(4, Math.min(maxHi, span*factor));
+    const t = span>0 ? (centerIdx-lo)/span : 0.5;
+    let newLo=centerIdx-t*newSpan, newHi=newLo+newSpan;
+    if(newLo<0){ newHi-=newLo; newLo=0; }
+    if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
+    state.view={lo:Math.round(Math.max(0,newLo)), hi:Math.round(Math.min(maxHi,newHi))};
+  }
+
+  // Multi-touch tracking: a single pointer below the drag threshold just hovers
+  // (so a tap/hold on touch shows the tooltip like a mouse hover does); past the
+  // threshold it pans. Two simultaneous pointers pinch-zoom instead of panning —
+  // wheel-zoom on desktop never fires from touch gestures, so this is the only
+  // way to zoom on a phone/tablet.
+  const DRAG_THRESHOLD = 6;
+  const pointers = new Map(); // pointerId -> {x,y}
+  let panning=false, panStartClientX=0, panStartView=null;
+  let pinching=false, pinchStartDist=0, pinchStartView=null;
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function midpointClientX(){
+    const pts=[...pointers.values()];
+    return pts.reduce((s,p)=>s+p.x,0)/pts.length;
+  }
+
+  canvas.addEventListener('pointerdown', e=>{
+    if(!state.series) return;
+    e.preventDefault();
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+    if(pointers.size===2){
+      panning=false;
+      const [a,b]=[...pointers.values()];
+      pinching=true; pinchStartDist=Math.max(1,dist(a,b)); pinchStartView={...state.view};
+      hideTip();
+    } else if(pointers.size===1){
+      pinching=false;
+      panStartClientX=e.clientX; panStartView={...state.view};
+      // panning=false until the threshold is crossed — see pointermove. Show the
+      // tooltip right away so a plain tap (no move at all) still reads a value.
+      const idx=indexFromClientX(e.clientX);
+      if(idx!=null){ state.hoverIdx=idx; redraw(); showTip(e.clientX, e.clientY, idx); }
+    }
+  });
+
+  canvas.addEventListener('pointermove', e=>{
+    if(!pointers.has(e.pointerId) && e.pointerType!=='mouse') return;
+    if(pointers.has(e.pointerId)) pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+
+    if(pinching && pointers.size===2){
+      e.preventDefault();
+      const [a,b]=[...pointers.values()];
+      const d=Math.max(1,dist(a,b));
+      const factor = pinchStartDist/d; // fingers moving apart -> factor<1 -> zoom in
+      const idx = indexFromClientX(midpointClientX());
+      const center = idx==null ? Math.round((pinchStartView.lo+pinchStartView.hi)/2) : idx;
+      state.view=pinchStartView;
+      zoomAt(center, factor);
+      redraw();
+      return;
+    }
+
+    if(pointers.size===1 && pointers.has(e.pointerId)){
+      const movedPx=Math.abs(e.clientX-panStartClientX);
+      if(!panning && movedPx>DRAG_THRESHOLD){ panning=true; hideTip(); }
+      if(panning){
+        e.preventDefault();
+        const rect=canvas.getBoundingClientRect();
+        const dx=e.clientX-panStartClientX;
+        const {lo,hi}=panStartView, span=hi-lo;
+        const shift=-(dx/(state.geom?state.geom.w:rect.width))*span;
+        let newLo=lo+shift, newHi=hi+shift;
+        const maxHi=state.series.length-1;
+        if(newLo<0){ newHi-=newLo; newLo=0; }
+        if(newHi>maxHi){ newLo-=(newHi-maxHi); newHi=maxHi; }
+        state.view={lo:Math.round(Math.max(0,newLo)), hi:Math.round(Math.min(maxHi,newHi))};
+        redraw();
+        return;
+      }
+    }
+
+    // No active drag/pinch (or a plain mouse hover): just show the value under the pointer.
+    const idx=indexFromClientX(e.clientX);
+    if(idx==null) return;
+    state.hoverIdx=idx;
+    redraw();
+    showTip(e.clientX, e.clientY, idx);
+  });
+
+  canvas.addEventListener('pointerleave', e=>{
+    if(pointers.size) return; // still touching, e.g. finger moved slightly outside then back
+    state.hoverIdx=null; redraw(); hideTip();
+  });
+
+  function endPointer(e){
+    pointers.delete(e.pointerId);
+    try{canvas.releasePointerCapture(e.pointerId);}catch(err){}
+    if(pointers.size<2) pinching=false;
+    if(pointers.size===0) panning=false;
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+
+  canvas.addEventListener('wheel', e=>{
+    if(!state.series) return;
+    e.preventDefault();
+    const idx = indexFromClientX(e.clientX);
+    const center = idx==null ? Math.round((state.view.lo+state.view.hi)/2) : idx;
+    zoomAt(center, e.deltaY<0 ? 0.85 : 1/0.85);
+    redraw();
+  }, {passive:false});
+
+  if(resetLinkEl){
+    resetLinkEl.addEventListener('click', e=>{
+      e.preventDefault();
+      if(state.series) state.view=fullView();
+      redraw();
+    });
+  }
+  window.addEventListener('resize', ()=>redraw());
+
+  return {update, setView, getView, setExtra};
+}
+
+// The simulation runs off the main thread so dragging sliders / the chart tooltip
+// never stalls while a run is in flight. The worker is assembled at runtime from
+// the .toString() of the very functions already defined above, so there is exactly
+// one implementation of simulate()/gauss()/normal()/logParams() — the worker cannot
+// drift from the main thread because it literally runs the same source.
+function buildWorkerSource(){
+  return [
+    '"use strict";',
+    'const START_YEAR='+START_YEAR+', START_MONTH='+START_MONTH+';',
+    'const CAREER_YEAR='+CAREER_YEAR+', CAREER_MONTH='+CAREER_MONTH+';',
+    'const FS1_GAP='+FS1_GAP+';',
+    'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
+    'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
+    // Plain JS source (not JSON.stringify) because the top bracket's upTo is
+    // Infinity, which JSON would silently turn into null.
+    'const SAVINGS_TAX_BRACKETS=['+SAVINGS_TAX_BRACKETS.map(b=>'{upTo:'+(b.upTo===Infinity?'Infinity':b.upTo)+',rate:'+b.rate+'}').join(',')+'];',
+    'const MONTHS=MONTH_DATES.length;',
+    'let spare=null;',
+    'const monthIndex='+monthIndex.toString()+';',
+    'const gauss='+gauss.toString()+';',
+    'const normal='+normal.toString()+';',
+    'const logParams='+logParams.toString()+';',
+    'const simulate='+simulate.toString()+';',
+    'self.onmessage=function(e){',
+    '  const {p,paths,reqId,calibrate}=e.data;',
+    '  const t0=performance.now();',
+    '  const result=simulate(p,paths);',
+    '  const ms=performance.now()-t0;',
+    '  self.postMessage({result,reqId,calibrate,ms}, [result.fireMonthAll.buffer, result.fireMonths.buffer, result.ruined.buffer, result.ruinMonth.buffer]);',
+    '};'
+  ].join('\n');
+}
+
+let worker=null;
+try{
+  const blob=new Blob([buildWorkerSource()], {type:'application/javascript'});
+  worker=new Worker(URL.createObjectURL(blob));
+}catch(e){ worker=null; console.error('Worker no disponible, usando cálculo síncrono:', e); }
+
+let reqCounter=0, latestReqId=0;
+const pendingResolvers=new Map(); // reqId -> {resolve, p, paths}
+if(worker){
+  worker.onmessage=(e)=>{
+    const {result,reqId,calibrate,ms}=e.data;
+    const entry=pendingResolvers.get(reqId);
+    pendingResolvers.delete(reqId);
+    // Calibration pings never compete for "latest" — they don't update the UI,
+    // they only measure timing, so they must never be dropped as stale.
+    if(!calibrate && reqId!==latestReqId) return;
+    if(entry) entry.resolve({result,ms});
+  };
+  worker.onerror=(e)=>{
+    console.error('Worker error, cambiando a cálculo síncrono:', e.message);
+    worker=null;
+    // Without this, any request already in flight when the worker dies would
+    // never resolve — the UI would show "Calculando…" forever. Finish them on
+    // the main thread instead so a mid-flight crash never hangs the app.
+    const pending=Array.from(pendingResolvers.values());
+    pendingResolvers.clear();
+    pending.forEach(({resolve,p,paths})=>{
+      const t0=performance.now();
+      const result=simulate(p,paths);
+      resolve({result, ms:performance.now()-t0});
+    });
+  };
+}
+
+function requestSimulation(p, paths, opts){
+  const calibrate=!!(opts && opts.calibrate);
+  const reqId=++reqCounter;
+  if(!calibrate) latestReqId=reqId;
+  return new Promise(resolve=>{
+    if(worker){
+      pendingResolvers.set(reqId, {resolve, p, paths});
+      worker.postMessage({p,paths,reqId,calibrate});
+    } else {
+      const t0=performance.now();
+      const result=simulate(p,paths);
+      resolve({result, ms:performance.now()-t0});
+    }
+  });
+}
+
+// "Máximo número de rutas posible": en vez de un PATHS fijo, se calibra con dos
+// tandas pequeñas (CALIB_N1/CALIB_N2) para medir el coste MARGINAL por ruta con
+// los parámetros actuales (el coste varía mucho según qué funciones PRO estén
+// activas). Dos puntos en vez de uno cancelan el overhead fijo del mensaje al
+// Worker (que domina en una tanda muy pequeña y sobreestimaría el coste real
+// por ruta), y se extrapola cuántas rutas caben en FULL_TIME_BUDGET_MS. Se
+// comparte entre runFullPrecision() y runSensitivity(), que calibra una sola
+// vez y reutiliza el mismo pathsFull en sus 16 simulaciones en vez de
+// recalibrar cada una (las perturbaciones de sensibilidad no activan/desactivan
+// ninguna feature PRO, así que el coste por ruta no cambia entre variantes).
+async function calibratePathsFull(p){
+  const [c1,c2]=await Promise.all([
+    requestSimulation(p, CALIB_N1, {calibrate:true}),
+    requestSimulation(p, CALIB_N2, {calibrate:true})
+  ]);
+  const msPerPath=Math.max(0.0005, (c2.ms-c1.ms)/(CALIB_N2-CALIB_N1));
+  let pathsFull=Math.round(FULL_TIME_BUDGET_MS/msPerPath);
+  // Without a Worker, requestSimulation() runs simulate() synchronously on the
+  // main thread — calibrating toward the same PATHS_FULL_MAX there would block
+  // the UI (unresponsive sliders/scroll) for the full multi-second budget.
+  const pathsCeiling = worker ? PATHS_FULL_MAX : 5000;
+  return Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
+}
+
+async function runFullPrecision(p){
+  const pathsFull=await calibratePathsFull(p);
+  return requestSimulation(p, pathsFull);
+}
+
+// Curated list of the parameters most likely to move the FIRE date, each with
+// a perturbation step chosen to be "a plausible amount to be wrong by" rather
+// than an arbitrary percentage. Each is tested both up and down from whatever
+// the sliders are currently set to, holding everything else fixed — a classic
+// one-at-a-time sensitivity/tornado analysis.
+const SENSITIVITY_PARAMS = [
+  {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vida', label:'Coste de vida actual (gasto mensual)', delta:p=>p.vida*0.1, fmt:v=>eur(v)+'/mes'},
+  {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, fmt:v=>v.toFixed(2)+' %'},
+  {key:'salG', label:'Crecimiento salarial anual', delta:0.5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'startDelay', label:'Retraso en empezar la carrera', delta:6, fmt:v=>v.toFixed(0)+' meses'},
+  {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, fmt:v=>eur(v)+'/mes'},
+];
+
+// Runs each SENSITIVITY_PARAMS entry both up and down from baseParams, at the
+// same full-precision path count as the main "Trayectoria" calculation (not
+// PATHS_PREVIEW) so the impact figures are as reliable as the headline number
+// — calibrated once from baseParams and reused for all 16 runs, since none of
+// these perturbations toggle a PRO feature on/off (the cost per path doesn't
+// change between variants). Returns the results sorted by impact on the
+// median FIRE age.
+//
+// requestSimulation's normal (non-calibrate) path only resolves the single
+// most-recent request and silently drops any older one — correct for the
+// slider-driven run() pipeline, where a stale in-flight run should lose to a
+// newer one, but wrong here: up to 16 requests run concurrently and every one
+// of them needs its own answer. `calibrate:true` is the existing escape hatch
+// for exactly that ("never compete for latest, always resolve") — it has no
+// effect on the computation itself, only on how the response is dispatched.
+async function runSensitivity(baseParams){
+  const pathsFull=await calibratePathsFull(baseParams);
+  const jobs=SENSITIVITY_PARAMS.map(async def=>{
+    const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
+    const base=baseParams[def.key];
+    const [lowR,highR]=await Promise.all([
+      requestSimulation({...baseParams,[def.key]:base-delta}, pathsFull, {calibrate:true}),
+      requestSimulation({...baseParams,[def.key]:base+delta}, pathsFull, {calibrate:true}),
+    ]);
+    const ageOf=r=>{ const fm=fireQuantileMonth(r.result.fireMonths,.50); return fm===null?null:baseParams.ageNow+yearFrac(fm); };
+    const ageLow=ageOf(lowR), ageHigh=ageOf(highR);
+    return {
+      label:def.label, valueLow:base-delta, valueHigh:base+delta, fmt:def.fmt,
+      ageLow, ageHigh,
+      impact: (ageLow===null||ageHigh===null) ? Infinity : Math.abs(ageHigh-ageLow),
+    };
+  });
+  const results=await Promise.all(jobs);
+  results.sort((a,b)=>b.impact-a.impact);
+  return results;
+}
+
+function renderSensitivity(results){
+  const el=document.getElementById('sensList');
+  if(!results.length){ el.innerHTML='<p class="sensEmpty">Sin resultados.</p>'; return; }
+  const maxImpact=Math.max(...results.map(r=>isFinite(r.impact)?r.impact:0), 0.1);
+  el.innerHTML=results.map(r=>{
+    const rangeTxt = (r.ageLow===null||r.ageHigh===null)
+      ? 'sin rutas exitosas en algún extremo'
+      : 'edad '+r.ageLow.toFixed(1)+' – '+r.ageHigh.toFixed(1)+' ('+r.fmt(r.valueLow)+' → '+r.fmt(r.valueHigh)+')';
+    const pct = isFinite(r.impact) ? Math.max(4, Math.round(r.impact/maxImpact*100)) : 100;
+    return '<div class="sensRow"><div class="sensHead"><span class="sensLabel">'+r.label+'</span>'+
+      '<span class="sensRange">'+rangeTxt+'</span></div>'+
+      '<div class="sensTrack"><div class="sensBar" style="width:'+pct+'%"></div></div></div>';
+  }).join('');
+}
+
+const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
+const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
+const contribChart=makeChartController(document.getElementById('contribChart'), document.getElementById('contribChartTip'), document.getElementById('zoomResetContrib'), renderContribChart, v=>{
+  const contrib=Math.max(0,Math.min(v.contrib50,v.p50)), growth=v.p50-contrib;
+  return '<b>'+v.year+'</b><br>Total · '+eurK(v.p50)+'<br>Aportado · '+eurK(contrib)+'<br>Rendimiento · '+eurK(growth);
+});
+const ruinChart=makeChartController(document.getElementById('ruinChartCanvas'), document.getElementById('ruinChartTip'), document.getElementById('zoomResetRuin'), renderRuinChart, v=>{
+  return '<b>Año '+v.y+' desde el FIRE</b><br>Ruina acumulada · '+(v.pct*100).toFixed(0)+' %<br>n='+v.atRisk.toLocaleString('es-ES')+' rutas';
+});
+const calcLoadingEl=document.getElementById('calcLoading');
+let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0;
+
+async function run(mode){
+  const t0=performance.now(), p=readParams();
+  // Paint slider values before any heavy calculation so the UI always shows them.
+  paintLabels(p);
+  const isPreview = mode==='preview';
+  let loadingTimer=null;
+  if(!isPreview) loadingTimer=setTimeout(()=>{ if(calcLoadingEl) calcLoadingEl.style.display='inline'; },350);
+  const {result:r} = isPreview ? await requestSimulation(p, PATHS_PREVIEW) : await runFullPrecision(p);
+  clearTimeout(loadingTimer);
+  if(calcLoadingEl) calcLoadingEl.style.display='none';
+  const s=r.series, target=r.target;
+  lastSeries=s; lastTarget=target;
+  // "Conservador" = escenario cauteloso = tarda MÁS, no menos: entre las rutas
+  // que sí llegan a FIRE, eso es el extremo tardío de la distribución (P90 de
+  // fechas), no el temprano — el P10 de fechas es justo el 10% más rápido/afortunado.
+  const fm50=fireQuantileMonth(r.fireMonths,.50), fmConservative=fireQuantileMonth(r.fireMonths,.90);
+  const pathsUsed=r.fireMonthAll.length;
+  const successRate=r.fireMonths.length/pathsUsed;
+
+  lastAgeMedText=fm50===null?'—':String(Math.floor(p.ageNow+yearFrac(fm50)));
+  lastSuccessRate=successRate;
+  document.getElementById('ageMed').textContent=fm50===null?'—':Math.floor(p.ageNow+yearFrac(fm50));
+  document.getElementById('yearMed').textContent=fm50===null?'no FIRE exitoso':ymdLabel(fm50)+' · P50 · éxito '+Math.round(successRate*100)+'%';
+  document.getElementById('ageP10').textContent=fmConservative===null?'—':Math.floor(p.ageNow+yearFrac(fmConservative));
+  document.getElementById('yearP10').textContent=fmConservative===null?'sin rutas exitosas':ymdLabel(fmConservative)+' · P90 de fechas FIRE exitosas';
+  document.getElementById('targetCap').textContent=eurK(target);
+  document.getElementById('targetNote').textContent=eur(p.gasto)+'/año ÷ '+p.swr.toFixed(2)+' %';
+
+  const marks=[1e6,1.5e6,2e6,3e6];
+  document.getElementById('wpts').innerHTML=marks.map(m=>{
+    const cell=k=>{
+      const y=firstYear(s,k,m);
+      return y?`<td>${y}<br><span class="age">edad ${p.ageNow+y-START_YEAR}</span></td>`:`<td class="na">—</td>`;
+    };
+    return `<tr class="${firstYear(s,'p50',m)!==null?'hit':''}"><td>${eurK(m)}</td>${cell('p50')}${cell('p10')}${cell('p90')}</tr>`;
+  }).join('');
+
+  mainChart.update(s,target);
+  if(chartModalEl.open) modalChart.update(s,target);
+  contribChart.update(s,target);
+
+  let firedCount=0, ruinedAfterFire=0;
+  for(let k=0;k<pathsUsed;k++){ if(r.fireMonthAll[k]>=0){ firedCount++; if(r.ruined[k]) ruinedAfterFire++; } }
+  const ruinRate=firedCount?ruinedAfterFire/firedCount:0;
+
+  const ruinCurve=buildRuinCurve(r, pathsUsed);
+  renderRuinTable(ruinCurve);
+  ruinChart.update(ruinCurve, null);
+
+  let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
+    Math.round(successRate*100)+' % rutas FIRE exitosas · ruina tras jubilarse '+Math.round(ruinRate*100)+' % · '+
+    Math.round(performance.now()-t0)+' ms';
+  if(p.profitShareWeeks>0) calcTxt+=' · profit sharing hasta '+p.profitShareWeeks.toFixed(1)+' semanas/año (sorteado)';
+  if(p.gratuityYears>0) calcTxt+=' · indemnización por antigüedad de '+p.gratuityYears.toFixed(1)+' años al jubilarse';
+  if(p.histMarketOn) calcTxt+=' · bolsa: bootstrap histórico real 1928-2025 (no teórico)';
+  if(p.proMode){
+    const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'];
+    calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
+    if(p.taxOn) calcTxt+=' · fiscalidad ES activa (tipo medio '+p.taxRate.toFixed(1)+'%, repat. +'+p.taxRepatDelay+'a)';
+    if(p.taxOn && p.taxRateProv!==p.taxRate) calcTxt+=' · retirada optimizada: '+(p.taxRateProv<p.taxRate?'plan de empresa antes que la cartera':'cartera antes que el plan de empresa')+' ('+p.taxRateProv.toFixed(1)+'% vs '+p.taxRate.toFixed(1)+'%)';
+    if(p.taxOn && p.taxBracketsOn) calcTxt+=' · cartera gravable: tramos reales del ahorro (19-30%), no tipo medio';
+    if(p.beckhamOn) calcTxt+=' · Ley Beckham activa ('+p.beckhamYears+'a, IRPF y patrimonio en pausa)';
+    if(p.wealthTaxOn) calcTxt+=' · patrimonio neto > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año'+(p.wealthBonusPct>0?' (bonif. '+p.wealthBonusPct.toFixed(0)+'%)':'')+(p.mortgageBalance>0?' (deuda deducida)':'');
+    if(p.fxVolOn) calcTxt+=' · FX estocástico';
+    if(p.inflOn) calcTxt+=' · inflación estocástica';
+    if(p.glideOn) calcTxt+=' · glide path activo';
+    if(p.lifeExpOn) calcTxt+=' · horizonte limitado a esperanza de vida '+p.lifeExp+' años';
+    if(p.baristaOn) calcTxt+=' · ingreso parcial tras FIRE ('+eurK(p.baristaIncome)+'/año, '+p.baristaYears+'a)';
+  }
+  document.getElementById('calc').textContent=calcTxt;
+}
+
+// Dragging a range slider fires 'input' continuously: run a cheap preview
+// (PATHS_PREVIEW) with a short debounce so it feels instant. Releasing it fires
+// 'change' once: run the full-precision simulation. Checkboxes only have 'input'
+// (no drag phase) and always go straight to full precision.
+let tPreview=null, tFull=null;
+function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>run('preview'),50); }
+function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>run('full'),40); }
+
+ids.forEach(k=>{
+  const n=el[k]; if(!n) return;
+  if(n.type==='range'){ n.addEventListener('input',scheduleInput); n.addEventListener('change',scheduleFull); }
+  else { n.addEventListener('input',scheduleFull); }
+});
+el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+// ccaaPreset is a UI shortcut, not a simulate() input: it just pre-fills the two
+// sliders that actually drive the calculation, which stay editable afterward.
+const CCAA_PRESETS=[
+  {exempt:700000, bonus:0},   // General (sin bonificación)
+  {exempt:700000, bonus:100}, // Madrid
+  {exempt:700000, bonus:100}, // Andalucía
+  {exempt:500000, bonus:0},   // Cataluña
+  {exempt:1000000, bonus:0}   // C. Valenciana
+];
+el.ccaaPreset.addEventListener('input',()=>{
+  const preset=CCAA_PRESETS[Math.round(parseFloat(el.ccaaPreset.value))];
+  if(!preset) return;
+  el.wealthExempt.value=preset.exempt;
+  el.wealthBonusPct.value=preset.bonus;
+  paintLabels(readParams());
+});
+document.getElementById('reset').addEventListener('click',()=>{
+  ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
+  document.body.classList.toggle('pro',DEFAULTS.proMode);
+  run('full');
+});
+
+const chartModalEl=document.getElementById('chartModal');
+document.getElementById('expandChart').addEventListener('click',()=>{
+  chartModalEl.showModal();
+  if(lastSeries){ modalChart.update(lastSeries,lastTarget); modalChart.setView(mainChart.getView()); }
+});
+document.getElementById('closeChartModal').addEventListener('click',()=>{ chartModalEl.close(); });
+
+// ---- Comparar escenarios: pure UI/state, never touches simulate() ----
+const SCENARIO_MAX=4;
+const SCENARIO_COLORS=['#1F7A4D','#2E6F9E','#0E7C86','#6B4FA0'];
+const SCENARIO_STORAGE_KEY='fireSimScenarios';
+let savedScenarios=[];
+try{
+  const raw=localStorage.getItem(SCENARIO_STORAGE_KEY);
+  if(raw) savedScenarios=JSON.parse(raw)||[];
+}catch(e){ savedScenarios=[]; }
+
+function persistScenarios(){
+  try{ localStorage.setItem(SCENARIO_STORAGE_KEY, JSON.stringify(savedScenarios)); }catch(e){}
+}
+
+function refreshScenarioOverlays(){
+  const visible=savedScenarios.filter(sc=>sc.visible!==false);
+  const forChart=visible.map(sc=>({color:sc.color, series:sc.series}));
+  mainChart.setExtra(forChart);
+  modalChart.setExtra(forChart);
+  [document.getElementById('legend'), document.getElementById('legendModal')].forEach(legendEl=>{
+    if(!legendEl) return;
+    legendEl.querySelectorAll('.scenarioLegendItem').forEach(el2=>el2.remove());
+    visible.forEach(sc=>{
+      const span=document.createElement('span');
+      span.className='scenarioLegendItem';
+      span.innerHTML='<i style="background:'+sc.color+'"></i>'+sc.name;
+      legendEl.appendChild(span);
+    });
+  });
+}
+
+function renderScenarioList(){
+  const ul=document.getElementById('scenarioList');
+  if(!savedScenarios.length){
+    ul.innerHTML='<li class="scenarioEmpty">Todavía no has guardado ningún escenario.</li>';
+  } else {
+    ul.innerHTML=savedScenarios.map(sc=>
+      '<li class="scenarioItem" style="--sc-color:'+sc.color+'">'+
+        '<input type="checkbox" data-act="toggle" data-id="'+sc.id+'" '+(sc.visible!==false?'checked':'')+'>'+
+        '<span class="swatch"></span>'+
+        '<span class="name">'+sc.name+'</span>'+
+        '<span class="stats">edad '+sc.ageMed+' · éxito '+Math.round(sc.successRate*100)+'%</span>'+
+        '<button type="button" data-act="load" data-id="'+sc.id+'">Cargar</button>'+
+        '<button type="button" data-act="del" data-id="'+sc.id+'" aria-label="Eliminar escenario">✕</button>'+
+      '</li>'
+    ).join('');
+  }
+  refreshScenarioOverlays();
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function showScenarioMsg(text){
+  const el2=document.getElementById('scenarioMsg');
+  if(!el2) return;
+  el2.textContent=text;
+  el2.style.display=text?'block':'none';
+  if(text) setTimeout(()=>{ if(el2.textContent===text) el2.style.display='none'; }, 4000);
+}
+
+function saveCurrentScenario(){
+  if(!lastSeries){ return; }
+  if(savedScenarios.length>=SCENARIO_MAX){
+    showScenarioMsg('Ya hay '+SCENARIO_MAX+' escenarios guardados. Elimina uno antes de guardar otro.');
+    return;
+  }
+  const nameInput=document.getElementById('scenarioName');
+  const name=escapeHtml((nameInput.value||'').trim() || ('Escenario '+(savedScenarios.length+1)));
+  const usedColors=new Set(savedScenarios.map(sc=>sc.color));
+  const color=SCENARIO_COLORS.find(c=>!usedColors.has(c)) || SCENARIO_COLORS[savedScenarios.length%SCENARIO_COLORS.length];
+  savedScenarios.push({
+    id:'sc'+Date.now()+Math.random().toString(36).slice(2,7),
+    name, color, visible:true,
+    series:lastSeries, target:lastTarget,
+    ageMed:lastAgeMedText, successRate:lastSuccessRate,
+    params:readParams()
+  });
+  nameInput.value='';
+  persistScenarios();
+  renderScenarioList();
+}
+
+function loadScenario(id){
+  const sc=savedScenarios.find(x=>x.id===id);
+  if(!sc) return;
+  ids.forEach(k=>{
+    const n=el[k]; if(!n || !(k in sc.params)) return;
+    if(n.type==='checkbox') n.checked=sc.params[k]; else n.value=sc.params[k];
+  });
+  document.body.classList.toggle('pro', !!sc.params.proMode);
+  initVisibleLabels();
+  run('full');
+}
+
+function deleteScenario(id){
+  savedScenarios=savedScenarios.filter(x=>x.id!==id);
+  persistScenarios();
+  renderScenarioList();
+}
+
+document.getElementById('saveScenario').addEventListener('click', saveCurrentScenario);
+
+document.getElementById('runSensitivity').addEventListener('click', async () => {
+  const btn=document.getElementById('runSensitivity'), loadingEl=document.getElementById('sensLoading');
+  btn.disabled=true; loadingEl.style.display='inline';
+  try{
+    const results=await runSensitivity(readParams());
+    renderSensitivity(results);
+  } finally {
+    btn.disabled=false; loadingEl.style.display='none';
+  }
+});
+// Backtest histórico secuencial: cheap and synchronous (no Worker needed —
+// ~40 bisection steps × ~69 historical windows × up to 40 years is trivial
+// compared to the main Monte Carlo), so it just redraws on every input.
+function renderBacktest(){
+  const capital=parseFloat(document.getElementById('btCapital').value);
+  const gasto=parseFloat(document.getElementById('btGasto').value);
+  const years=parseFloat(document.getElementById('btYears').value);
+  const portfolio=BT_PORTFOLIOS[Math.round(parseFloat(document.getElementById('btPortfolio').value))];
+  const results=runHistoricalBacktest(capital, gasto, years, portfolio);
+  const summary=summarizeBacktest(results);
+  const survived=summary.n-summary.failedYears.length;
+  document.getElementById('btPeriodCount').textContent=summary.n;
+  const capitalSurvive=capitalNeededFor(gasto, years, false, portfolio);
+  const capitalPerpetual=capitalNeededFor(gasto, years, true, portfolio);
+  // Each preset's own period differs (the permanent one starts in 1971), so
+  // alongside each row's own figures give the three over one common period —
+  // otherwise the comparison is apples to oranges.
+  const commonFrom=Math.max(...BT_PORTFOLIOS.map(btStartIndex));
+  document.getElementById('btPortfolioStats').innerHTML=
+    // Four columns, like every other table here: a fifth one no longer fits on
+    // a 320px phone. The period rides along under the portfolio name instead.
+    '<table><thead><tr><th>Cartera</th><th>Media anual</th><th>Volatilidad</th><th>Peor año</th></tr></thead><tbody>'+
+    BT_PORTFOLIOS.map(p=>{
+      const s=portfolioStats(p);
+      return '<tr'+(p===portfolio?' class="hit"':'')+'><td>'+p.short+'<br><span class="age">'+s.fromYear+'-'+s.toYear+'</span></td><td>'+fmtPct(s.cagr)+'</td><td>'+fmtPct(s.vol)+'</td><td>'+fmtPct(s.worstRet)+' <span class="age">'+s.worstYear+'</span></td></tr>';
+    }).join('')+
+    '</tbody></table>'+
+    '<p class="hint">Rentabilidad <em>real</em> (ya descontada la inflación) y compuesta: el ritmo al que habría crecido el capital de verdad, no la media aritmética de los años sueltos. Cada cartera se mide en su propio periodo, así que para compararlas de forma justa, todas sobre '+(HIST_START_YEAR+commonFrom)+'-'+portfolioStats(BT_PORTFOLIOS[0]).toYear+': '+
+    BT_PORTFOLIOS.map(p=>{
+      const s=portfolioStats(p,commonFrom);
+      return p.short+' '+fmtPct(s.cagr)+' (volatilidad '+fmtPct(s.vol)+', peor año '+fmtPct(s.worstRet)+' en '+s.worstYear+')';
+    }).join(' · ')+
+    '. Fíjate en que la cartera con más rentabilidad no es la que necesita menos capital: lo que manda en una retirada es aguantar los malos periodos, y ahí pesa tanto la volatilidad como la media.</p>';
+  document.getElementById('btResults').innerHTML=
+    '<p class="calc">'+survived+' de '+summary.n+' periodos históricos de '+years+' años sobrevivieron con este capital ('+Math.round(survived/summary.n*100)+' %). '+
+    (summary.failedYears.length ? 'Fallaron los que empezaron en: '+summary.failedYears.join(', ')+'.' : 'Ningún periodo se quedó sin dinero con este capital.')+
+    '</p>'+
+    '<table><thead><tr><th>Capital final tras '+years+' años</th><th>Mediana</th><th>P10</th><th>P90</th></tr></thead><tbody>'+
+    '<tr><td>De los '+summary.n+' periodos</td><td>'+eurK(summary.p50)+'</td><td>'+eurK(summary.p10)+'</td><td>'+eurK(summary.p90)+'</td></tr>'+
+    '</tbody></table>'+
+    '<table><thead><tr><th>Objetivo</th><th>Capital necesario</th></tr></thead><tbody>'+
+    '<tr><td>No arruinarte en ningún periodo probado</td><td>'+eurK(capitalSurvive)+'</td></tr>'+
+    '<tr><td>Conservar el poder adquisitivo (tasa perpetua)</td>'+
+      (capitalPerpetual===null ? '<td class="na">Imposible</td>' : '<td>'+eurK(capitalPerpetual)+'</td>')+'</tr>'+
+    '</tbody></table>'+
+    (capitalPerpetual===null
+      ? '<p class="hint">"Imposible" no es un error de cálculo: en '+years+' años hubo periodos en los que esta cartera perdió poder adquisitivo aunque no retiraras ni un euro, así que no hay capital inicial que los termine con el poder adquisitivo intacto. Alarga el plazo o elige una cartera más estable y volverá a salir una cifra.</p>'
+      : '');
+}
+{
+  const btEls=['btPortfolio','btCapital','btGasto','btYears'].map(k=>document.getElementById(k));
+  btEls.forEach(n=>{ n.value=BT_DEFAULTS[n.id]; });
+  const paintBtLabels=()=>{
+    document.getElementById('btPortfolio_o').textContent=BT_PORTFOLIOS[Math.round(parseFloat(document.getElementById('btPortfolio').value))].label;
+    document.getElementById('btCapital_o').textContent=eur(parseFloat(document.getElementById('btCapital').value));
+    document.getElementById('btGasto_o').textContent=eur(parseFloat(document.getElementById('btGasto').value))+'/año';
+    const y=parseFloat(document.getElementById('btYears').value);
+    document.getElementById('btYears_o').textContent=y+(y===1?' año':' años');
+  };
+  paintBtLabels();
+  renderBacktest();
+  btEls.forEach(n=>n.addEventListener('input', ()=>{ paintBtLabels(); renderBacktest(); }));
+}
+
+document.getElementById('scenarioList').addEventListener('click', e=>{
+  const btn=e.target.closest('button[data-act]');
+  if(!btn) return;
+  const id=btn.getAttribute('data-id');
+  if(btn.getAttribute('data-act')==='load') loadScenario(id);
+  else if(btn.getAttribute('data-act')==='del') deleteScenario(id);
+});
+document.getElementById('scenarioList').addEventListener('change', e=>{
+  const cb=e.target.closest('input[data-act="toggle"]');
+  if(!cb) return;
+  const sc=savedScenarios.find(x=>x.id===cb.getAttribute('data-id'));
+  if(sc){ sc.visible=cb.checked; persistScenarios(); refreshScenarioOverlays(); }
+});
+renderScenarioList();
+
+ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
+document.body.classList.toggle('pro',DEFAULTS.proMode);
+initVisibleLabels();
+run('full').catch(e=>{
+  // Keep the controls usable and values visible even if a browser-specific runtime issue occurs.
+  console.error(e);
+});
+</script>
+
+</body>
+</html>
