@@ -86,6 +86,8 @@ h2{
   margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid var(--rule);
 }
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+@media(max-width:600px){table{display:block;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}th,td{white-space:nowrap}}
+.skipLink{position:absolute;left:-10000px;top:0;background:#fff;padding:10px;z-index:1000}.skipLink:focus{left:12px;top:12px}
 thead th{
   font-family:'Barlow Condensed',sans-serif;
   font-size:11px;letter-spacing:.14em;text-transform:uppercase;
@@ -290,6 +292,7 @@ body:not(.pro) .pro-only{display:none}
 </head>
 <body>
 <div class="wrap">
+  <a class="skipLink" href="#main-content">Saltar al contenido principal</a>
 
   <header class="masthead">
     <p class="kicker">Plan de vuelo financiero</p>
@@ -297,6 +300,7 @@ body:not(.pro) .pro-only{display:none}
     <p class="sub">INICIO JUN-2027 DXB · EUROS REALES DE 2026 · MONTE CARLO MENSUAL · FIRST-PASSAGE FIRE + RETIRADA</p>
   </header>
 
+  <main id="main-content">
   <div class="readout">
     <div class="cell">
       <div class="lbl">Edad FIRE</div>
@@ -353,6 +357,7 @@ body:not(.pro) .pro-only{display:none}
       <span><i class="r"></i>Mediana</span>
       <span><i class="t"></i>Objetivo</span>
     </div>
+    <details><summary>Ver trayectoria anual en tabla</summary><table><thead><tr><th>Año</th><th>P10</th><th>Mediana</th><th>P90</th></tr></thead><tbody id="accessibleSeries"></tbody></table></details>
     <p class="hint">El eje Y es logarítmico (por eso las líneas no están equiespaciadas): con 60+ años de horizonte, algunas rutas crecen muchísimo por interés compuesto, y una escala lineal aplastaría los primeros años —donde ocurre el FIRE— contra el fondo. Pasa el ratón (o el dedo) por el gráfico para ver los valores exactos de cada año. Rueda del ratón para hacer zoom, arrastra para desplazarte, o pulsa "Ampliar" para una vista más grande.</p>
   </section>
 
@@ -372,6 +377,7 @@ body:not(.pro) .pro-only{display:none}
       <span><i style="background:#1F7A4D"></i>Rendimiento (lo generan las inversiones)</span>
       <span><i class="t"></i>Objetivo</span>
     </div>
+    <details><summary>Ver aportaciones y rendimiento en tabla</summary><table><thead><tr><th>Año</th><th>Total mediano</th><th>Aportado mediano</th><th>Rendimiento aproximado</th></tr></thead><tbody id="accessibleContrib"></tbody></table></details>
     <p class="hint">De la ruta mediana: "aportado" es el efectivo neto que metes (o retiras) tú — sueldo ahorrado, profit sharing, Burriana/Brasil, menos gasto e hipoteca; "rendimiento" es lo que crece por sí solo con el mercado, encima de eso. A diferencia del gráfico de arriba, este usa escala lineal a propósito: el objetivo es ver cómo el rendimiento acaba superando a lo aportado, no leer cifras exactas de la cola lejana. Pasa el ratón (o el dedo) para ver los valores de cada año; rueda del ratón para hacer zoom, arrastra para desplazarte.</p>
   </section>
 
@@ -401,7 +407,7 @@ body:not(.pro) .pro-only{display:none}
       </div>
     </div>
     <div class="chartbox">
-      <canvas id="chartModalCanvas" width="1600" height="900"></canvas>
+      <canvas id="chartModalCanvas" width="1600" height="900" role="img" aria-label="Vista ampliada de la trayectoria. Usa la tabla Waypoints de patrimonio como alternativa textual."></canvas>
       <div class="chart-tip" id="chartTipModal"></div>
     </div>
     <div class="legend" id="legendModal">
@@ -410,6 +416,15 @@ body:not(.pro) .pro-only{display:none}
       <span><i class="t"></i>Objetivo</span>
     </div>
   </dialog>
+
+  <section id="historicalBacktest">
+    <h2>Backtest histórico secuencial</h2>
+    <p class="hint">Reproduce retiradas mensuales sobre las rentabilidades reales anuales del S&amp;P 500 usadas por el simulador (1928–2025). No incluye impuestos, comisiones ni predice el futuro; cada inicio es un periodo histórico distinto.</p>
+    <div class="ctrl"><div class="row"><label for="btCapital">Capital inicial (€ reales)</label><output id="btCapitalValue"></output></div><input id="btCapital" type="range" min="50000" max="2000000" step="10000" value="600000"></div>
+    <div class="ctrl"><div class="row"><label for="btSpend">Retirada anual (€ reales)</label><output id="btSpendValue"></output></div><input id="btSpend" type="range" min="12000" max="120000" step="1000" value="24000"></div>
+    <div class="ctrl"><div class="row"><label for="btYears">Años de retirada</label><output id="btYearsValue"></output></div><input id="btYears" type="range" min="10" max="40" step="1" value="30"></div>
+    <div id="btResults" aria-live="polite"></div>
+  </section>
 
   <section>
     <h2>Comparar escenarios</h2>
@@ -579,8 +594,9 @@ body:not(.pro) .pro-only{display:none}
       <h3>Cartera hoy</h3>
       <p class="grouphint">Lo que ya tienes ahorrado, repartido en dos cestas con comportamiento distinto: renta variable tradicional y Bitcoin.</p>
       <div class="ctrl">
-        <div class="row"><label for="startEq">Cash + renta variable (€)</label><output id="startEq_o" for="startEq"></output></div>
+        <div class="row"><label for="startEq">Renta variable inicial (€)</label><output id="startEq_o" for="startEq"></output></div>
         <input type="range" id="startEq" min="0" max="400000" step="2500">
+        <p class="hint">Este importe se modela como 100 % renta variable; no hay una reserva de efectivo separada.</p>
       </div>
       <div class="ctrl">
         <div class="row"><label for="startBtc">Bitcoin (€)</label><output id="startBtc_o" for="startBtc"></output></div>
@@ -936,12 +952,13 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="actions">
       <button class="reset" id="reset">Restaurar valores base</button>
-      <label for="seed">Semilla reproducible</label><input type="number" id="seed" min="0" max="4294967295" step="1" aria-describedby="simulationContext">
+      <label for="seed">Semilla reproducible</label><input type="number" id="seed" min="0" max="4294967295" step="1" placeholder="Vacía = aleatoria" aria-describedby="simulationContext">
       <p class="calc" id="calc" role="status" aria-live="polite"></p>
     <p class="hint" id="simulationContext"></p>
       <p class="calcLoading" id="calcLoading" style="display:none">Calculando con el máximo de rutas que caben en ~3-5s…</p>
     </div>
   </section>
+</main>
 </div>
 
 
@@ -974,7 +991,7 @@ const IRPF_SAVINGS_BRACKETS = [
 ];
 
 const DEFAULTS = {
-  seed:20260921,
+  seed:null,
   ageNow:28,
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
   mandatoryRetireOn:false, mandatoryRetireAge:60,
@@ -1059,7 +1076,12 @@ const MONTH_DATES = (() => {
 
 function readParams(){
   const p={};
-  ids.forEach(k => { const n=el[k]; p[k]=n?(n.type==='checkbox'?n.checked:parseFloat(n.value)):DEFAULTS[k]; });
+  ids.forEach(k => {
+    const n=el[k];
+    if(k==='seed' && n && String(n.value).trim()===''){ p[k]=null; return; }
+    const value=n?(n.type==='checkbox'?n.checked:parseFloat(n.value)):DEFAULTS[k];
+    p[k]=k==='seed' && (!Number.isInteger(value)||value<0||value>4294967295) ? null : value;
+  });
   return p;
 }
 
@@ -1506,7 +1528,7 @@ function simulate(p, paths){
       // tax check further down — which runs regardless of the retired/working
       // branch, and even past the esperanza de vida cutoff — can also see whether
       // the Ley Beckham window is still open.
-      const inBeckham=beckhamActive && spanishResidentMonth>=0 && (i-spanishResidentMonth)<p.beckhamYears*12;
+        let inBeckham=NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,i,p.beckhamYears);
 
       if(!retired){
         if(net>=0){
@@ -1604,6 +1626,10 @@ function simulate(p, paths){
         if(fiscalityActive && !spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12){
           spanishResident=true;
           spanishResidentMonth=i;
+          // Residency starts at the top of this withdrawal month. Recompute
+          // the special regime immediately so its first month is not taxed as
+          // ordinary Spanish residence before the window is opened.
+          inBeckham=NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,i,p.beckhamYears);
         }
         // Ley Beckham: taxed as a non-resident for its window (year of the move + 5
         // more) — foreign-sourced income/wealth (this model's whole portfolio) is
@@ -1621,7 +1647,9 @@ function simulate(p, paths){
         const bracketsActive=taxNow && p.useIrpfBrackets;
         const gravRate=taxNow ? (bracketsActive ? 0 : p.taxRate) : 0;
         const provRate=taxNow ? p.taxRateProv : 0;
-        const provFirst=provRate<gravRate;
+        const provFirst=taxNow && (bracketsActive
+          ? NavlogCore.providentFirst(provRate,[{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
+          : provRate<gravRate);
 
         let deficit=wd, nb, r;
         if(provFirst){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
@@ -1641,7 +1669,9 @@ function simulate(p, paths){
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
       if(wealthTaxActive && !ruinedPath && spanishResident && !inBeckham && d.isSnap){
-        const totalWealth=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        // Property inclusion in the FIRE target is a liquidity/retirement choice;
+        // it must not remove owned real estate from the wealth-tax base.
+        const totalWealth=NavlogCore.wealthTaxBase(vEq+vBtc+vProv+vGold+vCons,vRE,reActive);
         // Debts reduce the taxable base (patrimonio neto, Ley 19/1991 art. 9): the
         // mortgage balance amortizes in a straight line to 0 by hipEnd.
         const debtNow=p.mortgageBalance>0 ? p.mortgageBalance*Math.max(0,1-i/mortgageMonths) : 0;
@@ -2234,7 +2264,7 @@ function buildWorkerSource(){
     'const MONTHS=MONTH_DATES.length;',
     'let spare=null, activeRandom=Math.random;',
     'const SAVINGS_BRACKETS='+JSON.stringify(NavlogCore.SAVINGS_BRACKETS)+';',
-    'const NavlogCore={seededRandom:'+NavlogCore.seededRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+'};',
+    'const NavlogCore={seededRandom:'+NavlogCore.seededRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+'};',
     'const progressiveSavingsTax=NavlogCore.progressiveSavingsTax, netAfterSavingsTax=NavlogCore.netAfterSavingsTax;',
     'const monthIndex='+monthIndex.toString()+';',
     'const seededRandom='+seededRandom.toString()+';',
@@ -2432,6 +2462,21 @@ function renderSrrStress(res, shockPct, shockMonths){
     '<p class="calc">Ruina tras jubilarse (rutas exitosas) — normal: <b>'+pct(res.base.ruinRate)+'</b> · con caída: <b>'+pct(res.shocked.ruinRate)+'</b></p>';
 }
 
+function renderHistoricalBacktest(){
+  const capital=Number(document.getElementById('btCapital').value), spend=Number(document.getElementById('btSpend').value), years=Number(document.getElementById('btYears').value);
+  document.getElementById('btCapitalValue').textContent=eur(capital);
+  document.getElementById('btSpendValue').textContent=eur(spend)+'/año';
+  document.getElementById('btYearsValue').textContent=years+' años';
+  const outcomes=NavlogCore.historicalWithdrawalBacktest(HIST_EQ_REAL_RETURNS,capital,spend,years);
+  const survivors=outcomes.filter(x=>!x.ruined).length;
+  const finals=outcomes.map(x=>x.finalBalance).sort((a,b)=>a-b);
+  const quantile=q=>finals.length?finals[Math.floor((finals.length-1)*q)]:0;
+  const failures=outcomes.filter(x=>x.ruined).map(x=>1928+x.startIndex);
+  document.getElementById('btResults').innerHTML='<p class="calc">Sobrevivieron '+survivors+' de '+outcomes.length+' periodos ('+(outcomes.length?Math.round(100*survivors/outcomes.length):0)+' %). '+(failures.length?'Años de inicio con ruina: '+failures.join(', ')+'.':'No hubo ruina en los periodos probados.')+'</p><table><thead><tr><th>Capital final real</th><th>P10</th><th>Mediana</th><th>P90</th></tr></thead><tbody><tr><td>Tras '+years+' años</td><td>'+eurK(quantile(.1))+'</td><td>'+eurK(quantile(.5))+'</td><td>'+eurK(quantile(.9))+'</td></tr></tbody></table>';
+}
+['btCapital','btSpend','btYears'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistoricalBacktest));
+renderHistoricalBacktest();
+
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
 const contribChart=makeChartController(document.getElementById('contribChart'), document.getElementById('contribChartTip'), document.getElementById('zoomResetContrib'), renderContribChart, v=>{
@@ -2442,7 +2487,7 @@ const ruinChart=makeChartController(document.getElementById('ruinChartCanvas'), 
   return '<b>Año '+v.y+' desde el FIRE</b><br>Ruina acumulada · '+(v.pct*100).toFixed(0)+' %<br>n='+v.atRisk.toLocaleString('es-ES')+' rutas';
 });
 const calcLoadingEl=document.getElementById('calcLoading');
-let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0;
+let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0, lastFullParams=null, fullRunsPending=0, activeRunsPending=0;
 
 async function run(mode){
   const t0=performance.now(), p=readParams();
@@ -2451,13 +2496,21 @@ async function run(mode){
   const isPreview = mode==='preview';
   let loadingTimer=null;
   if(!isPreview) loadingTimer=setTimeout(()=>{ if(calcLoadingEl) calcLoadingEl.style.display='inline'; },350);
-  const response = isPreview ? await requestSimulation(p, PATHS_PREVIEW) : await runFullPrecision(p);
+  activeRunsPending++;
+  if(!isPreview){ fullRunsPending++; const saveButton=document.getElementById('saveScenario'); if(saveButton) saveButton.disabled=true; }
+  let response;
+  try { response = isPreview ? await requestSimulation(p, PATHS_PREVIEW) : await runFullPrecision(p); }
+  finally {
+    activeRunsPending=Math.max(0,activeRunsPending-1);
+    if(!isPreview){ fullRunsPending=Math.max(0,fullRunsPending-1); }
+    const saveButton=document.getElementById('saveScenario'); if(saveButton) saveButton.disabled=activeRunsPending>0;
+  }
   clearTimeout(loadingTimer);
   if(response.stale) return;
   const r=response.result;
   if(calcLoadingEl) calcLoadingEl.style.display='none';
   const s=r.series, target=r.target;
-  lastSeries=s; lastTarget=target;
+  if(!isPreview){ lastSeries=s; lastTarget=target; lastFullParams={...p}; }
   // "Conservador" = escenario cauteloso = tarda MÁS, no menos: entre las rutas
   // que sí llegan a FIRE, eso es el extremo tardío de la distribución (P90 de
   // fechas), no el temprano — el P10 de fechas es justo el 10% más rápido/afortunado.
@@ -2486,18 +2539,23 @@ async function run(mode){
   mainChart.update(s,target);
   if(chartModalEl.open) modalChart.update(s,target);
   contribChart.update(s,target);
+  const fillAccessible=(id,rows)=>{const body=document.getElementById(id);body.replaceChildren(...rows.map(values=>{const tr=document.createElement('tr');values.forEach(value=>{const td=document.createElement('td');td.textContent=String(value);tr.appendChild(td);});return tr;}));};
+  fillAccessible('accessibleSeries',s.map(v=>[v.year,eurK(v.p10),eurK(v.p50),eurK(v.p90)]));
+  fillAccessible('accessibleContrib',s.map(v=>[v.year,eurK(v.p50),eurK(Math.max(0,Math.min(v.contrib50,v.p50))),eurK(v.p50-Math.max(0,Math.min(v.contrib50,v.p50)))]));
 
-  let firedCount=0, ruinedAfterFire=0, forcedOutCount=0, licenseLossCount=0;
-  for(let k=0;k<pathsUsed;k++){ if(r.fireMonthAll[k]>=0){ if(r.licenseLossOut[k]) { licenseLossCount++; continue; } firedCount++; if(r.ruined[k]) ruinedAfterFire++; if(r.forcedOut[k]) forcedOutCount++; } }
-  const ruinRate=firedCount?ruinedAfterFire/firedCount:0;
-  const forcedOutRate=firedCount?forcedOutCount/firedCount:0;
+  const cohortCounts=NavlogCore.retirementCohortCounts(r,pathsUsed);
+  const voluntaryCount=cohortCounts.voluntary, ruinedAfterFire=cohortCounts.voluntaryRuined;
+  const forcedOutCount=cohortCounts.forced, licenseLossCount=cohortCounts.licenseLoss;
+  const ruinRate=voluntaryCount?ruinedAfterFire/voluntaryCount:0;
+  const forcedOutRate=pathsUsed?forcedOutCount/pathsUsed:0;
+  const licenseLossRate=pathsUsed?licenseLossCount/pathsUsed:0;
 
   const ruinCurve=buildRuinCurve(r, pathsUsed);
   renderRuinTable(ruinCurve);
   ruinChart.update(ruinCurve, null);
 
   let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
-    Math.round(successRate*100)+' % rutas FIRE exitosas · ruina tras jubilarse '+Math.round(ruinRate*100)+' % · '+
+    Math.round(successRate*100)+' % rutas FIRE voluntario exitosas · ruina en esa cohorte '+Math.round(ruinRate*100)+' % (n='+voluntaryCount.toLocaleString('es-ES')+') · salidas forzosas '+Math.round(forcedOutRate*100)+' % · LOL '+Math.round(licenseLossRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
   if(p.profitShareWeeks>0) calcTxt+=' · profit sharing hasta '+p.profitShareWeeks.toFixed(1)+' semanas/año (sorteado)';
   if(p.gratuityYears>0) calcTxt+=' · gratuity de '+p.gratuityYears.toFixed(1)+' años pre-DEWS al jubilarse';
@@ -2572,7 +2630,7 @@ const SCENARIO_STORAGE_KEY='fireSimScenarios';
 let savedScenarios=[];
 try{
   const raw=localStorage.getItem(SCENARIO_STORAGE_KEY);
-  if(raw) savedScenarios=JSON.parse(raw)||[];
+  if(raw) savedScenarios=NavlogCore.normalizeScenarios(JSON.parse(raw),ids,SCENARIO_COLORS,SCENARIO_MAX);
 }catch(e){ savedScenarios=[]; }
 
 function persistScenarios(){
@@ -2590,7 +2648,8 @@ function refreshScenarioOverlays(){
     visible.forEach(sc=>{
       const span=document.createElement('span');
       span.className='scenarioLegendItem';
-      span.innerHTML='<i style="background:'+sc.color+'"></i>'+sc.name;
+      const marker=document.createElement('i'); marker.style.backgroundColor=sc.color;
+      span.append(marker,document.createTextNode(sc.name));
       legendEl.appendChild(span);
     });
   });
@@ -2599,24 +2658,23 @@ function refreshScenarioOverlays(){
 function renderScenarioList(){
   const ul=document.getElementById('scenarioList');
   if(!savedScenarios.length){
-    ul.innerHTML='<li class="scenarioEmpty">Todavía no has guardado ningún escenario.</li>';
+    const empty=document.createElement('li'); empty.className='scenarioEmpty'; empty.textContent='Todavía no has guardado ningún escenario.'; ul.replaceChildren(empty);
   } else {
-    ul.innerHTML=savedScenarios.map(sc=>
-      '<li class="scenarioItem" style="--sc-color:'+sc.color+'">'+
-        '<label><input type="checkbox" data-act="toggle" data-id="'+sc.id+'" '+(sc.visible!==false?'checked':'')+' aria-label="Mostrar escenario '+sc.name+'"></label>'+
-        '<span class="swatch" aria-hidden="true"></span>'+
-        '<span class="name">'+sc.name+'</span>'+
-        '<span class="stats">edad '+sc.ageMed+' · éxito '+Math.round(sc.successRate*100)+'%</span>'+
-        '<button type="button" data-act="load" data-id="'+sc.id+'">Cargar</button>'+
-        '<button type="button" data-act="del" data-id="'+sc.id+'" aria-label="Eliminar escenario">✕</button>'+
-      '</li>'
-    ).join('');
+    const items=savedScenarios.map(sc=>{
+      const li=document.createElement('li'); li.className='scenarioItem'; li.style.setProperty('--sc-color',sc.color);
+      const label=document.createElement('label'), checkbox=document.createElement('input');
+      checkbox.type='checkbox'; checkbox.dataset.act='toggle'; checkbox.dataset.id=sc.id; checkbox.checked=sc.visible;
+      checkbox.setAttribute('aria-label','Mostrar escenario '+sc.name); label.appendChild(checkbox);
+      const swatch=document.createElement('span'); swatch.className='swatch'; swatch.setAttribute('aria-hidden','true');
+      const name=document.createElement('span'); name.className='name'; name.textContent=sc.name;
+      const stats=document.createElement('span'); stats.className='stats'; stats.textContent='edad '+sc.ageMed+' · éxito '+Math.round(sc.successRate*100)+'%';
+      const makeButton=(action,text,aria)=>{const b=document.createElement('button');b.type='button';b.dataset.act=action;b.dataset.id=sc.id;b.textContent=text;if(aria)b.setAttribute('aria-label',aria);return b;};
+      li.append(label,swatch,name,stats,makeButton('load','Cargar'),makeButton('del','✕','Eliminar escenario'));
+      return li;
+    });
+    ul.replaceChildren(...items);
   }
   refreshScenarioOverlays();
-}
-
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 
 function showScenarioMsg(text){
@@ -2628,13 +2686,16 @@ function showScenarioMsg(text){
 }
 
 function saveCurrentScenario(){
-  if(!lastSeries){ return; }
+  const currentParams=readParams();
+  if(activeRunsPending || fullRunsPending || !lastSeries || !lastFullParams || !NavlogCore.sameParameterSnapshot(currentParams,lastFullParams)){
+    showScenarioMsg('Espera a que termine el cálculo completo de los parámetros actuales antes de guardar.'); return;
+  }
   if(savedScenarios.length>=SCENARIO_MAX){
     showScenarioMsg('Ya hay '+SCENARIO_MAX+' escenarios guardados. Elimina uno antes de guardar otro.');
     return;
   }
   const nameInput=document.getElementById('scenarioName');
-  const name=escapeHtml((nameInput.value||'').trim() || ('Escenario '+(savedScenarios.length+1)));
+  const name=(nameInput.value||'').trim().slice(0,60) || ('Escenario '+(savedScenarios.length+1));
   const usedColors=new Set(savedScenarios.map(sc=>sc.color));
   const color=SCENARIO_COLORS.find(c=>!usedColors.has(c)) || SCENARIO_COLORS[savedScenarios.length%SCENARIO_COLORS.length];
   savedScenarios.push({
@@ -2642,7 +2703,7 @@ function saveCurrentScenario(){
     name, color, visible:true,
     series:lastSeries, target:lastTarget,
     ageMed:lastAgeMedText, successRate:lastSuccessRate,
-    params:readParams()
+    params:{...lastFullParams}
   });
   nameInput.value='';
   persistScenarios();
@@ -2668,8 +2729,11 @@ function deleteScenario(id){
 }
 
 document.getElementById('saveScenario').addEventListener('click', saveCurrentScenario);
-  document.getElementById('deleteAllScenarios').addEventListener('click',()=>{
-    if(!savedScenarios.length) return showScenarioMsg('No hay escenarios locales que borrar.');
+document.getElementById('deleteAllScenarios').addEventListener('click',()=>{
+    if(!savedScenarios.length){
+      try{ localStorage.removeItem(SCENARIO_STORAGE_KEY); }catch(e){}
+      return showScenarioMsg('No había escenarios válidos; se limpió cualquier dato local dañado.');
+    }
     if(!window.confirm('Se borrarán todos los escenarios guardados en este navegador. Esta acción no se puede deshacer y no afecta a ningún servicio en la nube. ¿Continuar?')) return;
     savedScenarios=[];
     try{ localStorage.removeItem(SCENARIO_STORAGE_KEY); }catch(e){}
