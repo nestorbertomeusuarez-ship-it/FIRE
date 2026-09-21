@@ -1,0 +1,13 @@
+const assert = require('node:assert/strict');
+const core = require('../simulation-core.js');
+const a = core.seededRandom(42), b = core.seededRandom(42);
+assert.deepEqual([a(),a(),a()], [b(),b(),b()], 'seeded PRNG must reproduce paths');
+assert.equal(core.progressiveSavingsTax(6000), 1140);
+assert.equal(core.progressiveSavingsTax(7000), 1350, 'second bracket applies only above €6k');
+assert.equal(core.netAfterSavingsTax(1000, 0, 0), 1000, 'principal is never gains-taxed');
+assert.ok(core.netAfterSavingsTax(1000, .5, 0) > 900, 'only gain fraction is taxed');
+const gross = core.grossForNetSavings(10000, 1, 0, 20000);
+assert.ok(Math.abs(core.netAfterSavingsTax(gross, 1, 0)-10000) < .01, 'progressive gross-up settles the requested net withdrawal');
+assert.deepEqual(core.boundedPair(0, 6, 0, 36), {low:0, high:6, changed:true}, 'sensitivity respects input min');
+assert.equal(core.standardErrorProportion(.5, 100), .05);
+console.log('simulation-core invariants: OK');

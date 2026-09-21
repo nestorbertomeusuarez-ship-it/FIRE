@@ -1,0 +1,24 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const core = require('../simulation-core.js');
+const html = fs.readFileSync('index.html', 'utf8');
+const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
+const simulationSource = inline.slice(0, inline.indexOf('// Renderer shared by the inline chart')) + '\nglobalThis.__simTest={simulate,DEFAULTS};';
+const context = { console, Math, Float64Array, Int32Array, Uint8Array, Date, Infinity, NavlogCore: core,
+  document: { getElementById: () => null }, globalThis: null };
+context.globalThis = context;
+vm.createContext(context);
+vm.runInContext(simulationSource, context, { timeout: 1000 });
+const { simulate, DEFAULTS } = context.__simTest;
+const p = { ...DEFAULTS, seed: 7, proMode: true, lolOn: true, lolAnnualProb: 100, lolPayoutMode: 1,
+  lolReplacePct: 60, lolReplaceYears: 3, startEq: 0, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0,
+  vida: 0, hip: 0, nur: 0, gasto: 1, brOn: false, provOn: false, mandatoryRetireOn: false };
+const loss = simulate(p, 8);
+assert.equal(loss.fireMonths.length, 0, 'Loss-of-License exits never count as voluntary FIRE');
+assert.equal([...loss.licenseLossOut].filter(Boolean).length, 8, 'Loss-of-License is explicitly reported');
+assert.ok(loss.series.find(x => x.year === 2027).p50 > 0, 'first-month income replacement uses contractual salary, not €0');
+const reproducibleA = simulate({ ...DEFAULTS, seed: 99, ret: 2, vol: 10 }, 12);
+const reproducibleB = simulate({ ...DEFAULTS, seed: 99, ret: 2, vol: 10 }, 12);
+assert.deepEqual(reproducibleA.series.map(x => x.p50), reproducibleB.series.map(x => x.p50), 'seeded full simulations reproduce');
+console.log('simulation integration regressions: OK');
