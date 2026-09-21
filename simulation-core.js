@@ -82,7 +82,8 @@
     const finiteSeries = Array.isArray(value.series) && value.series.length > 0 && value.series.length <= 100 && value.series.every(point => point && Number.isFinite(point.year) && Number.isFinite(point.p50) && Number.isFinite(point.p10) && Number.isFinite(point.p90));
     const paramsValid = value.params && typeof value.params === 'object' && !Array.isArray(value.params)
       && Object.entries(value.params).every(([key, parameter]) => allowedKeys.includes(key)
-        && (typeof parameter === 'boolean' || Number.isFinite(parameter) || (key === 'seed' && parameter === null)));
+        && (typeof parameter === 'boolean' || Number.isFinite(parameter) || (key === 'seed' && parameter === null)
+          || (key === 'lumpSums' && typeof parameter === 'string' && parameter.length <= 12000 && (() => { try { validateLumpSums(JSON.parse(parameter)); return true; } catch (_) { return false; } })())));
     return typeof value.id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(value.id)
       && typeof value.name === 'string' && value.name.length <= 60
       && colors.includes(value.color) && typeof value.visible === 'boolean'
@@ -97,11 +98,68 @@
   }
   function sameParameterSnapshot(a, b) {
     if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
-    const keysA = Object.keys(a).sort(), keysB = Object.keys(b).sort();
-    return keysA.length === keysB.length && keysA.every((key, index) => key === keysB[index] && Object.is(a[key], b[key]));
+    try { return canonicalParameterFingerprint(a) === canonicalParameterFingerprint(b); } catch (_) { return false; }
+  }
+  // Parameter snapshots cross the DOM boundary on every run.  Schedules are
+  // reconstructed from JSON there, so identity equality would make an unchanged
+  // array look stale.  Stable value serialization deliberately sorts object keys
+  // while preserving array order (payment order is meaningful to the user).
+  function canonicalParameterFingerprint(value) {
+    if (value === null || typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value);
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) throw new TypeError('Parameters must be finite');
+      return Object.is(value, -0) ? '0' : String(value);
+    }
+    if (Array.isArray(value)) return '[' + value.map(canonicalParameterFingerprint).join(',') + ']';
+    if (typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonicalParameterFingerprint(value[key])).join(',') + '}';
+    throw new TypeError('Unsupported parameter value');
   }
   function wealthTaxBase(liquidWealth, propertyValue, propertyOwned) {
     return Math.max(0, Number(liquidWealth) || 0) + (propertyOwned ? Math.max(0, Number(propertyValue) || 0) : 0);
+  }
+  function validateAllocation(allocation) {
+    const keys = ['cash', 'bonds', 'equities'];
+    if (!allocation || typeof allocation !== 'object' || Array.isArray(allocation)) throw new TypeError('Allocation must be an object');
+    for (const key of keys) if (!Number.isFinite(allocation[key]) || allocation[key] < 0) throw new RangeError('Allocation values must be finite and nonnegative');
+    if (Math.abs(keys.reduce((sum, key) => sum + allocation[key], 0) - 100) > 0.01) throw new RangeError('Allocation must total 100%');
+    return { cash: allocation.cash, bonds: allocation.bonds, equities: allocation.equities };
+  }
+  function validateHorizon({ currentAge, endAge, startAge }) {
+    if (![currentAge, endAge, startAge].every(Number.isFinite) || currentAge < 18 || endAge > 110 || endAge <= currentAge || startAge < currentAge || startAge > endAge) throw new RangeError('Invalid horizon or age; horizon must be positive and no longer than 80 years');
+    const years = endAge - currentAge;
+    if (years > 80) throw new RangeError('Invalid horizon or age; horizon must be positive and no longer than 80 years');
+    return { currentAge, endAge, startAge, years };
+  }
+  function monthlyRetirementCashflow({ age, year, month, child, recurringIncome = [], healthcare = [], lumpSums = [] }) {
+    if (![age, year, month].every(Number.isFinite) || month < 1 || month > 12) throw new RangeError('Invalid cash-flow date');
+    const intervalApplies = item => age >= item.startAge && age < item.endAge;
+    let monthly = 0;
+    if (child && intervalApplies(child)) monthly -= child.monthlyCost;
+    for (const item of recurringIncome) if (intervalApplies(item)) monthly += item.amount / 12;
+    for (const item of healthcare) if (intervalApplies(item)) monthly -= item.amount / 12;
+    for (const item of lumpSums) if (year === item.year && month === item.month) monthly += item.amount;
+    return monthly;
+  }
+  function exportScenarioJson(scenarios) {
+    if (!Array.isArray(scenarios) || scenarios.length > 4) throw new TypeError('Expected up to four scenarios');
+    return JSON.stringify({ version: 1, scenarios });
+  }
+  function validateLumpSums(entries) {
+    if (!Array.isArray(entries) || entries.length > 100) throw new RangeError('Use a list of at most 100 payments');
+    return entries.map(entry => {
+      if (!entry || typeof entry !== 'object' || !Number.isInteger(entry.year) || entry.year < 2026 || entry.year > 2106
+        || !Number.isInteger(entry.month) || entry.month < 1 || entry.month > 12
+        || !Number.isFinite(entry.amount) || Math.abs(entry.amount) > 10000000) throw new RangeError('Each payment needs a year (2026–2106), month (1–12), and amount within €10,000,000');
+      return { year: entry.year, month: entry.month, amount: entry.amount };
+    });
+  }
+  function importScenarioJson(text, allowedKeys, colors, max = 4) {
+    if (typeof text !== 'string' || text.length > 2_000_000) return [];
+    try {
+      const parsed = JSON.parse(text);
+      const scenarios = Array.isArray(parsed) ? parsed : parsed && parsed.version === 1 ? parsed.scenarios : null;
+      return normalizeScenarios(scenarios, allowedKeys, colors, max);
+    } catch (_) { return []; }
   }
   function providentFirst(providentRate, savingsBuckets, ytdGain) {
     const availableRates = (savingsBuckets || []).filter(bucket => bucket && bucket.balance > 0).map(bucket => {
@@ -113,5 +171,5 @@
   function beckhamApplies(active, residentMonth, currentMonth, years) {
     return Boolean(active && residentMonth >= 0 && currentMonth >= residentMonth && currentMonth - residentMonth < years * 12);
   }
-  return { SAVINGS_BRACKETS, seededRandom, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot };
+  return { SAVINGS_BRACKETS, seededRandom, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson };
 });

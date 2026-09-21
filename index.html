@@ -151,6 +151,8 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 
 /* ---------- comparar escenarios ---------- */
 .srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.outcomeList{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:0;border-top:1px solid var(--hair);margin:14px 0 0}.outcomeList dt,.outcomeList dd{margin:0;padding:9px 0;border-bottom:1px solid var(--hair)}.outcomeList dd{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--ink-2)}
+@media print{.controls,.scenarioSave,#reports button,button,.skipLink{display:none!important}body{background:#fff!important;color:#111!important}section{break-inside:avoid}}
 .scenarioSave{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .scenarioSave input[type=text]{
   flex:1;min-width:160px;
@@ -426,16 +428,57 @@ body:not(.pro) .pro-only{display:none}
     <div id="btResults" aria-live="polite"></div>
   </section>
 
+  <section id="extendedAssumptions">
+    <h2>Supuestos adicionales editables</h2>
+    <p class="hint">Todas las cifras son supuestos del usuario en euros reales. La cartera básica se diversifica entre efectivo, bonos y acciones; valida el reparto al 100 %. Rendimientos y prestaciones no son previsiones ni derechos adquiridos.</p>
+    <details><summary>Edad, horizonte y cartera</summary>
+      <div class="ctrl"><label for="ageNow">Edad actual</label><input id="ageNow" type="number" min="18" max="109" step="1" value="28"></div>
+      <div class="ctrl"><label for="horizonAge">Edad final (máximo 80 años desde hoy; hasta 110)</label><input id="horizonAge" type="number" min="19" max="108" step="1" value="90"></div>
+      <div class="ctrl"><label for="careerYear">Año de inicio de carrera</label><input id="careerYear" type="number" min="2026" max="2106" step="1" value="2027"></div>
+      <div class="ctrl"><label for="allocCash">Efectivo (%)</label><input id="allocCash" type="number" min="0" max="100" step="1" value="10"></div>
+      <div class="ctrl"><label for="allocBonds">Bonos (%)</label><input id="allocBonds" type="number" min="0" max="100" step="1" value="20"></div>
+      <div class="ctrl"><label for="allocEquities">Acciones (%)</label><input id="allocEquities" type="number" min="0" max="100" step="1" value="70"></div>
+      <div class="ctrl"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><input id="cashRet" type="number" min="-10" max="20" step="0.1" value="1"></div>
+      <div class="ctrl"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><input id="cashVol" type="number" min="0" max="50" step="0.1" value="1.5"></div>
+    </details>
+    <details><summary>Gastos familiares, ingresos y salud</summary>
+      <div class="ctrl"><label for="childAnnual">Gasto anual por hijo (€)</label><input id="childAnnual" type="number" min="0" max="1000000" step="100" value="0"></div>
+      <div class="ctrl"><label for="childStartAge">Edad inicial del gasto por hijo</label><input id="childStartAge" type="number" min="0" max="110" step="1" value="30"></div>
+      <div class="ctrl"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><input id="childEndAge" type="number" min="0" max="110" step="1" value="40"></div>
+      <div class="ctrl"><label for="pensionAnnual">Ingreso recurrente anual desde jubilación (€)</label><input id="pensionAnnual" type="number" min="0" max="10000000" step="100" value="0"></div>
+      <div class="ctrl"><label for="pensionStartAge">Edad de inicio del ingreso supuesto</label><input id="pensionStartAge" type="number" min="0" max="110" step="1" value="67"></div>
+      <div class="ctrl"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><input id="healthcareAnnual" type="number" min="0" max="1000000" step="100" value="0"></div>
+      <div class="ctrl"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><input id="healthcareStartAge" type="number" min="0" max="110" step="1" value="65"></div>
+      <div class="ctrl"><label for="lumpSums">Pagos únicos (JSON: lista de año, mes e importe €)</label><textarea id="lumpSums" rows="3" maxlength="12000" aria-describedby="lumpSumHelp">[]</textarea><p id="lumpSumHelp" class="hint">Ejemplo: [{"year":2030,"month":6,"amount":-5000}]. Importe negativo = gasto; máximo 100 eventos y ±10 M€ por evento.</p></div>
+    </details>
+    <p id="assumptionError" role="alert" aria-live="assertive"></p>
+  </section>
+
+  <section id="outcomesDashboard">
+    <h2>Resumen de resultados por cohorte</h2>
+    <p class="hint">Las tasas se calculan sobre todas las rutas simuladas; la ruina voluntaria se divide solo por rutas de FIRE voluntario exitoso. Una LOL o salida forzosa no cuenta como FIRE voluntario.</p>
+    <div id="outcomeSummary" aria-live="polite"></div>
+  </section>
+
   <section>
     <h2>Comparar escenarios</h2>
     <div class="scenarioSave">
       <label class="srOnly" for="scenarioName">Nombre del escenario</label><input type="text" id="scenarioName" placeholder="Nombre (ej. Con Beckham)" maxlength="30">
       <button type="button" class="reset" id="saveScenario">Guardar escenario actual</button>
       <button type="button" class="reset" id="deleteAllScenarios">Borrar todos los escenarios locales</button>
+      <button type="button" class="reset" id="exportScenarios">Exportar JSON</button>
+      <label class="reset" for="importScenariosFile">Importar JSON</label><input type="file" id="importScenariosFile" accept="application/json,.json">
     </div>
     <p class="calcLoading" id="scenarioMsg" role="status" aria-live="polite" style="display:none"></p>
     <ul class="scenarioList" id="scenarioList"></ul>
     <p class="hint">Guarda hasta 4 configuraciones distintas para superponer sus medianas en el gráfico de arriba. "Cargar" restaura esos parámetros en todos los sliders; "Eliminar" solo lo quita de la lista. Se guardan en este navegador, así que siguen aquí si recargas la página.</p>
+  </section>
+
+  <section id="reports">
+    <h2>Informe</h2>
+    <button type="button" class="reset" id="exportCsv">Descargar CSV de supuestos y resultados</button>
+    <button type="button" class="reset" id="printReport">Imprimir / Guardar como PDF</button>
+    <p class="hint">Los informes se generan localmente en este navegador. Revisa los supuestos antes de compartirlos; el CSV/impreso puede contener información financiera personal.</p>
   </section>
 
   <section>
@@ -992,7 +1035,10 @@ const IRPF_SAVINGS_BRACKETS = [
 
 const DEFAULTS = {
   seed:null,
-  ageNow:28,
+  ageNow:28, horizonAge:90, careerYear:2027,
+  allocCash:10, allocBonds:20, allocEquities:70, cashRet:1, cashVol:1.5,
+  pensionAnnual:0, pensionStartAge:67, healthcareAnnual:0, healthcareStartAge:65,
+  childAnnual:0, childStartAge:30, childEndAge:40, lumpSums:'[]',
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
   mandatoryRetireOn:false, mandatoryRetireAge:60,
   ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056, nur:10000,
@@ -1041,7 +1087,7 @@ const FULL_TIME_BUDGET_MS = 2600; // targets ~3.5-5s of real wait for maximum pr
 const PATHS_PREVIEW = 250;
 const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
-const END_YEAR = 2092, END_MONTH = 12;          // long retirement horizon
+const END_YEAR = 2107, END_MONTH = 12;          // maximum supported simulation date
 const FS1_GAP = 10400;
 const MONTHS = (END_YEAR-START_YEAR)*12+(END_MONTH-START_MONTH)+1;
 
@@ -1074,15 +1120,63 @@ const MONTH_DATES = (() => {
   return arr;
 })();
 
+const NUMERIC_PARAM_KEYS=Object.keys(DEFAULTS).filter(key=>typeof DEFAULTS[key]==='number');
+function numericControlValue(key, control){
+  const fallback=DEFAULTS[key];
+  if(!control) return fallback;
+  const raw=String(control.value ?? '').trim();
+  if(raw==='') throw new RangeError('El campo '+key+' requiere un numero.');
+  const value=Number(raw);
+  if(!Number.isFinite(value)) throw new RangeError('El campo '+key+' debe ser un numero finito.');
+  const min=control.min===''||control.min==null ? null : Number(control.min);
+  const max=control.max===''||control.max==null ? null : Number(control.max);
+  if((Number.isFinite(min) && value<min) || (Number.isFinite(max) && value>max)) throw new RangeError('El campo '+key+' esta fuera del rango permitido.');
+  return value;
+}
+function validateSimulationParams(raw){
+  if(!raw || typeof raw!=='object') throw new TypeError('Parametros de simulacion no validos.');
+  const p={...raw};
+  for(const key of NUMERIC_PARAM_KEYS) if(!Number.isFinite(p[key])) throw new RangeError('El campo '+key+' debe ser un numero finito.');
+  if(p.seed!==null && (!Number.isInteger(p.seed)||p.seed<0||p.seed>4294967295)) throw new RangeError('La semilla debe ser un entero entre 0 y 4294967295, o estar vacia.');
+  p.lumpSums=Array.isArray(p.lumpSums) ? NavlogCore.validateLumpSums(p.lumpSums) : NavlogCore.validateLumpSums(JSON.parse(p.lumpSums||'[]'));
+  NavlogCore.validateAllocation({cash:p.allocCash,bonds:p.allocBonds,equities:p.allocEquities});
+  NavlogCore.validateHorizon({currentAge:p.ageNow,endAge:p.horizonAge,startAge:p.ageNow});
+  const lastCareerYear=START_YEAR+(p.horizonAge-p.ageNow);
+  if(!Number.isInteger(p.careerYear)||p.careerYear<2026||p.careerYear>Math.min(2106,lastCareerYear)) throw new RangeError('El ano de inicio debe ser un entero dentro del horizonte.');
+  for(const key of ['childStartAge','childEndAge','pensionStartAge','healthcareStartAge']) if(!Number.isInteger(p[key])||p[key]<0||p[key]>p.horizonAge) throw new RangeError('Las edades adicionales deben ser enteros dentro del horizonte.');
+  if(p.childEndAge<p.childStartAge) throw new RangeError('La edad final del gasto por hijo debe ser posterior a la inicial.');
+  return p;
+}
+function syncHorizonControl(){
+  const horizon=el.horizonAge, career=el.careerYear;
+  if(!horizon) return;
+  const current=Number(el.ageNow && el.ageNow.value);
+  if(!Number.isFinite(current)) return;
+  const min=current+1, max=Math.min(110,current+80);
+  horizon.min=String(min); horizon.max=String(max);
+  const selected=Number(horizon.value);
+  if(!Number.isFinite(selected) || selected<min) horizon.value=String(min);
+  else if(selected>max) horizon.value=String(max);
+  if(career){
+    const careerMax=Math.min(2106,START_YEAR+(Number(horizon.value)-current));
+    career.max=String(careerMax);
+    if(Number(career.value)>careerMax) career.value=String(careerMax);
+  }
+}
+
 function readParams(){
   const p={};
   ids.forEach(k => {
     const n=el[k];
+    if(k==='lumpSums'){
+      try { p[k]=NavlogCore.validateLumpSums(JSON.parse(n ? (n.value||'[]') : DEFAULTS[k])); }
+      catch(e){ throw new RangeError('Calendario de pagos: '+e.message); }
+      return;
+    }
     if(k==='seed' && n && String(n.value).trim()===''){ p[k]=null; return; }
-    const value=n?(n.type==='checkbox'?n.checked:parseFloat(n.value)):DEFAULTS[k];
-    p[k]=k==='seed' && (!Number.isInteger(value)||value<0||value>4294967295) ? null : value;
+    p[k]=n ? (n.type==='checkbox' ? n.checked : numericControlValue(k,n)) : DEFAULTS[k];
   });
-  return p;
+  return validateSimulationParams(p);
 }
 
 function initVisibleLabels(){
@@ -1210,10 +1304,12 @@ function ymdLabel(i){
  This avoids mistaking "touching the number" for "financially viable retirement".
 */
 function simulate(p, paths){
+  // Keep worker/direct callers behind the same finite, bounded parameter gate as the DOM.
+  p=validateSimulationParams(p);
   // A supplied seed makes every stochastic draw reproducible. Sensitivity/stress
   // variants share it, giving paired common-random-number comparisons.
   activeRandom=p.seed==null ? Math.random : seededRandom(p.seed); spare=null;
-  const months=MONTHS;
+  const months=Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1));
   const eq=logParams(Math.pow(1+p.ret/100,1/12)-1, p.vol/100/Math.sqrt(12));
   const btc=logParams(Math.pow(1+p.btcRet/100,1/12)-1, p.btcVol/100/Math.sqrt(12));
   const rho=p.btcRho/100, rhoC=Math.sqrt(Math.max(0,1-rho*rho));
@@ -1323,6 +1419,8 @@ function simulate(p, paths){
   const goldRho=p.goldRho/100, goldRhoC=Math.sqrt(Math.max(0,1-goldRho*goldRho));
   const consMonthlyRet=Math.pow(1+p.consRet/100,1/12)-1;
   const consVolM=p.consVol/100/Math.sqrt(12);
+  const cashMonthlyRet=Math.pow(1+p.cashRet/100,1/12)-1;
+  const cashVolM=p.cashVol/100/Math.sqrt(12);
   const reApprM=Math.pow(1+p.reAppr/100,1/12)-1;
   const fxVolM=p.fxVol/100/Math.sqrt(12);
   const fxRevM=p.fxMeanRevert/100/12;
@@ -1351,8 +1449,9 @@ function simulate(p, paths){
   const finalVal=new Float64Array(paths);
 
   for(let k=0;k<paths;k++){
-    let vEq=p.startEq, vBtc=p.startBtc, vProv=0;
-    let vGold=goldActive?p.startGold:0, vCons=0, vRE=reActive?p.reValue:0;
+    const alloc=NavlogCore.validateAllocation({cash:p.allocCash,bonds:p.allocBonds,equities:p.allocEquities});
+    let vEq=p.startEq*alloc.equities/100, vBtc=p.startBtc, vProv=0;
+    let vGold=goldActive?p.startGold:0, vCons=p.startEq*alloc.bonds/100, vCash=p.startEq*alloc.cash/100, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false, forcedOutPath=false, licenseLossPath=false;
     // Loss-of-License: absorbing once triggered (never reset), same discipline as
     // ruin. lastSalaryEUR is captured each working month so an income-replacement
@@ -1366,8 +1465,8 @@ function simulate(p, paths){
     // moves 1:1 with contributions, shrinks pro-rata with any partial removal, so
     // only the gain fraction of a withdrawal gets taxed. vProv has no basis — see
     // takeFromBucket's comment above.
-    let basisEq=p.startEq, basisBtc=p.startBtc;
-    let basisGold=goldActive?p.startGold:0, basisCons=0, basisRE=reActive?p.reValue:0;
+    let basisEq=vEq, basisBtc=p.startBtc;
+    let basisGold=goldActive?p.startGold:0, basisCons=vCons, basisCash=vCash, basisRE=reActive?p.reValue:0;
     let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1;
     // Running year-to-date realized gain on the capital-gains-taxed buckets, reset
     // every January — feeds irpfBracketRate() when useIrpfBrackets is on.
@@ -1377,7 +1476,7 @@ function simulate(p, paths){
     // (net cash you put in) can be recovered as totalWealth-cumGrowth without
     // having to intercept every single cash-flow line separately.
     let cumGrowth=0;
-    const startBase=monthIndex(CAREER_YEAR,CAREER_MONTH);
+    const startBase=monthIndex(p.careerYear,CAREER_MONTH);
     // non-negative truncated delays; central date remains the user's selected value
     const startDelay=Math.max(0,Math.round(normal(0,p.startDelay)));
     const careerStart=startBase+startDelay;
@@ -1395,7 +1494,7 @@ function simulate(p, paths){
     for(let i=0;i<months;i++){
       const d=MONTH_DATES[i];
       if(d.m===1) ytdGainCartera=0;
-      const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+      const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
       if(histActive && i>0 && d.m===1){
         histPos=(histPos+1)%HIST_EQ_REAL_RETURNS.length;
         histMonthlyR=Math.pow(1+HIST_EQ_REAL_RETURNS[histPos],1/12)-1;
@@ -1420,9 +1519,10 @@ function simulate(p, paths){
         const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
         vGold*=1+rGold;
       }
-      if(glideActive) vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
+      vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
+      vCash*=1+(cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet);
       if(reActive) vRE*=1+reApprM;
-      cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
+      cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
 
       if(fxVolActive){
         fxCur+=fxRevM*(p.fx-fxCur)+fxCur*normal(0,fxVolM);
@@ -1524,11 +1624,16 @@ function simulate(p, paths){
       // Brazil: monthly receipts across the chosen liquidation window, not an annual lump.
       if(p.brOn && d.y>=p.brStart && d.y<p.brStart+p.brYears) net+=p.brNet/(p.brYears*12);
 
+      const ageNow=p.ageNow+i/12;
+      const childNet=ageNow>=p.childStartAge && ageNow<p.childEndAge ? -p.childAnnual/12 : 0;
+      const lumpNet=p.lumpSums.reduce((sum,event)=>sum+(event.year===d.y&&event.month===d.m?event.amount:0),0);
       // Computed here (not just inside the retirement branch below) so the wealth
       // tax check further down — which runs regardless of the retired/working
       // branch, and even past the esperanza de vida cutoff — can also see whether
       // the Ley Beckham window is still open.
         let inBeckham=NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,i,p.beckhamYears);
+
+      if(!retired){ net+=childNet+lumpNet; }
 
       if(!retired){
         if(net>=0){
@@ -1540,8 +1645,11 @@ function simulate(p, paths){
           // actually coming in that month.
           const totalW=wBtc+wGold;
           if(totalW>1){ wBtc/=totalW; wGold/=totalW; }
-          const wEq=Math.max(0,1-wBtc-wGold);
+          const investable=Math.max(0,1-wBtc-wGold);
+          const wEq=investable*alloc.equities/100, wCons=investable*alloc.bonds/100, wCash=investable*alloc.cash/100;
           vEq+=net*wEq; basisEq+=net*wEq;
+          vCons+=net*wCons; basisCons+=net*wCons;
+          vCash+=net*wCash; basisCash+=net*wCash;
           vBtc+=net*wBtc; basisBtc+=net*wBtc;
           if(goldActive){ vGold+=net*wGold; basisGold+=net*wGold; }
         } else {
@@ -1551,10 +1659,11 @@ function simulate(p, paths){
           // employed, unlike a temporary cash-flow crunch). Basis shrinks pro-rata
           // with every removal so later gain-fraction math stays correct.
           let deficit=-net;
-          const fromEq=Math.min(vEq,deficit); basisEq=shrinkBasis(vEq,basisEq,fromEq); vEq-=fromEq; deficit-=fromEq;
+          const fromCash=Math.min(vCash,deficit); basisCash=shrinkBasis(vCash,basisCash,fromCash); vCash-=fromCash; deficit-=fromCash;
+          if(deficit>0){ const fromCons=Math.min(vCons,deficit); basisCons=shrinkBasis(vCons,basisCons,fromCons); vCons-=fromCons; deficit-=fromCons; }
+          if(deficit>0){ const fromEq=Math.min(vEq,deficit); basisEq=shrinkBasis(vEq,basisEq,fromEq); vEq-=fromEq; deficit-=fromEq; }
           const fromBtc=Math.min(vBtc,deficit); basisBtc=shrinkBasis(vBtc,basisBtc,fromBtc); vBtc-=fromBtc; deficit-=fromBtc;
           if(deficit>0 && goldActive){ const fromGold=Math.min(vGold,deficit); basisGold=shrinkBasis(vGold,basisGold,fromGold); vGold-=fromGold; deficit-=fromGold; }
-          if(deficit>0){ const fromCons=Math.min(vCons,deficit); basisCons=shrinkBasis(vCons,basisCons,fromCons); vCons-=fromCons; deficit-=fromCons; }
           if(deficit>0 && reActive && p.reCountsFire){ const fromRE=Math.min(vRE,deficit); basisRE=shrinkBasis(vRE,basisRE,fromRE); vRE-=fromRE; deficit-=fromRE; }
           // vProv stays locked for an ordinary pre-FIRE cash crunch (see comment
           // above), but a LOL'd path has genuinely left the company already — same
@@ -1563,7 +1672,7 @@ function simulate(p, paths){
           if(deficit>0) ruinedPath=true;
         }
 
-        const total=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        const total=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         // Gratuity is realized right when you leave the company, so it can count
         // toward crossing the target that same month — a real departure lump sum,
         // not money you already had.
@@ -1590,7 +1699,7 @@ function simulate(p, paths){
       } else if(!ruinedPath && (!lifeActive || i<=lifeMonth)){
         // Replacement income is cash flow, not a tax-free balance adjustment: invest
         // it first, then let the ordinary withdrawal cover expenses for this month.
-        if(net>0){ vEq+=net; basisEq+=net; }
+        if(net>0){ vEq+=net*alloc.equities/100; basisEq+=net*alloc.equities/100; vCons+=net*alloc.bonds/100; basisCons+=net*alloc.bonds/100; vCash+=net*alloc.cash/100; basisCash+=net*alloc.cash/100; }
         // Retirement phase: real annual retirement spend, inflation already stripped.
         // Past lifeMonth (esperanza de vida) this whole block is skipped: no more
         // withdrawals, no more ruin risk — the balance just keeps compounding, like
@@ -1601,7 +1710,7 @@ function simulate(p, paths){
           wd=p.gasto/12; // idéntico al comportamiento original
         } else if(strat===1){
           const monthsSinceRetire=i-fireMonth[k];
-          const totalNow=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+          const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
           if(totalNow>0 && monthsSinceRetire>0 && monthsSinceRetire%p.gkFreq===0){
             const currentWR=curSpendAnnual/totalNow, anchorWR=p.swr/100;
             const upper=anchorWR*(1+p.gkGuard/100), lower=anchorWR*(1-p.gkGuard/100);
@@ -1622,6 +1731,9 @@ function simulate(p, paths){
         if(baristaActive && yearsSinceFire<p.baristaYears){
           wd=Math.max(0, wd-p.baristaIncome/12);
         }
+        const retirementIncome=ageNow>=p.pensionStartAge?p.pensionAnnual/12:0;
+        const healthCost=ageNow>=p.healthcareStartAge?p.healthcareAnnual/12:0;
+        wd=Math.max(0,wd-retirementIncome)+healthCost-childNet-lumpNet;
 
         if(fiscalityActive && !spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12){
           spanishResident=true;
@@ -1648,11 +1760,12 @@ function simulate(p, paths){
         const gravRate=taxNow ? (bracketsActive ? 0 : p.taxRate) : 0;
         const provRate=taxNow ? p.taxRateProv : 0;
         const provFirst=taxNow && (bracketsActive
-          ? NavlogCore.providentFirst(provRate,[{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
+          ? NavlogCore.providentFirst(provRate,[{balance:vCash,basis:basisCash},{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
           : provRate<gravRate);
 
         let deficit=wd, nb, r;
         if(provFirst){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        if(deficit>0){ const ob=vCash, obs=basisCash; r=takeFromBucket(vCash,basisCash,deficit,gravRate,ytdGainCartera,bracketsActive); vCash=r.bal; basisCash=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vCons, obs=basisCons; r=takeFromBucket(vCons,basisCons,deficit,gravRate,ytdGainCartera,bracketsActive); vCons=r.bal; basisCons=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vEq, obs=basisEq; r=takeFromBucket(vEq,basisEq,deficit,gravRate,ytdGainCartera,bracketsActive); vEq=r.bal; basisEq=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0 && goldActive){ const ob=vGold, obs=basisGold; r=takeFromBucket(vGold,basisGold,deficit,gravRate,ytdGainCartera,bracketsActive); vGold=r.bal; basisGold=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
@@ -1671,7 +1784,7 @@ function simulate(p, paths){
       if(wealthTaxActive && !ruinedPath && spanishResident && !inBeckham && d.isSnap){
         // Property inclusion in the FIRE target is a liquidity/retirement choice;
         // it must not remove owned real estate from the wealth-tax base.
-        const totalWealth=NavlogCore.wealthTaxBase(vEq+vBtc+vProv+vGold+vCons,vRE,reActive);
+        const totalWealth=NavlogCore.wealthTaxBase(vEq+vBtc+vProv+vGold+vCons+vCash,vRE,reActive);
         // Debts reduce the taxable base (patrimonio neto, Ley 19/1991 art. 9): the
         // mortgage balance amortizes in a straight line to 0 by hipEnd.
         const debtNow=p.mortgageBalance>0 ? p.mortgageBalance*Math.max(0,1-i/mortgageMonths) : 0;
@@ -1680,7 +1793,8 @@ function simulate(p, paths){
         let due=unpaidWealthTax+(excess>0 ? excess*(p.wealthRate/100)*(1-p.wealthBonusPct/100) : 0);
         unpaidWealthTax=0;
         if(due>0){
-          const fromCons=Math.min(vCons,due); basisCons=shrinkBasis(vCons,basisCons,fromCons); vCons-=fromCons; due-=fromCons;
+          const fromCash=Math.min(vCash,due); basisCash=shrinkBasis(vCash,basisCash,fromCash); vCash-=fromCash; due-=fromCash;
+          if(due>0){ const fromCons=Math.min(vCons,due); basisCons=shrinkBasis(vCons,basisCons,fromCons); vCons-=fromCons; due-=fromCons; }
           const fromEq=Math.min(vEq,due); basisEq=shrinkBasis(vEq,basisEq,fromEq); vEq-=fromEq; due-=fromEq;
           const fromGold=Math.min(vGold,due); basisGold=shrinkBasis(vGold,basisGold,fromGold); vGold-=fromGold; due-=fromGold;
           const fromBtc=Math.min(vBtc,due); basisBtc=shrinkBasis(vBtc,basisBtc,fromBtc); vBtc-=fromBtc; due-=fromBtc;
@@ -1727,7 +1841,7 @@ function simulate(p, paths){
       }
 
       if(d.isSnap){
-        const totalNow=vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0);
+        const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         snapVals[snap][k]=Math.max(0,totalNow);
         contribVals[snap][k]=totalNow-cumGrowth;
         snap++;
@@ -1736,7 +1850,7 @@ function simulate(p, paths){
     ruined[k]=ruinedPath?1:0;
     forcedOut[k]=forcedOutPath?1:0;
     licenseLossOut[k]=licenseLossPath?1:0;
-    finalVal[k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+(reActive && p.reCountsFire?vRE:0));
+    finalVal[k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0));
   }
 
   const series=annualSnapshots.map((idx,j)=>{
@@ -2262,15 +2376,17 @@ function buildWorkerSource(){
     'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
     'const IRPF_SAVINGS_BRACKETS='+JSON.stringify(IRPF_SAVINGS_BRACKETS)+';',
     'const MONTHS=MONTH_DATES.length;',
+    'const NUMERIC_PARAM_KEYS='+JSON.stringify(NUMERIC_PARAM_KEYS)+';',
     'let spare=null, activeRandom=Math.random;',
     'const SAVINGS_BRACKETS='+JSON.stringify(NavlogCore.SAVINGS_BRACKETS)+';',
-    'const NavlogCore={seededRandom:'+NavlogCore.seededRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+'};',
+    'const NavlogCore={seededRandom:'+NavlogCore.seededRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+'};',
     'const progressiveSavingsTax=NavlogCore.progressiveSavingsTax, netAfterSavingsTax=NavlogCore.netAfterSavingsTax;',
     'const monthIndex='+monthIndex.toString()+';',
     'const seededRandom='+seededRandom.toString()+';',
     'const gauss='+gauss.toString()+';',
     'const normal='+normal.toString()+';',
     'const logParams='+logParams.toString()+';',
+    'const validateSimulationParams='+validateSimulationParams.toString()+';',
     'const simulate='+simulate.toString()+';',
     'self.onmessage=function(e){',
     '  const {p,paths,reqId,calibrate}=e.data;',
@@ -2489,6 +2605,22 @@ const ruinChart=makeChartController(document.getElementById('ruinChartCanvas'), 
 const calcLoadingEl=document.getElementById('calcLoading');
 let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0, lastFullParams=null, fullRunsPending=0, activeRunsPending=0;
 
+function renderOutcomeDashboard(counts, pathsUsed){
+  const host=document.getElementById('outcomeSummary');
+  if(!host) return;
+  const pct=value=>Math.round((pathsUsed ? value/pathsUsed : 0)*100)+' %';
+  const entries=[
+    ['FIRE voluntario',counts.voluntary,pct(counts.voluntary)],
+    ['Ruina tras FIRE voluntario',counts.voluntaryRuined,counts.voluntary ? Math.round(counts.voluntaryRuined/counts.voluntary*100)+' % de FIRE voluntario' : 'sin cohorte'],
+    ['Salida forzosa',counts.forced,pct(counts.forced)],
+    ['P?rdida de licencia',counts.licenseLoss,pct(counts.licenseLoss)],
+    ['Sin jubilaci?n en el horizonte',Math.max(0,pathsUsed-counts.voluntary-counts.forced-counts.licenseLoss),pct(Math.max(0,pathsUsed-counts.voluntary-counts.forced-counts.licenseLoss))]
+  ];
+  const list=document.createElement('dl'); list.className='outcomeList';
+  entries.forEach(([label,count,rate])=>{const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=count.toLocaleString('es-ES')+' rutas ? '+rate;list.append(dt,dd);});
+  host.replaceChildren(list);
+}
+
 async function run(mode){
   const t0=performance.now(), p=readParams();
   // Paint slider values before any heavy calculation so the UI always shows them.
@@ -2549,12 +2681,13 @@ async function run(mode){
   const ruinRate=voluntaryCount?ruinedAfterFire/voluntaryCount:0;
   const forcedOutRate=pathsUsed?forcedOutCount/pathsUsed:0;
   const licenseLossRate=pathsUsed?licenseLossCount/pathsUsed:0;
+  renderOutcomeDashboard(cohortCounts,pathsUsed);
 
   const ruinCurve=buildRuinCurve(r, pathsUsed);
   renderRuinTable(ruinCurve);
   ruinChart.update(ruinCurve, null);
 
-  let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(END_YEAR-START_YEAR+1)+' años de horizonte · '+
+  let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(p.horizonAge-p.ageNow)+' años de horizonte · '+
     Math.round(successRate*100)+' % rutas FIRE voluntario exitosas · ruina en esa cohorte '+Math.round(ruinRate*100)+' % (n='+voluntaryCount.toLocaleString('es-ES')+') · salidas forzosas '+Math.round(forcedOutRate*100)+' % · LOL '+Math.round(licenseLossRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
   if(p.profitShareWeeks>0) calcTxt+=' · profit sharing hasta '+p.profitShareWeeks.toFixed(1)+' semanas/año (sorteado)';
@@ -2580,13 +2713,22 @@ async function run(mode){
   document.getElementById('simulationContext').textContent='Semilla '+(p.seed==null?'aleatoria (no reproducible)':p.seed)+' · muestra '+pathsUsed.toLocaleString('es-ES')+' rutas · incertidumbre Monte Carlo aproximada del éxito: ±'+(se===null?'—':(1.96*se*100).toFixed(1))+' puntos porcentuales (IC 95 %, no incluye incertidumbre de los supuestos).';
 }
 
+function safeRun(mode){
+  const error=document.getElementById('assumptionError');
+  if(error) error.textContent='';
+  return run(mode).catch(err=>{
+    if(error) error.textContent=err && err.message ? err.message : 'No se pudo calcular este escenario.';
+    console.error(err);
+  });
+}
+
 // Dragging a range slider fires 'input' continuously: run a cheap preview
 // (PATHS_PREVIEW) with a short debounce so it feels instant. Releasing it fires
 // 'change' once: run the full-precision simulation. Checkboxes only have 'input'
 // (no drag phase) and always go straight to full precision.
 let tPreview=null, tFull=null;
-function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>run('preview'),50); }
-function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>run('full'),40); }
+function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>safeRun('preview'),50); }
+function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>safeRun('full'),40); }
 
 ids.forEach(k=>{
   const n=el[k]; if(!n) return;
@@ -2594,6 +2736,8 @@ ids.forEach(k=>{
   else { n.addEventListener('input',scheduleFull); }
 });
 el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+if(el.ageNow) el.ageNow.addEventListener('input',syncHorizonControl);
+if(el.horizonAge) el.horizonAge.addEventListener('input',syncHorizonControl);
 // ccaaPreset is a UI shortcut, not a simulate() input: it just pre-fills the two
 // sliders that actually drive the calculation, which stay editable afterward.
 const CCAA_PRESETS=[
@@ -2613,7 +2757,8 @@ el.ccaaPreset.addEventListener('input',()=>{
 document.getElementById('reset').addEventListener('click',()=>{
   ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
   document.body.classList.toggle('pro',DEFAULTS.proMode);
-  run('full');
+  syncHorizonControl();
+  safeRun('full');
 });
 
 const chartModalEl=document.getElementById('chartModal');
@@ -2677,12 +2822,48 @@ function renderScenarioList(){
   refreshScenarioOverlays();
 }
 
+function downloadText(filename, text, mime='application/json'){
+  const blob=new Blob([text],{type:mime+';charset=utf-8'}), url=URL.createObjectURL(blob);
+  const link=document.createElement('a'); link.href=url; link.download=filename; link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),0);
+}
+function csvCell(value){ return '"'+String(value ?? '').replace(/"/g,'""')+'"'; }
+function exportCurrentReport(){
+  if(!lastFullParams || !lastSeries) return showScenarioMsg('Calcula primero el escenario actual con precisi?n completa.');
+  const header=['kind','year','p10','p50','p90','target'];
+  const assumptions=Object.entries(lastFullParams).map(([key,value])=>['assumption',key,Array.isArray(value)?JSON.stringify(value):value,'','','']);
+  const series=lastSeries.map(point=>['projection',point.year,point.p10,point.p50,point.p90,lastTarget]);
+  downloadText('navlog-fire-report.csv',[header,...assumptions,...series].map(row=>row.map(csvCell).join(',')).join('\n'),'text/csv');
+  showScenarioMsg('CSV descargado.');
+}
+function importScenariosFile(file){
+  if(!file) return;
+  if(file.size>2_000_000) return showScenarioMsg('El archivo supera el l?mite de 2 MB.');
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const imported=NavlogCore.importScenarioJson(String(reader.result||''),ids,SCENARIO_COLORS,SCENARIO_MAX);
+    if(!imported.length) return showScenarioMsg('No se encontraron escenarios v?lidos en el JSON.');
+    const available=SCENARIO_MAX-savedScenarios.length;
+    if(available<=0) return showScenarioMsg('Elimina un escenario antes de importar otro.');
+    const usedIds=new Set(savedScenarios.map(sc=>sc.id));
+    imported.slice(0,available).forEach(sc=>{ while(usedIds.has(sc.id)) sc.id='sc'+Date.now()+Math.random().toString(36).slice(2,7); usedIds.add(sc.id); savedScenarios.push(sc); });
+    persistScenarios(); renderScenarioList(); showScenarioMsg('Se importaron '+Math.min(imported.length,available)+' escenario(s).');
+  };
+  reader.onerror=()=>showScenarioMsg('No se pudo leer el archivo seleccionado.'); reader.readAsText(file,'utf-8');
+}
+
 function showScenarioMsg(text){
   const el2=document.getElementById('scenarioMsg');
   if(!el2) return;
   el2.textContent=text;
   el2.style.display=text?'block':'none';
   if(text) setTimeout(()=>{ if(el2.textContent===text) el2.style.display='none'; }, 4000);
+}
+
+function serializeScenarioParams(params){
+  const copy={...params};
+  if(Array.isArray(copy.lumpSums)) copy.lumpSums=JSON.stringify(copy.lumpSums);
+  return copy;
 }
 
 function saveCurrentScenario(){
@@ -2703,7 +2884,7 @@ function saveCurrentScenario(){
     name, color, visible:true,
     series:lastSeries, target:lastTarget,
     ageMed:lastAgeMedText, successRate:lastSuccessRate,
-    params:{...lastFullParams}
+    params:serializeScenarioParams(lastFullParams)
   });
   nameInput.value='';
   persistScenarios();
@@ -2718,8 +2899,9 @@ function loadScenario(id){
     if(n.type==='checkbox') n.checked=sc.params[k]; else n.value=sc.params[k];
   });
   document.body.classList.toggle('pro', !!sc.params.proMode);
+  syncHorizonControl();
   initVisibleLabels();
-  run('full');
+  safeRun('full');
 }
 
 function deleteScenario(id){
@@ -2739,6 +2921,17 @@ document.getElementById('deleteAllScenarios').addEventListener('click',()=>{
     try{ localStorage.removeItem(SCENARIO_STORAGE_KEY); }catch(e){}
     renderScenarioList(); showScenarioMsg('Se han borrado todos los escenarios locales de este navegador.');
   });
+
+
+document.getElementById('exportScenarios').addEventListener('click',()=>{
+  downloadText('navlog-fire-scenarios.json',NavlogCore.exportScenarioJson(savedScenarios));
+  showScenarioMsg('Escenarios exportados.');
+});
+document.getElementById('importScenariosFile').addEventListener('change',event=>{
+  importScenariosFile(event.target.files && event.target.files[0]); event.target.value='';
+});
+document.getElementById('exportCsv').addEventListener('click',exportCurrentReport);
+document.getElementById('printReport').addEventListener('click',()=>window.print());
 
 document.getElementById('runSensitivity').addEventListener('click', async () => {
   const btn=document.getElementById('runSensitivity'), loadingEl=document.getElementById('sensLoading');
@@ -2778,8 +2971,9 @@ renderScenarioList();
 
 ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
 document.body.classList.toggle('pro',DEFAULTS.proMode);
+syncHorizonControl();
 initVisibleLabels();
-run('full').catch(e=>{
+safeRun('full').catch(e=>{
   // Keep the controls usable and values visible even if a browser-specific runtime issue occurs.
   console.error(e);
 });

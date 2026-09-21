@@ -22,8 +22,10 @@ file is retained as a historical comparison and is not the canonical app.
 - The Monte Carlo model works in real euros and samples monthly returns from
   the configured means and volatilities. Historical-market mode bootstraps the
   annual S&amp;P 500 real-return series embedded in `index.html`.
-- “Renta variable inicial” is modeled as 100% equity. There is no separate
-  cash allocation, bond allocation, or rebalancing strategy for that balance.
+- The starting liquid portfolio and new investable contributions are allocated across
+  cash, bonds, and equities by the user-selected percentages. The model keeps that
+  target allocation for new money; it does not model periodic selling-based rebalancing,
+  fund fees, or asset-specific tax lots beyond its simplified gain-basis buckets.
 - Tax modeling is intentionally approximate. The savings-income bracket values
   embedded in `simulation-core.js` are labeled in `index.html` as
   illustrative 2024/2025 assumptions (documentation reviewed 2026-09-21); they
@@ -37,6 +39,13 @@ file is retained as a historical comparison and is not the canonical app.
   returns. The sequential backtest excludes taxes, fees, and trading frictions.
 - Monte Carlo results are sensitive to the user's assumptions, model structure,
   path count, and random seed. They are estimates, not guarantees.
+
+## Features and data provenance
+
+- Additional assumptions include an editable current age and end age. The end age is dynamically constrained to at most 80 years after the current age, never above 110; this maps the fixed September 2026 simulation start to the supported calendar through September 2106. Career start is constrained to that same window. Cash/bond/equity allocation, recurring retirement income, health costs, child costs, and dated one-off cash flows are user inputs, not forecasts.
+- The outcome dashboard separates voluntary FIRE, post-FIRE ruin, forced retirement, loss of licence, and routes that do not retire in the selected horizon.
+- Save up to four local scenarios. They can be exported/imported as validated JSON. A CSV report contains the current full-precision assumptions and percentile series; printing the page can be saved as PDF by the browser.
+- Current embedded-data review date: 2026-09-21. Source attributions in the app are informational only. Before relying on any tax, pension, salary, healthcare, or market figure, replace it with a current, personally verified source.
 
 ## Privacy and saved scenarios
 
