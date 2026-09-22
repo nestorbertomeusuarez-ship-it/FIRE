@@ -444,23 +444,23 @@ body:not(.pro) .pro-only{display:none}
     <h2>Supuestos adicionales editables</h2>
     <p class="hint">Todas las cifras son supuestos del usuario en euros reales. La cartera básica se diversifica entre efectivo, bonos y acciones; valida el reparto al 100 %. Rendimientos y prestaciones no son previsiones ni derechos adquiridos.</p>
     <details><summary>Edad, horizonte y cartera</summary>
-      <div class="ctrl"><label for="ageNow">Edad actual</label><input id="ageNow" type="number" min="18" max="109" step="1" value="28"></div>
-      <div class="ctrl"><label for="horizonAge">Edad final (máximo 80 años desde hoy; hasta 110)</label><input id="horizonAge" type="number" min="19" max="108" step="1" value="90"></div>
-      <div class="ctrl"><label for="careerYear">Año de inicio de carrera</label><input id="careerYear" type="number" min="2026" max="2106" step="1" value="2027"></div>
-      <div class="ctrl"><label for="allocCash">Efectivo (%)</label><input id="allocCash" type="number" min="0" max="100" step="1" value="10"></div>
-      <div class="ctrl"><label for="allocBonds">Bonos (%)</label><input id="allocBonds" type="number" min="0" max="100" step="1" value="20"></div>
-      <div class="ctrl"><label for="allocEquities">Acciones (%)</label><input id="allocEquities" type="number" min="0" max="100" step="1" value="70"></div>
-      <div class="ctrl"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><input id="cashRet" type="number" min="-10" max="20" step="0.1" value="1"></div>
-      <div class="ctrl"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><input id="cashVol" type="number" min="0" max="50" step="0.1" value="1.5"></div>
+      <div class="ctrl"><div class="row"><label for="ageNow">Edad actual</label><output id="ageNow_o" for="ageNow"></output></div><input type="range" id="ageNow" min="18" max="109" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="horizonAge">Edad final (máximo 80 años desde hoy; hasta 110)</label><output id="horizonAge_o" for="horizonAge"></output></div><input type="range" id="horizonAge" min="19" max="108" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="careerYear">Año de inicio de carrera</label><output id="careerYear_o" for="careerYear"></output></div><input type="range" id="careerYear" min="2026" max="2106" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="allocCash">Efectivo (%)</label><output id="allocCash_o" for="allocCash"></output></div><input type="range" id="allocCash" min="0" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="allocBonds">Bonos (%)</label><output id="allocBonds_o" for="allocBonds"></output></div><input type="range" id="allocBonds" min="0" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="allocEquities">Acciones (%)</label><output id="allocEquities_o" for="allocEquities"></output></div><input type="range" id="allocEquities" min="0" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><output id="cashRet_o" for="cashRet"></output></div><input type="range" id="cashRet" min="-10" max="20" step="0.1"></div>
+      <div class="ctrl"><div class="row"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><output id="cashVol_o" for="cashVol"></output></div><input type="range" id="cashVol" min="0" max="50" step="0.1"></div>
     </details>
     <details><summary>Gastos familiares, ingresos y salud</summary>
-      <div class="ctrl"><label for="childAnnual">Gasto anual por hijo (€)</label><input id="childAnnual" type="number" min="0" max="1000000" step="100" value="0"></div>
-      <div class="ctrl"><label for="childStartAge">Edad inicial del gasto por hijo</label><input id="childStartAge" type="number" min="0" max="110" step="1" value="30"></div>
-      <div class="ctrl"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><input id="childEndAge" type="number" min="0" max="110" step="1" value="40"></div>
-      <div class="ctrl"><label for="pensionAnnual">Ingreso recurrente anual desde jubilación (€)</label><input id="pensionAnnual" type="number" min="0" max="10000000" step="100" value="0"></div>
-      <div class="ctrl"><label for="pensionStartAge">Edad de inicio del ingreso supuesto</label><input id="pensionStartAge" type="number" min="0" max="110" step="1" value="67"></div>
-      <div class="ctrl"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><input id="healthcareAnnual" type="number" min="0" max="1000000" step="100" value="0"></div>
-      <div class="ctrl"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><input id="healthcareStartAge" type="number" min="0" max="110" step="1" value="65"></div>
+      <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><input type="range" id="childAnnual" min="0" max="1000000" step="10000"></div>
+      <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><input type="range" id="childStartAge" min="0" max="110" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><input type="range" id="childEndAge" min="0" max="110" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="pensionAnnual">Ingreso recurrente anual desde jubilación (€)</label><output id="pensionAnnual_o" for="pensionAnnual"></output></div><input type="range" id="pensionAnnual" min="0" max="10000000" step="100000"></div>
+      <div class="ctrl"><div class="row"><label for="pensionStartAge">Edad de inicio del ingreso supuesto</label><output id="pensionStartAge_o" for="pensionStartAge"></output></div><input type="range" id="pensionStartAge" min="0" max="110" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><output id="healthcareAnnual_o" for="healthcareAnnual"></output></div><input type="range" id="healthcareAnnual" min="0" max="1000000" step="10000"></div>
+      <div class="ctrl"><div class="row"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><output id="healthcareStartAge_o" for="healthcareStartAge"></output></div><input type="range" id="healthcareStartAge" min="0" max="110" step="1"></div>
       <div class="ctrl"><label for="lumpSums">Pagos únicos (JSON: lista de año, mes e importe €)</label><textarea id="lumpSums" rows="3" maxlength="12000" aria-describedby="lumpSumHelp">[]</textarea><p id="lumpSumHelp" class="hint">Ejemplo: [{"year":2030,"month":6,"amount":-5000}]. Importe negativo = gasto; máximo 100 eventos y ±10 M€ por evento.</p></div>
     </details>
     <p id="assumptionError" role="alert" aria-live="assertive"></p>
@@ -1210,7 +1210,10 @@ function syncHorizonControl(){
   }
 }
 
-function readParams(){
+// Reads every control's raw value into a plain object with no cross-field validation.
+// Kept separate from readParams() so callers (run(), initVisibleLabels()) can paint
+// slider labels from whatever is on screen even when the combination is not yet valid.
+function collectRawParams(){
   const p={};
   ids.forEach(k => {
     const n=el[k];
@@ -1224,11 +1227,14 @@ function readParams(){
     if(k==='seed'){ if(n && n.validity && n.validity.badInput) throw new RangeError('La semilla debe ser un entero entre 0 y 4294967295, o estar vacía.'); const raw=n ? String(n.value ?? '').trim() : ''; p[k]=!n ? DEFAULTS[k] : raw==='' ? null : Number(raw); return; }
     p[k]=n ? (n.type==='checkbox' ? n.checked : numericControlValue(k,n)) : DEFAULTS[k];
   });
-  return validateSimulationParams(p);
+  return p;
+}
+function readParams(){
+  return validateSimulationParams(collectRawParams());
 }
 
 function initVisibleLabels(){
-  try { paintLabels(readParams()); }
+  try { paintLabels(collectRawParams()); }
   catch(e) {
     ids.forEach(k => {
       if(out[k] && !out[k].textContent) {
@@ -1242,6 +1248,20 @@ function initVisibleLabels(){
 function paintLabels(p){
   const set=(k,t)=>{ if(out[k]) out[k].textContent=t; };
   set('ageNow', p.ageNow+' años');
+  set('horizonAge', p.horizonAge+' años');
+  set('careerYear', String(p.careerYear));
+  set('allocCash', p.allocCash.toFixed(0)+' %');
+  set('allocBonds', p.allocBonds.toFixed(0)+' %');
+  set('allocEquities', p.allocEquities.toFixed(0)+' %');
+  set('cashRet', p.cashRet.toFixed(1)+' %');
+  set('cashVol', p.cashVol.toFixed(1)+' %');
+  set('childAnnual', eur(p.childAnnual)+'/año');
+  set('childStartAge', p.childStartAge+' años');
+  set('childEndAge', p.childEndAge+' años');
+  set('pensionAnnual', eur(p.pensionAnnual)+'/año');
+  set('pensionStartAge', p.pensionStartAge+' años');
+  set('healthcareAnnual', eur(p.healthcareAnnual)+'/año');
+  set('healthcareStartAge', p.healthcareStartAge+' años');
   set('fx',p.fx.toFixed(3));
   set('salFO','AED '+(p.salFO/1000).toFixed(0)+'k · '+eur(p.salFO*p.fx));
   set('salCA','AED '+(p.salCA/1000).toFixed(0)+'k · '+eur(p.salCA*p.fx));
@@ -2795,9 +2815,13 @@ function renderOutcomeDashboard(counts, pathsUsed){
 }
 
 async function run(mode){
-  const t0=performance.now(), p=readParams();
-  // Paint slider values before any heavy calculation so the UI always shows them.
-  paintLabels(p);
+  const t0=performance.now(), raw=collectRawParams();
+  // Paint slider values before validation/calculation so the UI never freezes a
+  // dragged label just because the current combination is invalid (e.g. an
+  // allocation that no longer sums to 100 %) — validateSimulationParams below
+  // may still throw and refuse the run, which is caught upstream by safeRun().
+  paintLabels(raw);
+  const p=validateSimulationParams(raw);
   const isPreview = mode==='preview';
   let loadingTimer=null;
   if(!isPreview) loadingTimer=setTimeout(()=>{ if(calcLoadingEl) calcLoadingEl.style.display='inline'; },350);
@@ -2958,7 +2982,7 @@ el.ccaaPreset.addEventListener('input',()=>{
   if(!preset) return;
   el.wealthExempt.value=preset.exempt;
   el.wealthBonusPct.value=preset.bonus;
-  paintLabels(readParams());
+  paintLabels(collectRawParams());
 });
 document.getElementById('reset').addEventListener('click',()=>{
   ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
