@@ -443,7 +443,7 @@ body:not(.pro) .pro-only{display:none}
   <section id="extendedAssumptions">
     <h2>Supuestos adicionales editables</h2>
     <p class="hint">Todas las cifras son supuestos del usuario en euros reales. La cartera básica se diversifica entre efectivo, bonos y acciones; valida el reparto al 100 %. Rendimientos y prestaciones no son previsiones ni derechos adquiridos.</p>
-    <details><summary>Edad, horizonte y cartera</summary>
+    <details open><summary>Edad, horizonte y cartera</summary>
       <div class="ctrl"><div class="row"><label for="ageNow">Edad actual</label><output id="ageNow_o" for="ageNow"></output></div><input type="range" id="ageNow" min="18" max="109" step="1"></div>
       <div class="ctrl"><div class="row"><label for="horizonAge">Edad final (máximo 80 años desde hoy; hasta 110)</label><output id="horizonAge_o" for="horizonAge"></output></div><input type="range" id="horizonAge" min="19" max="108" step="1"></div>
       <div class="ctrl"><div class="row"><label for="careerYear">Año de inicio de carrera</label><output id="careerYear_o" for="careerYear"></output></div><input type="range" id="careerYear" min="2026" max="2106" step="1"></div>
@@ -453,7 +453,7 @@ body:not(.pro) .pro-only{display:none}
       <div class="ctrl"><div class="row"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><output id="cashRet_o" for="cashRet"></output></div><input type="range" id="cashRet" min="-10" max="20" step="0.1"></div>
       <div class="ctrl"><div class="row"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><output id="cashVol_o" for="cashVol"></output></div><input type="range" id="cashVol" min="0" max="50" step="0.1"></div>
     </details>
-    <details><summary>Gastos familiares, ingresos y salud</summary>
+    <details open><summary>Gastos familiares, ingresos y salud</summary>
       <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><input type="range" id="childAnnual" min="0" max="1000000" step="10000"></div>
       <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><input type="range" id="childStartAge" min="0" max="110" step="1"></div>
       <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><input type="range" id="childEndAge" min="0" max="110" step="1"></div>
