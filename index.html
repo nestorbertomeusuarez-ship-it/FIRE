@@ -151,6 +151,17 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 
 /* ---------- comparar escenarios ---------- */
 .srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.printOnly{display:none}
+@media print{.printOnly{display:block!important}.screenOnly{display:none!important}}
+.limitsList{margin:10px 0 0;padding-left:20px;font-size:13px;line-height:1.6;color:var(--ink-2)}
+.seedRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 0}
+.seedRow label{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:var(--ink)}
+.seedRow input[type=number]{
+  width:190px;max-width:100%;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);
+  background:var(--paper);border:1px solid var(--hair);padding:9px 10px;
+}
+.seedRow input[type=number]:focus-visible{outline:2px solid var(--route);outline-offset:1px}
 .outcomeList{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:0;border-top:1px solid var(--hair);margin:14px 0 0}.outcomeList dt,.outcomeList dd{margin:0;padding:9px 0;border-bottom:1px solid var(--hair)}.outcomeList dd{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--ink-2)}
 @media print{.controls,.scenarioSave,#reports button,button,.skipLink{display:none!important}body{background:#fff!important;color:#111!important}section{break-inside:avoid}}
 .scenarioSave{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
@@ -371,7 +382,8 @@ body:not(.pro) .pro-only{display:none}
       </div>
     </div>
     <div class="chartbox">
-      <canvas id="contribChart" width="1400" height="700" role="img" aria-label="Aportado frente a rendimiento; los valores se resumen tras cada cálculo."></canvas>
+      <canvas id="contribChart" width="1400" height="700" role="img" aria-label="Aportado frente a rendimiento de la ruta mediana." aria-describedby="contribSummary"></canvas>
+      <p class="srOnly" id="contribSummary"></p>
       <div class="chart-tip" id="contribChartTip"></div>
     </div>
     <div class="legend">
@@ -457,7 +469,7 @@ body:not(.pro) .pro-only{display:none}
   <section id="outcomesDashboard">
     <h2>Resumen de resultados por cohorte</h2>
     <p class="hint">Las tasas se calculan sobre todas las rutas simuladas; la ruina voluntaria se divide solo por rutas de FIRE voluntario exitoso. Una LOL o salida forzosa no cuenta como FIRE voluntario.</p>
-    <div id="outcomeSummary" aria-live="polite"></div>
+    <div id="outcomeSummary"></div>
   </section>
 
   <section>
@@ -478,7 +490,19 @@ body:not(.pro) .pro-only{display:none}
     <h2>Informe</h2>
     <button type="button" class="reset" id="exportCsv">Descargar CSV de supuestos y resultados</button>
     <button type="button" class="reset" id="printReport">Imprimir / Guardar como PDF</button>
-    <p class="hint">Los informes se generan localmente en este navegador. Revisa los supuestos antes de compartirlos; el CSV/impreso puede contener información financiera personal.</p>
+    <p class="hint">Los informes se generan localmente en este navegador. Revisa los supuestos antes de compartirlos; el CSV/impreso puede contener información financiera personal. El CSV usa «;» como separador, coma decimal y UTF-8 con BOM para abrirse directamente en Excel en español.</p>
+  </section>
+
+  <section id="printAssumptions" class="printOnly">
+    <h2>Supuestos de este cálculo</h2>
+    <dl class="outcomeList" id="printAssumptionsList"></dl>
+    <h2>Supuestos y límites del modelo</h2>
+    <ul class="limitsList" id="printLimitsList"></ul>
+  </section>
+
+  <section id="assumptionsLimits" class="screenOnly">
+    <h2>Supuestos y límites del modelo</h2>
+    <ul class="limitsList" id="limitsList"></ul>
   </section>
 
   <section>
@@ -995,9 +1019,13 @@ body:not(.pro) .pro-only{display:none}
 
     <div class="actions">
       <button class="reset" id="reset">Restaurar valores base</button>
-      <label for="seed">Semilla reproducible</label><input type="number" id="seed" min="0" max="4294967295" step="1" placeholder="Vacía = aleatoria" aria-describedby="simulationContext">
-      <p class="calc" id="calc" role="status" aria-live="polite"></p>
-    <p class="hint" id="simulationContext"></p>
+      <div class="seedRow">
+        <label for="seed">Semilla (opcional)</label>
+        <input type="number" id="seed" min="0" max="4294967295" step="1" placeholder="Vacía = aleatoria" aria-describedby="simulationContext">
+      </div>
+      <p class="calc" id="calc"></p>
+      <p class="srOnly" id="calcAnnounce" role="status" aria-live="polite"></p>
+      <p class="hint" id="simulationContext"></p>
       <p class="calcLoading" id="calcLoading" style="display:none">Calculando con el máximo de rutas que caben en ~3-5s…</p>
     </div>
   </section>
@@ -1125,25 +1153,43 @@ function numericControlValue(key, control){
   const fallback=DEFAULTS[key];
   if(!control) return fallback;
   const raw=String(control.value ?? '').trim();
-  if(raw==='') throw new RangeError('El campo '+key+' requiere un numero.');
+  if(raw==='') throw new RangeError('El campo '+key+' requiere un número.');
   const value=Number(raw);
-  if(!Number.isFinite(value)) throw new RangeError('El campo '+key+' debe ser un numero finito.');
+  if(!Number.isFinite(value)) throw new RangeError('El campo '+key+' debe ser un número finito.');
   const min=control.min===''||control.min==null ? null : Number(control.min);
   const max=control.max===''||control.max==null ? null : Number(control.max);
-  if((Number.isFinite(min) && value<min) || (Number.isFinite(max) && value>max)) throw new RangeError('El campo '+key+' esta fuera del rango permitido.');
+  if((Number.isFinite(min) && value<min) || (Number.isFinite(max) && value>max)) throw new RangeError('El campo '+key+' está fuera del rango permitido.');
   return value;
 }
+// Core validators throw English messages; the UI copy is Spanish, so translate the
+// known ones at the boundary (unknown messages pass through unchanged).
+function translateValidation(error){
+  const message=String(error && error.message ? error.message : error);
+  if(/Allocation must total 100%/.test(message)) return 'Efectivo, bonos y acciones deben sumar exactamente 100 %.';
+  if(/Allocation values must be finite and nonnegative|Allocation must be an object/.test(message)) return 'Las asignaciones de efectivo, bonos y acciones deben ser números no negativos.';
+  if(/Current age must be at least 18/.test(message)) return 'La edad actual debe ser de al menos 18 años.';
+  if(/Invalid horizon or age/.test(message)) return 'Edad o horizonte no válidos: el horizonte debe ser positivo y no superar 80 años (ni los 110 años de edad).';
+  if(/at most 100 payments/.test(message)) return 'Usa una lista de como máximo 100 pagos.';
+  if(/Each payment needs/.test(message)) return 'Cada pago necesita año (2026-2106), mes (1-12) e importe dentro de ±10 M€.';
+  if(/JSON/.test(message)) return 'el JSON no es válido.';
+  return message;
+}
 function validateSimulationParams(raw){
-  if(!raw || typeof raw!=='object') throw new TypeError('Parametros de simulacion no validos.');
+  if(!raw || typeof raw!=='object') throw new TypeError('Parámetros de simulación no válidos.');
   const p={...raw};
-  for(const key of NUMERIC_PARAM_KEYS) if(!Number.isFinite(p[key])) throw new RangeError('El campo '+key+' debe ser un numero finito.');
-  if(p.seed!==null && (!Number.isInteger(p.seed)||p.seed<0||p.seed>4294967295)) throw new RangeError('La semilla debe ser un entero entre 0 y 4294967295, o estar vacia.');
-  p.lumpSums=Array.isArray(p.lumpSums) ? NavlogCore.validateLumpSums(p.lumpSums) : NavlogCore.validateLumpSums(JSON.parse(p.lumpSums||'[]'));
-  NavlogCore.validateAllocation({cash:p.allocCash,bonds:p.allocBonds,equities:p.allocEquities});
-  NavlogCore.validateHorizon({currentAge:p.ageNow,endAge:p.horizonAge,startAge:p.ageNow});
+  for(const key of NUMERIC_PARAM_KEYS) if(!Number.isFinite(p[key])) throw new RangeError('El campo '+key+' debe ser un número finito.');
+  if(p.seed!==null && (!Number.isInteger(p.seed)||p.seed<0||p.seed>4294967295)) throw new RangeError('La semilla debe ser un entero entre 0 y 4294967295, o estar vacía.');
+  try{ p.lumpSums=Array.isArray(p.lumpSums) ? NavlogCore.validateLumpSums(p.lumpSums) : NavlogCore.validateLumpSums(JSON.parse(p.lumpSums||'[]')); }
+  catch(e){ throw new RangeError('Calendario de pagos: '+translateValidation(e)); }
+  try{
+    NavlogCore.validateAllocation({cash:p.allocCash,bonds:p.allocBonds,equities:p.allocEquities});
+    NavlogCore.validateHorizon({currentAge:p.ageNow,endAge:p.horizonAge,startAge:p.ageNow});
+  }catch(e){ throw new RangeError(translateValidation(e)); }
   const lastCareerYear=START_YEAR+(p.horizonAge-p.ageNow);
-  if(!Number.isInteger(p.careerYear)||p.careerYear<2026||p.careerYear>Math.min(2106,lastCareerYear)) throw new RangeError('El ano de inicio debe ser un entero dentro del horizonte.');
-  for(const key of ['childStartAge','childEndAge','pensionStartAge','healthcareStartAge']) if(!Number.isInteger(p[key])||p[key]<0||p[key]>p.horizonAge) throw new RangeError('Las edades adicionales deben ser enteros dentro del horizonte.');
+  if(!Number.isInteger(p.careerYear)||p.careerYear<2026||p.careerYear>Math.min(2106,lastCareerYear)) throw new RangeError('El año de inicio debe ser un entero dentro del horizonte.');
+  // An interval that starts after the horizon simply never applies, so ages are only
+  // bounded by the control range (0-110), not by the horizon.
+  for(const key of ['childStartAge','childEndAge','pensionStartAge','healthcareStartAge']) if(!Number.isInteger(p[key])||p[key]<0||p[key]>110) throw new RangeError('Las edades adicionales deben ser enteros entre 0 y 110.');
   if(p.childEndAge<p.childStartAge) throw new RangeError('La edad final del gasto por hijo debe ser posterior a la inicial.');
   return p;
 }
@@ -1170,10 +1216,12 @@ function readParams(){
     const n=el[k];
     if(k==='lumpSums'){
       try { p[k]=NavlogCore.validateLumpSums(JSON.parse(n ? (n.value||'[]') : DEFAULTS[k])); }
-      catch(e){ throw new RangeError('Calendario de pagos: '+e.message); }
+      catch(e){ throw new RangeError('Calendario de pagos: '+translateValidation(e)); }
       return;
     }
-    if(k==='seed' && n && String(n.value).trim()===''){ p[k]=null; return; }
+    // Only an EMPTY field means "random run". Any other text must be a valid seed:
+    // validateSimulationParams rejects it with a Spanish message (never a silent random run).
+    if(k==='seed'){ if(n && n.validity && n.validity.badInput) throw new RangeError('La semilla debe ser un entero entre 0 y 4294967295, o estar vacía.'); const raw=n ? String(n.value ?? '').trim() : ''; p[k]=!n ? DEFAULTS[k] : raw==='' ? null : Number(raw); return; }
     p[k]=n ? (n.type==='checkbox' ? n.checked : numericControlValue(k,n)) : DEFAULTS[k];
   });
   return validateSimulationParams(p);
@@ -1279,7 +1327,6 @@ function paintLabels(p){
 }
 
 let spare=null, activeRandom=Math.random;
-function seededRandom(seed){ return NavlogCore.seededRandom(seed); }
 function gauss(){
   if(spare!==null){ const s=spare; spare=null; return s; }
   let u,v,q;
@@ -1306,9 +1353,15 @@ function ymdLabel(i){
 function simulate(p, paths){
   // Keep worker/direct callers behind the same finite, bounded parameter gate as the DOM.
   p=validateSimulationParams(p);
-  // A supplied seed makes every stochastic draw reproducible. Sensitivity/stress
-  // variants share it, giving paired common-random-number comparisons.
-  activeRandom=p.seed==null ? Math.random : seededRandom(p.seed); spare=null;
+  // A supplied seed makes every stochastic draw reproducible. Each path owns two
+  // generators derived from (seed, path index): a market stream (gauss/normal and the
+  // historical start pick) and an event stream (Loss-of-License, profit sharing).
+  // Both are consumed a fixed number of times per month whatever the path's own state
+  // (retired, ruined...), so path i sees identical numbers regardless of the path
+  // count or of what other paths do, and paired runs (same seed, one parameter moved)
+  // stay on common random numbers. Unseeded runs use Math.random for both.
+  let eventRandom=Math.random;
+  activeRandom=Math.random; spare=null;
   const months=Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1));
   const eq=logParams(Math.pow(1+p.ret/100,1/12)-1, p.vol/100/Math.sqrt(12));
   const btc=logParams(Math.pow(1+p.btcRet/100,1/12)-1, p.btcVol/100/Math.sqrt(12));
@@ -1319,9 +1372,12 @@ function simulate(p, paths){
   // in the exponent itself), so precompute the growth curve once per simulate() call
   // instead of calling Math.pow ~paths*months times for a value that only has `months`
   // distinct outcomes.
-  const retGrowthPow=new Float64Array(months);
-  const spendGrowthPow=new Float64Array(months);
-  for(let n=0;n<months;n++){
+  // The career may start before the simulation does (careerYear 2026 => a negative
+  // start index), so the exponent can exceed `months`: leave headroom for that offset.
+  const growthLen=months+4;
+  const retGrowthPow=new Float64Array(growthLen);
+  const spendGrowthPow=new Float64Array(growthLen);
+  for(let n=0;n<growthLen;n++){
     retGrowthPow[n]=Math.pow(1+annualRetGrowth,n);
     spendGrowthPow[n]=Math.pow(1+annualSpendGrowth,n);
   }
@@ -1344,6 +1400,9 @@ function simulate(p, paths){
   // equity leg (BTC/gold keep independent draws) for N months right after each
   // path's own VOLUNTARY FIRE date, so it answers "what if the market crashes right
   // when I choose to retire" without overstating the scenario across every asset.
+  // Test hook: track the smallest unclamped bucket/basis value (published snapshots are clamped at 0).
+  const trackBuckets=!!p.debugTrackBuckets; let minBucket=Infinity;
+  const earlyWealth=trackBuckets ? new Float64Array(paths) : null; // wealth after the first year, per path
   const srrShockActive=!!p.srrShockOn;
   const srrShockMonths=p.srrShockMonths||12;
   const srrShockMonthlyMult=Math.pow(1+(p.srrShockPct||-30)/100, 1/srrShockMonths);
@@ -1449,6 +1508,8 @@ function simulate(p, paths){
   const finalVal=new Float64Array(paths);
 
   for(let k=0;k<paths;k++){
+    if(p.seed!=null){ activeRandom=NavlogCore.pathRandom(p.seed,k,0); eventRandom=NavlogCore.pathRandom(p.seed,k,1); }
+    spare=null;
     const alloc=NavlogCore.validateAllocation({cash:p.allocCash,bonds:p.allocBonds,equities:p.allocEquities});
     let vEq=p.startEq*alloc.equities/100, vBtc=p.startBtc, vProv=0;
     let vGold=goldActive?p.startGold:0, vCons=p.startEq*alloc.bonds/100, vCash=p.startEq*alloc.cash/100, vRE=reActive?p.reValue:0;
@@ -1532,11 +1593,13 @@ function simulate(p, paths){
 
       // Loss-of-License: a small monthly chance of permanent medical disqualification
       // while actively flying. Rolled before isWorking so the same month it triggers
-      // is already excluded from salary/contributions. Math.random() (not gauss()),
-      // matching this file's existing precedent for discrete Bernoulli-style events
-      // (profit-sharing's yearly draw, historical-bootstrap's starting-year pick).
+      // is already excluded from salary/contributions. The uniform is drawn every month
+      // (whether or not the path is still eligible) so the event stream never depends
+      // on path state; profit sharing draws once every December for the same reason.
+      const lolDraw=lolFeatureActive ? eventRandom() : 1;
+      const profitShareDraw=profitShareActive && d.m===12 ? eventRandom() : 0;
       if(lolFeatureActive && !retired && !lolTriggered && i>=careerStart && i<mandatoryRetireMonth
-         && activeRandom()<lolMonthlyProb){
+         && lolDraw<lolMonthlyProb){
         lolTriggered=true; lolMonthIdx=i;
       }
       const isWorking=!retired && i>=careerStart && i<mandatoryRetireMonth && !lolTriggered;
@@ -1567,7 +1630,7 @@ function simulate(p, paths){
         // ≈0-15.6 weeks of básico pay) — drawn independently per year, not smoothed
         // or correlated with anything else, since the company's payout isn't public.
         if(profitShareActive && d.m===12){
-          const weeksThisYear=activeRandom()*p.profitShareWeeks;
+          const weeksThisYear=profitShareDraw*p.profitShareWeeks;
           net+=weeksThisYear*(basicAED*12/52)*fxEff;
         }
       }
@@ -1729,11 +1792,19 @@ function simulate(p, paths){
         // Barista/FIRE parcial: ingreso real que reduce directamente la retirada
         // necesaria durante los primeros baristaYears tras el FIRE de esa ruta.
         if(baristaActive && yearsSinceFire<p.baristaYears){
-          wd=Math.max(0, wd-p.baristaIncome/12);
+          wd=wd-p.baristaIncome/12; // may go negative: the surplus branch below invests the excess
         }
         const retirementIncome=ageNow>=p.pensionStartAge?p.pensionAnnual/12:0;
         const healthCost=ageNow>=p.healthcareStartAge?p.healthcareAnnual/12:0;
-        wd=Math.max(0,wd-retirementIncome)+healthCost-childNet-lumpNet;
+        wd=wd-retirementIncome+healthCost-childNet-lumpNet;
+        // Income above this month's spending (a large pension, an inheritance) is surplus
+        // to be invested like any other inflow, not silently discarded.
+        if(wd<0){
+          const surplus=-wd; wd=0;
+          vEq+=surplus*alloc.equities/100; basisEq+=surplus*alloc.equities/100;
+          vCons+=surplus*alloc.bonds/100; basisCons+=surplus*alloc.bonds/100;
+          vCash+=surplus*alloc.cash/100; basisCash+=surplus*alloc.cash/100;
+        }
 
         if(fiscalityActive && !spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12){
           spanishResident=true;
@@ -1840,6 +1911,8 @@ function simulate(p, paths){
         }
       }
 
+      if(trackBuckets && i===11) earlyWealth[k]=vEq+vBtc+vProv+vGold+vCons+vCash;
+      if(trackBuckets){ minBucket=Math.min(minBucket,vEq,vBtc,vProv,vGold,vCons,vCash,vRE,basisEq,basisBtc,basisGold,basisCons,basisCash,basisRE); }
       if(d.isSnap){
         const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         snapVals[snap][k]=Math.max(0,totalNow);
@@ -1879,7 +1952,9 @@ function simulate(p, paths){
   for(let k=0;k<paths;k++) if(fireMonth[k]>=0 && !ruined[k] && !forcedOut[k] && !licenseLossOut[k]) successBuf[successCount++]=fireMonth[k];
   const successful=successBuf.subarray(0,successCount);
 
-  return {series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots,forcedOut,licenseLossOut};
+  const result={series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots,forcedOut,licenseLossOut};
+  if(trackBuckets) result.debug={minBucket,earlyWealth};
+  return result;
 }
 
 function firstYear(series,key,target){
@@ -1902,7 +1977,7 @@ const RUIN_MILESTONES=[1,5,10,15,20,25,30];
 // Kaplan-Meier-style estimator, just restrict each year's denominator to the
 // routes with enough runway ("at risk") instead of pretending routes that
 // simply ran out of simulated time survived.
-function buildRuinCurve(r, pathsUsed){
+function buildRuinCurve(r, pathsUsed, simulatedMonths=MONTHS){
   const minSample=Math.max(30, Math.round(pathsUsed*0.01));
   const curve=[];
   for(let y=1;y<=RUIN_MAX_YEARS;y++){
@@ -1913,7 +1988,7 @@ function buildRuinCurve(r, pathsUsed){
       // are drawdown starts but not part of the voluntary retirement cohort.
       if(fm<0 || r.forcedOut[k] || r.licenseLossOut[k]) continue;
       const cutoff=fm+y*12;
-      if(cutoff>MONTHS-1) continue; // this route's simulated horizon doesn't reach year y post-FIRE
+      if(cutoff>simulatedMonths-1) continue; // this run's horizon doesn't reach year y post-FIRE
       atRisk++;
       if(r.ruinMonth[k]>=0 && r.ruinMonth[k]<=cutoff) ruinedByY++;
     }
@@ -2367,6 +2442,10 @@ function makeChartController(canvas, tipEl, resetLinkEl, renderFn, tipHtml){
 // one implementation of simulate()/gauss()/normal()/logParams() — the worker cannot
 // drift from the main thread because it literally runs the same source.
 function buildWorkerSource(){
+  // JSON.stringify turns Infinity into null, which silently breaks open-ended tax
+  // brackets inside the worker (Math.min(gain,null)===0). Emit a JS literal instead.
+  const literal=value=>JSON.stringify(value,(key,item)=>item===Infinity?'__INFINITY__':item===-Infinity?'__NEG_INFINITY__':item)
+    .replace(/"__INFINITY__"/g,'Infinity').replace(/"__NEG_INFINITY__"/g,'-Infinity');
   return [
     '"use strict";',
     'const START_YEAR='+START_YEAR+', START_MONTH='+START_MONTH+';',
@@ -2374,18 +2453,18 @@ function buildWorkerSource(){
     'const FS1_GAP='+FS1_GAP+';',
     'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
     'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
-    'const IRPF_SAVINGS_BRACKETS='+JSON.stringify(IRPF_SAVINGS_BRACKETS)+';',
+    'const IRPF_SAVINGS_BRACKETS='+literal(IRPF_SAVINGS_BRACKETS)+';',
     'const MONTHS=MONTH_DATES.length;',
     'const NUMERIC_PARAM_KEYS='+JSON.stringify(NUMERIC_PARAM_KEYS)+';',
     'let spare=null, activeRandom=Math.random;',
-    'const SAVINGS_BRACKETS='+JSON.stringify(NavlogCore.SAVINGS_BRACKETS)+';',
-    'const NavlogCore={seededRandom:'+NavlogCore.seededRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+'};',
+    'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+'};',
     'const progressiveSavingsTax=NavlogCore.progressiveSavingsTax, netAfterSavingsTax=NavlogCore.netAfterSavingsTax;',
     'const monthIndex='+monthIndex.toString()+';',
-    'const seededRandom='+seededRandom.toString()+';',
-    'const gauss='+gauss.toString()+';',
+        'const gauss='+gauss.toString()+';',
     'const normal='+normal.toString()+';',
     'const logParams='+logParams.toString()+';',
+    'const translateValidation='+translateValidation.toString()+';',
     'const validateSimulationParams='+validateSimulationParams.toString()+';',
     'const simulate='+simulate.toString()+';',
     'self.onmessage=function(e){',
@@ -2398,58 +2477,89 @@ function buildWorkerSource(){
   ].join('\n');
 }
 
-let worker=null;
-try{
-  const blob=new Blob([buildWorkerSource()], {type:'application/javascript'});
-  worker=new Worker(URL.createObjectURL(blob));
-}catch(e){ worker=null; console.error('Worker no disponible, usando cálculo síncrono:', e); }
-
-let reqCounter=0, latestReqId=0;
-const pendingResolvers=new Map(); // reqId -> {resolve, p, paths}
-if(worker){
-  worker.onmessage=(e)=>{
-    const {result,reqId,calibrate,ms}=e.data;
-    const entry=pendingResolvers.get(reqId);
-    pendingResolvers.delete(reqId);
-    // Calibration pings never compete for "latest" — they don't update the UI,
-    // they only measure timing, so they must never be dropped as stale.
-    if(!calibrate && reqId!==latestReqId){ if(entry) entry.resolve({stale:true}); return; }
-    if(entry) entry.resolve({result,ms});
-  };
-  worker.onerror=(e)=>{
-    console.error('Worker error, cambiando a cálculo síncrono:', e.message);
-    worker=null;
-    // Without this, any request already in flight when the worker dies would
-    // never resolve — the UI would show "Calculando…" forever. Finish them on
-    // the main thread instead so a mid-flight crash never hangs the app.
-    const pending=Array.from(pendingResolvers.values());
-    pendingResolvers.clear();
-    pending.forEach(({resolve,p,paths})=>{
-      const t0=performance.now();
-      const result=simulate(p,paths);
-      resolve({result, ms:performance.now()-t0});
-    });
-  };
-}
-
-function requestSimulation(p, paths, opts){
-  const calibrate=!!(opts && opts.calibrate);
-  const reqId=++reqCounter;
-  if(!calibrate) latestReqId=reqId;
-  return new Promise(resolve=>{
-    if(worker){
-      pendingResolvers.set(reqId, {resolve, p, paths});
-      try{ worker.postMessage({p,paths,reqId,calibrate}); }catch(e){
-        pendingResolvers.delete(reqId);
-        const t0=performance.now(); resolve({result:simulate(p,paths), ms:performance.now()-t0});
-      }
-    } else {
-      const t0=performance.now();
-      const result=simulate(p,paths);
-      resolve({result, ms:performance.now()-t0});
+// Job manager for the simulation worker. A newer non-calibration request supersedes older ones
+// (their answers would be dropped anyway); when a superseded job is a long one (>= minTerminatePaths)
+// the worker is terminated and recreated, so the stale run stops burning CPU instead of finishing
+// first. Calibration/sensitivity requests are never stale: they are re-posted to the new worker.
+// Dependencies are injected so the logic is unit-testable with fake workers.
+function createSimulationJobs({makeWorker, runSync, now, minTerminatePaths=1000}){
+  let worker=null, reqCounter=0, latestReqId=0, restarts=0;
+  const pending=new Map(); // reqId -> {resolve, reject, p, paths, calibrate}
+  function syncRun(entry){
+    const t0=now();
+    try{ entry.resolve({result:runSync(entry.p,entry.paths), ms:now()-t0}); }catch(err){ entry.reject(err); }
+  }
+  function spawn(){
+    let created;
+    try{ created=makeWorker(); }catch(e){ created=null; console.error('Worker no disponible, usando cálculo síncrono:', e); }
+    worker=created;
+    if(!created) return;
+    created.onmessage=(e)=>{
+      if(created!==worker) return; // message from a terminated worker
+      const {result,reqId,calibrate,ms}=e.data;
+      const entry=pending.get(reqId);
+      pending.delete(reqId);
+      // Calibration pings never compete for "latest": they only measure timing.
+      if(!calibrate && reqId!==latestReqId){ if(entry) entry.resolve({stale:true}); return; }
+      if(entry) entry.resolve({result,ms});
+    };
+    created.onerror=(e)=>{
+      if(created!==worker) return;
+      console.error('Worker error, cambiando a cálculo síncrono:', e && e.message);
+      worker=null;
+      // Finish in-flight requests on the main thread so a crash never leaves "Calculando…" forever.
+      const entries=Array.from(pending.values());
+      pending.clear();
+      entries.forEach(syncRun);
+    };
+  }
+  function post(reqId, entry){
+    try{ worker.postMessage({p:entry.p, paths:entry.paths, reqId, calibrate:entry.calibrate}); return true; }
+    catch(e){ pending.delete(reqId); syncRun(entry); return false; }
+  }
+  // Drop superseded non-calibration jobs; restart the worker if one of them was long-running.
+  function supersedeOlderJobs(newReqId){
+    let restartNeeded=false;
+    for(const [id,entry] of Array.from(pending)){
+      if(entry.calibrate || id>=newReqId) continue;
+      pending.delete(id);
+      entry.resolve({stale:true});
+      if(entry.paths>=minTerminatePaths) restartNeeded=true;
     }
-  });
+    if(restartNeeded && worker){
+      const old=worker; worker=null;
+      try{ old.terminate(); }catch(e){}
+      restarts++;
+      spawn();
+      if(worker) for(const [id,entry] of pending) post(id,entry); // surviving calibration jobs
+      else { const entries=Array.from(pending.values()); pending.clear(); entries.forEach(syncRun); }
+    }
+  }
+  spawn();
+  return {
+    hasWorker:()=>!!worker,
+    restarts:()=>restarts,
+    pendingCount:()=>pending.size,
+    request(p, paths, opts){
+      const calibrate=!!(opts && opts.calibrate);
+      const reqId=++reqCounter;
+      if(!calibrate){ latestReqId=reqId; supersedeOlderJobs(reqId); }
+      return new Promise((resolve,reject)=>{
+        const entry={resolve,reject,p,paths,calibrate};
+        if(!worker){ syncRun(entry); return; }
+        pending.set(reqId,entry);
+        post(reqId,entry);
+      });
+    }
+  };
 }
+
+const jobs=createSimulationJobs({
+  makeWorker:()=>new Worker(URL.createObjectURL(new Blob([buildWorkerSource()], {type:'application/javascript'}))),
+  runSync:(p,paths)=>simulate(p,paths),
+  now:()=>performance.now()
+});
+function requestSimulation(p, paths, opts){ return jobs.request(p, paths, opts); }
 
 // "Máximo número de rutas posible": en vez de un PATHS fijo, se calibra con dos
 // tandas pequeñas (CALIB_N1/CALIB_N2) para medir el coste MARGINAL por ruta con
@@ -2461,7 +2571,16 @@ function requestSimulation(p, paths, opts){
 // vez y reutiliza el mismo pathsFull en sus 16 simulaciones en vez de
 // recalibrar cada una (las perturbaciones de sensibilidad no activan/desactivan
 // ninguna feature PRO, así que el coste por ruta no cambia entre variantes).
-async function calibratePathsFull(p){
+// Seeded runs must be exactly reproducible on any device, so they never use the
+// wall-clock calibration: 5000 paths (>= PATHS_FULL_MIN, standard error of a success
+// rate <= 0.7 points) is small enough to finish quickly even with every PRO feature on.
+const SEEDED_PATHS_FULL = 5000;
+// Sensitivity (16 runs) and the sequence-risk stress test (2 runs) queue many full runs, so
+// seeded ones use a smaller FIXED count (still device-independent); the paired runs share the
+// same random numbers, which keeps their comparison precise.
+const SEEDED_PATHS_SENSITIVITY = 2000;
+async function calibratePathsFull(p, purpose){
+  if(p.seed!=null) return purpose==='sensitivity' ? SEEDED_PATHS_SENSITIVITY : SEEDED_PATHS_FULL;
   const [c1,c2]=await Promise.all([
     requestSimulation(p, CALIB_N1, {calibrate:true}),
     requestSimulation(p, CALIB_N2, {calibrate:true})
@@ -2471,7 +2590,7 @@ async function calibratePathsFull(p){
   // Without a Worker, requestSimulation() runs simulate() synchronously on the
   // main thread — calibrating toward the same PATHS_FULL_MAX there would block
   // the UI (unresponsive sliders/scroll) for the full multi-second budget.
-  const pathsCeiling = worker ? PATHS_FULL_MAX : 5000;
+  const pathsCeiling = jobs.hasWorker() ? PATHS_FULL_MAX : 5000;
   return Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
 }
 
@@ -2512,12 +2631,12 @@ const SENSITIVITY_PARAMS = [
 // for exactly that ("never compete for latest, always resolve") — it has no
 // effect on the computation itself, only on how the response is dispatched.
 async function runSensitivity(baseParams){
-  const pathsFull=await calibratePathsFull(baseParams);
+  const pathsFull=await calibratePathsFull(baseParams,'sensitivity');
   const jobs=SENSITIVITY_PARAMS.map(async def=>{
     const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
     const base=baseParams[def.key];
     const pair=NavlogCore.boundedPair(base, delta, def.min, def.max);
-    const pairSeed=(baseParams.seed==null ? 20260921 : baseParams.seed) + SENSITIVITY_PARAMS.indexOf(def);
+    const pairSeed=NavlogCore.deriveSeed(baseParams.seed, SENSITIVITY_PARAMS.indexOf(def));
     const [lowR,highR]=await Promise.all([
       requestSimulation({...baseParams,[def.key]:pair.low,seed:pairSeed}, pathsFull, {calibrate:true}),
       requestSimulation({...baseParams,[def.key]:pair.high,seed:pairSeed}, pathsFull, {calibrate:true}),
@@ -2556,10 +2675,11 @@ function renderSensitivity(results){
 // (see simulate()'s srrShockActive arming logic), so the comparison is read off
 // ruin-rate-among-successful-FIRErs, the same metric run() already reports.
 async function runSrrStress(baseParams, shockPct, shockMonths){
-  const pathsFull=await calibratePathsFull(baseParams);
+  const pathsFull=await calibratePathsFull(baseParams,'sensitivity');
+  const stressSeed=NavlogCore.deriveSeed(baseParams.seed,0);
   const [baseR,shockR]=await Promise.all([
-    requestSimulation({...baseParams,seed:baseParams.seed==null?20260921:baseParams.seed}, pathsFull, {calibrate:true}),
-    requestSimulation({...baseParams,seed:baseParams.seed==null?20260921:baseParams.seed, srrShockOn:true, srrShockPct:shockPct, srrShockMonths:shockMonths}, pathsFull, {calibrate:true}),
+    requestSimulation({...baseParams,seed:stressSeed}, pathsFull, {calibrate:true}),
+    requestSimulation({...baseParams,seed:stressSeed, srrShockOn:true, srrShockPct:shockPct, srrShockMonths:shockMonths}, pathsFull, {calibrate:true}),
   ]);
   const ruinRateOf=r=>{
     const n=r.result.fireMonthAll.length;
@@ -2605,19 +2725,72 @@ const ruinChart=makeChartController(document.getElementById('ruinChartCanvas'), 
 const calcLoadingEl=document.getElementById('calcLoading');
 let lastSeries=null, lastTarget=0, lastAgeMedText='—', lastSuccessRate=0, lastFullParams=null, fullRunsPending=0, activeRunsPending=0;
 
+// Single source for the model's documented limits: rendered into the on-screen section and
+// into the print-only block (the on-screen copy is hidden when printing), so both are identical.
+// Every statement below was checked against simulate().
+const MODEL_LIMITS=[
+  'Es una simulación, no asesoramiento financiero, fiscal ni legal: los resultados dependen de los supuestos elegidos y las rentabilidades pasadas no garantizan las futuras.',
+  'Las cifras están en euros reales (inflación descontada) salvo que actives la inflación estocástica; el tipo de cambio AED/EUR es fijo salvo que actives el FX estocástico.',
+  'La fiscalidad está simplificada: tipo medio o tramos del ahorro, Provident con un único tipo medio, Ley Beckham e impuesto de patrimonio esquematizados; no se modelan mínimos personales, deducciones ni compensación de pérdidas.',
+  'Los impuestos sobre plusvalías solo se aplican a las retiradas y el de patrimonio al saldo anual, y ambos solo desde que repatrías el capital a España (tras los años de retraso desde el FIRE que configures); la venta de Burriana tributa aparte con su propio tipo. Las plusvalías mientras acumulas y los dividendos, intereses y alquileres del inmueble no tributan.',
+  'El sueldo, las aportaciones al Provident y el ingreso barista se tratan como libres de impuestos y cotizaciones; el Provident solo tributa al retirarlo.',
+  'Los tramos del ahorro (cifras nominales 2024/2025, que no se actualizan solas) se aplican a plusvalías calculadas en euros reales, sin ajustar por inflación.',
+  'El coste de guardería (control nur, en €/año) se carga cada año natural de 2027 a 2030 y un hueco FS1 fijo de 10.400 € al año en 2029 y 2031; ambos solo mientras trabajas (desde el inicio de carrera hasta que dejas de trabajar), sin relación con tu edad ni con el gasto por hijo que configures.',
+  'La pensión o ingreso recurrente, los pagos únicos y cualquier excedente de ingresos sobre el gasto se invierten sin IRPF ni cotizaciones.',
+  'Con semilla, las ejecuciones completas usan '+SEEDED_PATHS_FULL+' rutas fijas ('+SEEDED_PATHS_SENSITIVITY+' rutas en sensibilidad y riesgo de secuencia) y son reproducibles en el mismo navegador y dispositivo; entre navegadores puede haber diferencias mínimas por el redondeo de las funciones matemáticas. Sin semilla, el número de rutas depende de la velocidad del dispositivo.',
+  'No se modelan cambios legislativos, gastos sanitarios no declarados, longevidad superior al horizonte ni riesgo de contraparte.'
+];
+function renderModelLimits(){
+  ['limitsList','printLimitsList'].forEach(id=>{
+    const host=document.getElementById(id); if(!host) return;
+    host.replaceChildren(...MODEL_LIMITS.map(text=>{ const li=document.createElement('li'); li.textContent=text; return li; }));
+  });
+}
+
+// Print/PDF report: the sidebar controls are hidden when printing, so list the key
+// assumptions of the last calculation in a print-only block.
+function renderPrintAssumptions(p, pathsUsed){
+  const host=document.getElementById('printAssumptionsList');
+  if(!host) return;
+  const yesNo=v=>v?'sí':'no';
+  const rows=[
+    ['Semilla',p.seed==null?'aleatoria':String(p.seed)],['Rutas simuladas',pathsUsed.toLocaleString('es-ES')],
+    ['Edad actual / final',p.ageNow+' / '+p.horizonAge],['Gasto anual al jubilarte',eur(p.gasto)],['Tasa de retiro',p.swr.toFixed(2)+' %'],
+    ['Rentabilidad / volatilidad de la bolsa',p.ret.toFixed(1)+' % / '+p.vol.toFixed(1)+' %'],
+    ['Asignación efectivo / bonos / acciones',p.allocCash+' % / '+p.allocBonds+' % / '+p.allocEquities+' %'],
+    ['Modo PRO',yesNo(p.proMode)],['Fiscalidad ES',yesNo(p.proMode&&p.taxOn)+(p.proMode&&p.taxOn&&p.useIrpfBrackets?' (tramos)':'')],
+    ['Ley Beckham',yesNo(p.proMode&&p.beckhamOn)],['Impuesto de patrimonio',yesNo(p.proMode&&p.wealthTaxOn)]
+  ];
+  const nodes=[];
+  rows.forEach(([label,value])=>{const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;nodes.push(dt,dd);});
+  host.replaceChildren(...nodes);
+}
+
+// Text alternative for the contribution chart, refreshed after every calculation.
+function summarizeContribution(series){
+  const last=Array.isArray(series) && series.length ? series[series.length-1] : null;
+  if(!last || !Number.isFinite(last.p50)) return 'Sin datos de aportaciones todavía.';
+  const contrib=Math.max(0,Math.min(Number.isFinite(last.contrib50)?last.contrib50:0,last.p50)), growth=last.p50-contrib;
+  return 'Ruta mediana en '+last.year+': patrimonio total '+eurK(last.p50)+', de los cuales aportado '+eurK(contrib)+' y rendimiento '+eurK(growth)+'. La tabla siguiente detalla cada año.';
+}
+
 function renderOutcomeDashboard(counts, pathsUsed){
   const host=document.getElementById('outcomeSummary');
   if(!host) return;
   const pct=value=>Math.round((pathsUsed ? value/pathsUsed : 0)*100)+' %';
+  // Mutually exclusive and exhaustive categories (they add up to the number of paths);
+  // the second row is a SUBSET of the first, shown as a share of voluntary FIRE.
   const entries=[
     ['FIRE voluntario',counts.voluntary,pct(counts.voluntary)],
-    ['Ruina tras FIRE voluntario',counts.voluntaryRuined,counts.voluntary ? Math.round(counts.voluntaryRuined/counts.voluntary*100)+' % de FIRE voluntario' : 'sin cohorte'],
+    ['de ellos, ruina después del FIRE (incluida en la fila anterior)',counts.voluntaryRuined,counts.voluntary ? Math.round(counts.voluntaryRuined/counts.voluntary*100)+' % de FIRE voluntario' : 'sin cohorte'],
     ['Salida forzosa',counts.forced,pct(counts.forced)],
-    ['P?rdida de licencia',counts.licenseLoss,pct(counts.licenseLoss)],
-    ['Sin jubilaci?n en el horizonte',Math.max(0,pathsUsed-counts.voluntary-counts.forced-counts.licenseLoss),pct(Math.max(0,pathsUsed-counts.voluntary-counts.forced-counts.licenseLoss))]
+    ['Pérdida de licencia',counts.licenseLoss,pct(counts.licenseLoss)],
+    ['Ruina antes de llegar al FIRE',counts.preFireRuin,pct(counts.preFireRuin)],
+    ['Sin jubilación en el horizonte (sin ruina)',counts.noRetirement,pct(counts.noRetirement)],
+    ['Total de rutas (suma de las categorías excluyentes)',counts.voluntary+counts.forced+counts.licenseLoss+counts.preFireRuin+counts.noRetirement,pct(pathsUsed)]
   ];
   const list=document.createElement('dl'); list.className='outcomeList';
-  entries.forEach(([label,count,rate])=>{const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=count.toLocaleString('es-ES')+' rutas ? '+rate;list.append(dt,dd);});
+  entries.forEach(([label,count,rate])=>{const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=count.toLocaleString('es-ES')+' rutas · '+rate;list.append(dt,dd);});
   host.replaceChildren(list);
 }
 
@@ -2683,7 +2856,7 @@ async function run(mode){
   const licenseLossRate=pathsUsed?licenseLossCount/pathsUsed:0;
   renderOutcomeDashboard(cohortCounts,pathsUsed);
 
-  const ruinCurve=buildRuinCurve(r, pathsUsed);
+  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1)));
   renderRuinTable(ruinCurve);
   ruinChart.update(ruinCurve, null);
 
@@ -2697,8 +2870,11 @@ async function run(mode){
   if(p.proMode){
     const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go'];
     calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
-    if(p.taxOn) calcTxt+=' · fiscalidad ES activa (tipo medio '+p.taxRate.toFixed(1)+'%, repat. +'+p.taxRepatDelay+'a)';
-    if(p.taxOn && p.taxRateProv!==p.taxRate) calcTxt+=' · retirada optimizada: '+(p.taxRateProv<p.taxRate?'Provident antes que la cartera':'cartera antes que el Provident')+' ('+p.taxRateProv.toFixed(1)+'% vs '+p.taxRate.toFixed(1)+'%)';
+    if(p.taxOn) calcTxt+=' · fiscalidad ES activa ('+(p.useIrpfBrackets?'tramos progresivos del ahorro 19-30 %':'tipo medio '+p.taxRate.toFixed(1)+'%')+', repat. +'+p.taxRepatDelay+'a)';
+    // Ordering is decided per month: flat-rate mode compares the two configured rates;
+    // bracket mode compares the Provident rate with the marginal savings bracket in force.
+    if(p.taxOn && p.useIrpfBrackets && p.provOn) calcTxt+=' · retirada: el Provident ('+p.taxRateProv.toFixed(1)+'%) se usa antes que la cartera solo mientras su tipo sea inferior al tramo marginal del ahorro vigente ese año';
+    else if(p.taxOn && p.taxRateProv!==p.taxRate) calcTxt+=' · retirada optimizada: '+(p.taxRateProv<p.taxRate?'Provident antes que la cartera':'cartera antes que el Provident')+' ('+p.taxRateProv.toFixed(1)+'% vs '+p.taxRate.toFixed(1)+'%)';
     if(p.beckhamOn) calcTxt+=' · Ley Beckham activa ('+p.beckhamYears+'a, IRPF y patrimonio en pausa)';
     if(p.wealthTaxOn) calcTxt+=' · patrimonio neto > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año'+(p.wealthBonusPct>0?' (bonif. '+p.wealthBonusPct.toFixed(0)+'%)':'')+(p.mortgageBalance>0?' (deuda deducida)':'');
     if(p.lolOn) calcTxt+=' · riesgo LOL '+p.lolAnnualProb.toFixed(1)+'%/año';
@@ -2710,16 +2886,44 @@ async function run(mode){
   }
   document.getElementById('calc').textContent=calcTxt;
   const se=NavlogCore.standardErrorProportion(successRate, pathsUsed);
-  document.getElementById('simulationContext').textContent='Semilla '+(p.seed==null?'aleatoria (no reproducible)':p.seed)+' · muestra '+pathsUsed.toLocaleString('es-ES')+' rutas · incertidumbre Monte Carlo aproximada del éxito: ±'+(se===null?'—':(1.96*se*100).toFixed(1))+' puntos porcentuales (IC 95 %, no incluye incertidumbre de los supuestos).';
+  document.getElementById('simulationContext').textContent=describeSimulationContext(p.seed, pathsUsed, se);
+  document.getElementById('contribSummary').textContent=summarizeContribution(s);
+  renderPrintAssumptions(p, pathsUsed);
+  if(!isPreview) announceResult(announcementText(p, fm50, successRate, ruinRate, pathsUsed));
 }
 
+// The number of paths in a full run is calibrated to the device speed, so the
+// sample size (not the reproducibility of each path) varies between machines.
+function describeSimulationContext(seed, pathsUsed, se){
+  const seedText=seed==null
+    ? 'Semilla aleatoria (no reproducible; el número de rutas de una ejecución completa se ajusta a la velocidad del dispositivo)'
+    : 'Semilla '+seed+' (reproducible en este navegador y dispositivo: las ejecuciones completas con semilla usan siempre '+SEEDED_PATHS_FULL+' rutas fijas ('+SEEDED_PATHS_SENSITIVITY+' en sensibilidad y riesgo de secuencia), así que percentiles, éxito y ruina se repiten; entre navegadores puede haber diferencias mínimas de redondeo)';
+  const error=se===null||se===undefined||!Number.isFinite(se) ? '—' : (1.96*se*100).toFixed(1);
+  return seedText+' · muestra '+pathsUsed.toLocaleString('es-ES')+' rutas · incertidumbre Monte Carlo aproximada del éxito: ±'+error+' puntos porcentuales (IC 95 %, no incluye incertidumbre de los supuestos).';
+}
+
+// Polite live region for FINAL results only: previews fire on every slider tick and
+// would otherwise flood screen readers. Announcements are debounced.
+let announceTimer=null;
+function announceResult(text){
+  clearTimeout(announceTimer);
+  announceTimer=setTimeout(()=>{ const host=document.getElementById('calcAnnounce'); if(host) host.textContent=text; },900);
+}
+function announcementText(p, fm50, successRate, ruinRate, pathsUsed){
+  const when=fm50===null ? 'sin FIRE voluntario exitoso en la mediana' : 'FIRE mediano a los '+Math.floor(p.ageNow+yearFrac(fm50))+' años';
+  return 'Cálculo completo: '+when+', éxito '+Math.round(successRate*100)+' %, ruina tras FIRE voluntario '+Math.round(ruinRate*100)+' %, '+pathsUsed.toLocaleString('es-ES')+' rutas.';
+}
+
+// Every user-triggered calculation reports its errors in the same visible place.
+function reportError(err){
+  const error=document.getElementById('assumptionError');
+  if(error) error.textContent=err && err.message ? err.message : 'No se pudo calcular este escenario.';
+  console.error(err);
+}
 function safeRun(mode){
   const error=document.getElementById('assumptionError');
   if(error) error.textContent='';
-  return run(mode).catch(err=>{
-    if(error) error.textContent=err && err.message ? err.message : 'No se pudo calcular este escenario.';
-    console.error(err);
-  });
+  return run(mode).catch(reportError);
 }
 
 // Dragging a range slider fires 'input' continuously: run a cheap preview
@@ -2733,6 +2937,8 @@ function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setT
 ids.forEach(k=>{
   const n=el[k]; if(!n) return;
   if(n.type==='range'){ n.addEventListener('input',scheduleInput); n.addEventListener('change',scheduleFull); }
+  // The seed is free text: a full run costs seconds, so wait for the user to commit it.
+  else if(k==='seed'){ n.addEventListener('change',scheduleFull); }
   else { n.addEventListener('input',scheduleFull); }
 });
 el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
@@ -2772,14 +2978,23 @@ document.getElementById('closeChartModal').addEventListener('click',()=>{ chartM
 const SCENARIO_MAX=4;
 const SCENARIO_COLORS=['#1F7A4D','#2E6F9E','#0E7C86','#6B4FA0'];
 const SCENARIO_STORAGE_KEY='fireSimScenarios';
+// Strict per-parameter typing for stored/imported scenarios (booleans only for boolean controls, etc.).
+const PARAM_TYPES=Object.fromEntries(ids.map(k=>[k, k==='seed' ? 'seed' : k==='lumpSums' ? 'lumpSums' : typeof DEFAULTS[k]==='boolean' ? 'boolean' : 'number']));
 let savedScenarios=[];
 try{
   const raw=localStorage.getItem(SCENARIO_STORAGE_KEY);
-  if(raw) savedScenarios=NavlogCore.normalizeScenarios(JSON.parse(raw),ids,SCENARIO_COLORS,SCENARIO_MAX);
+  if(raw) savedScenarios=NavlogCore.normalizeScenarios(JSON.parse(raw),PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
 }catch(e){ savedScenarios=[]; }
 
+// Returns false (and tells the user) when the browser refuses the write: a full or
+// blocked localStorage would otherwise look like a successful save.
 function persistScenarios(){
-  try{ localStorage.setItem(SCENARIO_STORAGE_KEY, JSON.stringify(savedScenarios)); }catch(e){}
+  try{ localStorage.setItem(SCENARIO_STORAGE_KEY, JSON.stringify(savedScenarios)); return true; }
+  catch(e){
+    console.error(e);
+    showScenarioMsg('No se pudo guardar en este navegador (almacenamiento lleno o bloqueado): los escenarios solo existirán hasta que recargues la página.');
+    return false;
+  }
 }
 
 function refreshScenarioOverlays(){
@@ -2827,22 +3042,34 @@ function downloadText(filename, text, mime='application/json'){
   const link=document.createElement('a'); link.href=url; link.download=filename; link.click();
   setTimeout(()=>URL.revokeObjectURL(url),0);
 }
-function csvCell(value){ return '"'+String(value ?? '').replace(/"/g,'""')+'"'; }
-function exportCurrentReport(){
-  if(!lastFullParams || !lastSeries) return showScenarioMsg('Calcula primero el escenario actual con precisi?n completa.');
+// Spanish-locale Excel expects ';' as delimiter and ',' as decimal mark. Numbers keep their value
+// (a genuine -30 stays -30) and only swap the decimal point; free text starting with a formula
+// trigger is prefixed so spreadsheets never evaluate it (CSV injection). Every cell is quoted.
+function csvCell(value){
+  let text;
+  if(typeof value==='number') text=Number.isFinite(value) ? String(value).replace('.',',') : '';
+  else { text=String(value ?? ''); if(/^[=+\-@\t\r]/.test(text)) text="'"+text; }
+  return '"'+text.replace(/"/g,'""')+'"';
+}
+// UTF-8 BOM first so Excel detects the encoding of accents and the euro sign.
+function buildReportCsv(params, series, target){
   const header=['kind','year','p10','p50','p90','target'];
-  const assumptions=Object.entries(lastFullParams).map(([key,value])=>['assumption',key,Array.isArray(value)?JSON.stringify(value):value,'','','']);
-  const series=lastSeries.map(point=>['projection',point.year,point.p10,point.p50,point.p90,lastTarget]);
-  downloadText('navlog-fire-report.csv',[header,...assumptions,...series].map(row=>row.map(csvCell).join(',')).join('\n'),'text/csv');
-  showScenarioMsg('CSV descargado.');
+  const assumptions=Object.entries(params).map(([key,value])=>['assumption',key,Array.isArray(value)?JSON.stringify(value):value,'','','']);
+  const rows=series.map(point=>['projection',point.year,point.p10,point.p50,point.p90,target]);
+  return '\ufeff'+[header,...assumptions,...rows].map(row=>row.map(csvCell).join(';')).join('\n');
+}
+function exportCurrentReport(){
+  if(!lastFullParams || !lastSeries) return showScenarioMsg('Calcula primero el escenario actual con precisión completa.');
+  downloadText('navlog-fire-report.csv',buildReportCsv(lastFullParams,lastSeries,lastTarget),'text/csv');
+  showScenarioMsg('CSV descargado (separador «;», decimales con coma, UTF-8 con BOM).');
 }
 function importScenariosFile(file){
   if(!file) return;
-  if(file.size>2_000_000) return showScenarioMsg('El archivo supera el l?mite de 2 MB.');
+  if(file.size>2_000_000) return showScenarioMsg('El archivo supera el límite de 2 MB.');
   const reader=new FileReader();
   reader.onload=()=>{
-    const imported=NavlogCore.importScenarioJson(String(reader.result||''),ids,SCENARIO_COLORS,SCENARIO_MAX);
-    if(!imported.length) return showScenarioMsg('No se encontraron escenarios v?lidos en el JSON.');
+    const imported=NavlogCore.importScenarioJson(String(reader.result||''),PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
+    if(!imported.length) return showScenarioMsg('No se encontraron escenarios válidos en el JSON.');
     const available=SCENARIO_MAX-savedScenarios.length;
     if(available<=0) return showScenarioMsg('Elimina un escenario antes de importar otro.');
     const usedIds=new Set(savedScenarios.map(sc=>sc.id));
@@ -2894,11 +3121,17 @@ function saveCurrentScenario(){
 function loadScenario(id){
   const sc=savedScenarios.find(x=>x.id===id);
   if(!sc) return;
+  // Stored scenarios are untrusted data: only own properties of the expected type are
+  // applied (a bad value would otherwise surface as NaN or an unrelated control state).
   ids.forEach(k=>{
-    const n=el[k]; if(!n || !(k in sc.params)) return;
-    if(n.type==='checkbox') n.checked=sc.params[k]; else n.value=sc.params[k];
+    const n=el[k]; if(!n || !Object.prototype.hasOwnProperty.call(sc.params,k)) return;
+    const value=sc.params[k];
+    if(n.type==='checkbox'){ if(typeof value==='boolean') n.checked=value; }
+    else if(k==='seed'){ if(value===null || typeof value==='number') n.value=value===null ? '' : String(value); }
+    else if(k==='lumpSums'){ if(typeof value==='string') n.value=value; else if(Array.isArray(value)) n.value=JSON.stringify(value); }
+    else if(typeof DEFAULTS[k]==='number' && typeof value==='number' && Number.isFinite(value)) n.value=value;
   });
-  document.body.classList.toggle('pro', !!sc.params.proMode);
+  document.body.classList.toggle('pro', sc.params.proMode===true);
   syncHorizonControl();
   initVisibleLabels();
   safeRun('full');
@@ -2937,8 +3170,10 @@ document.getElementById('runSensitivity').addEventListener('click', async () => 
   const btn=document.getElementById('runSensitivity'), loadingEl=document.getElementById('sensLoading');
   btn.disabled=true; loadingEl.style.display='inline';
   try{
+    const error=document.getElementById('assumptionError'); if(error) error.textContent='';
     const results=await runSensitivity(readParams());
     renderSensitivity(results);
+  } catch(err){ reportError(err);
   } finally {
     btn.disabled=false; loadingEl.style.display='none';
   }
@@ -2947,9 +3182,11 @@ document.getElementById('runSrrStress').addEventListener('click', async () => {
   const btn=document.getElementById('runSrrStress'), loadingEl=document.getElementById('srrLoading');
   btn.disabled=true; loadingEl.style.display='inline';
   try{
+    const error=document.getElementById('assumptionError'); if(error) error.textContent='';
     const p=readParams();
     const res=await runSrrStress(p, p.srrShockPct, p.srrShockMonths);
     renderSrrStress(res, p.srrShockPct, p.srrShockMonths);
+  } catch(err){ reportError(err);
   } finally {
     btn.disabled=false; loadingEl.style.display='none';
   }
@@ -2968,6 +3205,7 @@ document.getElementById('scenarioList').addEventListener('change', e=>{
   if(sc){ sc.visible=cb.checked; persistScenarios(); refreshScenarioOverlays(); }
 });
 renderScenarioList();
+renderModelLimits();
 
 ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
 document.body.classList.toggle('pro',DEFAULTS.proMode);

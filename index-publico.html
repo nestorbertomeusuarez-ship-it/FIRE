@@ -2346,20 +2346,39 @@ async function runFullPrecision(p){
   return requestSimulation(p, pathsFull);
 }
 
+// This file is intentionally standalone (no simulation-core.js / NavlogCore
+// dependency), so it carries its own tiny clamp helper instead of importing
+// NavlogCore.boundedPair. Same contract: a missing bound means "unbounded on
+// that side", and `changed` tells the caller whether the pair still spans a
+// real range or degenerated to a single point (value already at its bound).
+function boundedPair(value, delta, min, max){
+  const lower = Number.isFinite(min) ? min : -Infinity, upper = Number.isFinite(max) ? max : Infinity;
+  // Clamp EACH endpoint into [lower,upper] independently (not just low up to
+  // lower and high down to upper): if the whole raw interval sits below lower
+  // (or above upper), a one-sided clamp would leave the other endpoint
+  // outside the bound. Both endpoints collapsing to the same value is the
+  // correct "already at the limit" outcome, not a bug.
+  const low = Math.min(Math.max(lower, value - delta), upper);
+  const high = Math.max(Math.min(upper, value + delta), lower);
+  return { low, high, changed: low !== high };
+}
+
 // Curated list of the parameters most likely to move the FIRE date, each with
 // a perturbation step chosen to be "a plausible amount to be wrong by" rather
 // than an arbitrary percentage. Each is tested both up and down from whatever
 // the sliders are currently set to, holding everything else fixed — a classic
-// one-at-a-time sensitivity/tornado analysis.
+// one-at-a-time sensitivity/tornado analysis. min/max mirror each slider's own
+// bounds (see the matching <input type="range"> tags) so boundedPair() below
+// never simulates a value the slider itself could not produce.
 const SENSITIVITY_PARAMS = [
-  {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, fmt:v=>v.toFixed(1)+' %'},
-  {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, fmt:v=>v.toFixed(1)+' %'},
-  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, fmt:v=>v.toFixed(1)+' %'},
-  {key:'vida', label:'Coste de vida actual (gasto mensual)', delta:p=>p.vida*0.1, fmt:v=>eur(v)+'/mes'},
-  {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, fmt:v=>v.toFixed(2)+' %'},
-  {key:'salG', label:'Crecimiento salarial anual', delta:0.5, fmt:v=>v.toFixed(1)+' %'},
-  {key:'startDelay', label:'Retraso en empezar la carrera', delta:6, fmt:v=>v.toFixed(0)+' meses'},
-  {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, fmt:v=>eur(v)+'/mes'},
+  {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, min:2, max:9, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, min:0, max:26, fmt:v=>v.toFixed(1)+' %'},
+  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-10, max:20, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vida', label:'Coste de vida actual (gasto mensual)', delta:p=>p.vida*0.1, min:1800, max:7000, fmt:v=>eur(v)+'/mes'},
+  {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, min:2.4, max:4.6, fmt:v=>v.toFixed(2)+' %'},
+  {key:'salG', label:'Crecimiento salarial anual', delta:0.5, min:-1, max:2.5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'startDelay', label:'Retraso en empezar la carrera', delta:6, min:0, max:18, fmt:v=>v.toFixed(0)+' meses'},
+  {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, min:0, max:1400, fmt:v=>eur(v)+'/mes'},
 ];
 
 // Runs each SENSITIVITY_PARAMS entry both up and down from baseParams, at the
@@ -2382,15 +2401,19 @@ async function runSensitivity(baseParams){
   const jobs=SENSITIVITY_PARAMS.map(async def=>{
     const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
     const base=baseParams[def.key];
+    const pair=boundedPair(base, delta, def.min, def.max);
     const [lowR,highR]=await Promise.all([
-      requestSimulation({...baseParams,[def.key]:base-delta}, pathsFull, {calibrate:true}),
-      requestSimulation({...baseParams,[def.key]:base+delta}, pathsFull, {calibrate:true}),
+      requestSimulation({...baseParams,[def.key]:pair.low}, pathsFull, {calibrate:true}),
+      requestSimulation({...baseParams,[def.key]:pair.high}, pathsFull, {calibrate:true}),
     ]);
     const ageOf=r=>{ const fm=fireQuantileMonth(r.result.fireMonths,.50); return fm===null?null:baseParams.ageNow+yearFrac(fm); };
     const ageLow=ageOf(lowR), ageHigh=ageOf(highR);
     return {
-      label:def.label, valueLow:base-delta, valueHigh:base+delta, fmt:def.fmt,
+      label:def.label, valueLow:pair.low, valueHigh:pair.high, fmt:def.fmt,
       ageLow, ageHigh,
+      // When the parameter is already at its bound, pair.low===pair.high (no
+      // usable range in that direction) and impact correctly collapses to 0
+      // instead of crashing or reporting an out-of-range simulated value.
       impact: (ageLow===null||ageHigh===null) ? Infinity : Math.abs(ageHigh-ageLow),
     };
   });
