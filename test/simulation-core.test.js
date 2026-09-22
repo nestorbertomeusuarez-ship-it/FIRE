@@ -38,6 +38,12 @@ assert.deepEqual(core.boundedPair(10, 5, 8, undefined), { low: 8, high: 15, chan
 assert.deepEqual(core.boundedPair(10, 5, undefined, 12), { low: 5, high: 12, changed: true }, 'only an upper bound');
 assert.deepEqual(core.boundedPair(0, 0, undefined, undefined), { low: 0, high: 0, changed: false }, 'zero delta is unchanged, not NaN');
 
+// ---- boundedPair: a one-sided clamp inverts when the whole raw interval sits
+// outside [min,max] (both bounds present). Each endpoint must be clamped into
+// [min,max] independently, mirroring index-publico.html's local boundedPair.
+assert.deepEqual(core.boundedPair(1400, 140, 1800, 7000), { low: 1800, high: 1800, changed: false }, 'interval entirely below min collapses to min, not an inverted pair');
+assert.deepEqual(core.boundedPair(8000, 140, 1800, 7000), { low: 7000, high: 7000, changed: false }, 'interval entirely above max collapses to max, not an inverted pair');
+
 // ---- normalizeSeed: one gate for every seed source ----
 assert.equal(core.normalizeSeed(''), null, 'empty seed is random');
 assert.equal(core.normalizeSeed('   '), null, 'blank seed is random');

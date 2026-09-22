@@ -8,7 +8,18 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
 - Canonical entry point: `index.html` (loads `simulation-core.js`).
 - Open `index.html` directly in a current browser, or serve this directory with
   any static HTTP server. No build step or package installation is required.
-- Regression tests: `node --test test/post-fix-regressions.test.js test/simulation-core.test.js test/simulation-integration.test.js`.
+- Regression tests: each file under `test/` is a standalone `node --test` entry
+  point (no shared fixtures across files). `node --test test/` runs the whole
+  directory on Linux/macOS, but fails on Windows in this repo (Node resolves
+  the bare directory as a module path, not a test glob), so on Windows run
+  each file individually instead, e.g. from PowerShell:
+  `Get-ChildItem test/*.test.js | ForEach-Object { node --test $_.FullName }`.
+  Current files: `feature-audit.test.js`, `index-publico-sensitivity.test.js`,
+  `index-sensitivity-bounds.test.js`, `input-validation.test.js`,
+  `post-fix-regressions.test.js`, `reproducibility.test.js`,
+  `simulation-core.test.js`, `simulation-integration.test.js`,
+  `simulation-jobs.test.js`, `tax-accumulation.test.js`, `ui-behaviour.test.js`,
+  `worker-parity.test.js`.
 
 ## Deploy
 

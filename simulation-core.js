@@ -135,7 +135,13 @@
   function boundedPair(value, delta, min, max) {
     // A missing bound means "unbounded on that side" (Math.max(undefined, x) is NaN).
     const lower = Number.isFinite(min) ? min : -Infinity, upper = Number.isFinite(max) ? max : Infinity;
-    const low = Math.max(lower, value - delta), high = Math.min(upper, value + delta);
+    // Clamp EACH endpoint into [lower,upper] independently (not just low up to
+    // lower and high down to upper): if the whole raw interval sits below lower
+    // (or above upper), a one-sided clamp would leave the other endpoint
+    // outside the bound. Both endpoints collapsing to the same value is the
+    // correct "already at the limit" outcome, not a bug.
+    const low = Math.min(Math.max(lower, value - delta), upper);
+    const high = Math.max(Math.min(upper, value + delta), lower);
     return { low, high, changed: low !== high };
   }
   function standardErrorProportion(p, n) { return n > 0 ? Math.sqrt(Math.max(0, p * (1 - p)) / n) : null; }

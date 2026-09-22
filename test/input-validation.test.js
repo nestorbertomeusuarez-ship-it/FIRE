@@ -5,10 +5,10 @@ const vm = require('node:vm');
 const core = require('../simulation-core.js');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
-const source = inline.slice(0, inline.indexOf('// Renderer shared by the inline chart')) + '\nglobalThis.__t={simulate,DEFAULTS,readParams,validateSimulationParams,controls:el};';
+const source = inline.slice(0, inline.indexOf('// Renderer shared by the inline chart')) + '\nglobalThis.__t={simulate,DEFAULTS,readParams,validateSimulationParams,controls:el,START_YEAR,START_MONTH,CAREER_MONTH,monthIndex};';
 const context = { console, Math, Float64Array, Int32Array, Uint8Array, Date, Infinity, NavlogCore: core, document: { getElementById: () => null }, globalThis: null };
 context.globalThis = context; vm.createContext(context); vm.runInContext(source, context, { timeout: 5000 });
-const { simulate, DEFAULTS, readParams, validateSimulationParams, controls } = context.__t;
+const { simulate, DEFAULTS, readParams, validateSimulationParams, controls, START_YEAR, START_MONTH, CAREER_MONTH, monthIndex } = context.__t;
 // simulate() clamps the published snapshots with Math.max(0, ...), so p50 >= 0 could never fail. The
 // debug hook (p.debugTrackBuckets) exposes the smallest UNCLAMPED bucket value / cost basis seen in any month.
 const finiteSeries = result => result.series.every(x => [x.p10, x.p25, x.p50, x.p75, x.p90, x.contrib50].every(Number.isFinite) && x.p50 >= 0)
@@ -101,4 +101,39 @@ for (const key of Object.keys(DEFAULTS)) {
 assert.deepEqual([...seen].sort(), Object.keys(EXPECTED_REJECTIONS).sort(), 'every listed rejection corresponds to a real control edge');
 assert.equal(rejected, Object.keys(EXPECTED_REJECTIONS).length);
 assert.ok(checked > 80, 'sweep covered the controls (' + checked + ')');
+
+// ---- growthLen headroom (index.html ~line 1377): the career can start before
+// the simulation does (careerYear at its minimum), which makes i-careerStart
+// exceed `months`. growthLen=months+4 exists to give retGrowthPow/spendGrowthPow
+// enough headroom for that. Compute the TRUE worst-case offset from the real
+// control bounds (not an assumed number) instead of guessing.
+const careerYearMin = Number((tag('careerYear').match(/min="([^"]+)"/) || [])[1]);
+const startDelayMin = Number((tag('startDelay').match(/min="([^"]+)"/) || [])[1]);
+assert.equal(careerYearMin, 2026, 'careerYear minimum must match the validated floor (RangeError check above)');
+assert.equal(startDelayMin, 0, 'startDelay sigma control never goes below 0 (startDelay itself is Math.max(0,...)-clamped)');
+// startBase = monthIndex(careerYear, CAREER_MONTH); its most negative value (the
+// career starting before the simulation) occurs at careerYear's minimum. startDelay
+// is always >= 0 (Math.max(0, round(normal(0, sigma)))), so it can only push
+// careerStart later, never earlier — the sigma control's own minimum (0) makes that
+// delay deterministically 0, giving the true minimum careerStart exactly.
+const startBaseMin = monthIndex(careerYearMin, CAREER_MONTH);
+const worstOffset = -startBaseMin; // magnitude of the earliest possible negative careerStart
+assert.ok(worstOffset <= 4, 'growthLen=months+4 headroom must cover the true worst-case offset (got ' + worstOffset + ', START_YEAR=' + START_YEAR + ' START_MONTH=' + START_MONTH + ' CAREER_MONTH=' + CAREER_MONTH + ')');
+
+// Exercise the actual worst-case parameter combination: earliest possible career
+// start (careerYear/startDelay at their minimums) over the longest horizon, with
+// a household that can never accumulate enough to voluntarily or mandatorily
+// retire (so `retired` stays false and the living-cost read at
+// spendGrowthPow[Math.max(0,monthsSinceCareer)] keeps running every month all the
+// way to i=months-1, the exact index that needs the +4 headroom). Confirm no
+// bucket ever reads NaN/undefined from the growth arrays at that boundary.
+const worstCase = {
+  ...DEFAULTS, seed: 7, careerYear: careerYearMin, startDelay: startDelayMin,
+  debugTrackBuckets: true, startEq: 0, startBtc: 0, brOn: false,
+  salFO: 280000, salCA: 420000, vida: 7000, hip: 1400, gasto: 130000, swr: 2.4,
+};
+const worstResult = simulate(worstCase, 6);
+assert.ok(finiteSeries(worstResult), 'worst-case career-start offset produces finite series and buckets');
+assert.ok(Number.isFinite(worstResult.debug.minBucket), 'worst-case career-start offset never reads NaN/undefined from the growth arrays (minBucket=' + worstResult.debug.minBucket + ')');
+assert.ok(Array.from(worstResult.fireMonthAll).every(m => m === -1), 'the worst-case household never reaches FIRE, so the growth-array read really runs for the full horizon (confirms the boundary index is actually exercised)');
 console.log('input validation: OK');
