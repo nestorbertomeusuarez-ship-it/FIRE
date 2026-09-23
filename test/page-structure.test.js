@@ -7,12 +7,12 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
-const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 // Baseline: HEAD. Phase 2 is uncommitted while this runs, so HEAD is the Phase 1 commit and the script must not differ
 // from it. (After the change is committed the comparison is trivially true; EXPECTED_IDS keeps guarding the markup.)
 let baselineHtml = null;
 try {
-  baselineHtml = execFileSync('git', ['show', 'HEAD:index.html'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+  baselineHtml = execFileSync('git', ['show', 'HEAD:index.html'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }).replace(/\r\n/g, '\n');
 } catch (error) {
   baselineHtml = null; // not a git checkout: the script comparison is skipped below
 }
