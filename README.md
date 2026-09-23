@@ -18,6 +18,7 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
   `index-publico-sensitivity.test.js`, `index-sensitivity-bounds.test.js`,
   `input-validation.test.js`, `label-painting.test.js`,
   `page-structure.test.js`, `post-fix-regressions.test.js`,
+  `remaining-audit-fixes.test.js`,
   `reproducibility.test.js`, `simulation-core.test.js`,
   `simulation-integration.test.js`, `simulation-jobs.test.js`,
   `slider-ranges.test.js`, `tax-accumulation.test.js`, `ui-behaviour.test.js`,
