@@ -76,8 +76,9 @@ const heavy = { ...DEFAULTS, seed: 3, proMode: true, taxOn: true, useIrpfBracket
 heavy.debugTrackBuckets = true;
 // Per-control expectations: every min/max is accepted EXCEPT the listed cross-field violations,
 // which must be refused with the specific Spanish message (so wrongly rejected values cannot hide).
+// careerYear@max (2040) is no longer refused: the slider now tops out at CAREER_YEAR_MAX, inside the heavy scenario's horizon.
 const EXPECTED_REJECTIONS = {
-  'ageNow@max': /horizonte/, 'horizonAge@min': /horizonte/, 'careerYear@max': /inicio/,
+  'ageNow@max': /horizonte/, 'horizonAge@min': /horizonte/,
   'allocCash@min': /100 %/, 'allocCash@max': /100 %/, 'allocBonds@min': /100 %/, 'allocBonds@max': /100 %/, 'allocEquities@min': /100 %/, 'allocEquities@max': /100 %/,
   'childStartAge@max': /hijo/, 'childEndAge@min': /hijo/
 };

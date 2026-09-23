@@ -39,16 +39,27 @@ const { loadApp } = require('./helpers/fake-app.js');
     assert.equal(Number(input.value), expected, `${id}'s real init path sets the intended DEFAULTS value, not the native min/max midpoint`);
   }
 
-  // ---- dragging allocCash alone breaks the 100% invariant, but its label must still update ----
+  // ---- allocation is now self-balancing: dragging allocCash alone keeps the 100% invariant ----
   assert.equal(el('allocCash_o').textContent, '10 %', 'sanity: default allocCash label');
   setValue('allocCash', '40');
   el('allocCash').fire('input');
   await quiesce();
-  assert.match(el('assumptionError').textContent, /100/, 'the invalid allocation is still refused with a Spanish error');
-  assert.equal(el('allocCash_o').textContent, '40 %', 'the dragged label reflects the new value immediately, even though the run was refused');
+  assert.equal(el('assumptionError').textContent, '', 'dragging cash no longer produces a 100 % error (Acciones is computed)');
+  assert.equal(el('allocCash_o').textContent, '40 %', 'the dragged label reflects the new value');
+  assert.equal(el('allocEquities_o').textContent, '40 %', 'the computed Acciones label follows (100 - 40 - 20)');
+  assert.equal(Number(el('allocEquities').value), 40, 'the disabled Acciones control holds the computed value');
+
+  // ---- a label must still update when the run is refused (cross-field child-age check, bypassing the UI sync) ----
+  const childStart = String(app.run('DEFAULTS.childStartAge')), childEnd = String(app.run('DEFAULTS.childEndAge'));
+  setValue('childStartAge', '50'); setValue('childEndAge', '40'); setValue('cashRet', '2');
+  el('cashRet').fire('input');
+  await quiesce();
+  assert.match(el('assumptionError').textContent, /hijo/, 'the invalid child ages are still refused with a Spanish error');
+  assert.equal(el('cashRet_o').textContent, '2.0 %', 'the dragged label reflects the new value immediately, even though the run was refused');
+  setValue('childStartAge', childStart); setValue('childEndAge', childEnd); setValue('cashRet', String(app.run('DEFAULTS.cashRet')));
 
   // ---- a genuinely valid drag (no cross-field constraint) still paints AND still computes ----
-  setValue('allocCash', '10'); el('allocCash').fire('input'); await quiesce(); // restore a valid allocation
+  setValue('allocCash', '10'); el('allocCash').fire('input'); await quiesce(); // restore the default allocation
   assert.equal(el('assumptionError').textContent, '', 'allocation is valid again');
   const announcedBefore = el('calcAnnounce').textHistory.length;
   setValue('ret', '7.5');

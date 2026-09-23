@@ -444,23 +444,23 @@ body:not(.pro) .pro-only{display:none}
     <h2>Supuestos adicionales editables</h2>
     <p class="hint">Todas las cifras son supuestos del usuario en euros reales. La cartera básica se diversifica entre efectivo, bonos y acciones; valida el reparto al 100 %. Rendimientos y prestaciones no son previsiones ni derechos adquiridos.</p>
     <details open><summary>Edad, horizonte y cartera</summary>
-      <div class="ctrl"><div class="row"><label for="ageNow">Edad actual</label><output id="ageNow_o" for="ageNow"></output></div><input type="range" id="ageNow" min="18" max="109" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="ageNow">Edad actual</label><output id="ageNow_o" for="ageNow"></output></div><input type="range" id="ageNow" min="18" max="75" step="1"></div>
       <div class="ctrl"><div class="row"><label for="horizonAge">Edad final (máximo 80 años desde hoy; hasta 110)</label><output id="horizonAge_o" for="horizonAge"></output></div><input type="range" id="horizonAge" min="19" max="108" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="careerYear">Año de inicio de carrera</label><output id="careerYear_o" for="careerYear"></output></div><input type="range" id="careerYear" min="2026" max="2106" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="careerYear">Año de inicio de carrera</label><output id="careerYear_o" for="careerYear"></output></div><input type="range" id="careerYear" min="2026" max="2040" step="1"></div>
       <div class="ctrl"><div class="row"><label for="allocCash">Efectivo (%)</label><output id="allocCash_o" for="allocCash"></output></div><input type="range" id="allocCash" min="0" max="100" step="1"></div>
       <div class="ctrl"><div class="row"><label for="allocBonds">Bonos (%)</label><output id="allocBonds_o" for="allocBonds"></output></div><input type="range" id="allocBonds" min="0" max="100" step="1"></div>
       <div class="ctrl"><div class="row"><label for="allocEquities">Acciones (%)</label><output id="allocEquities_o" for="allocEquities"></output></div><input type="range" id="allocEquities" min="0" max="100" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><output id="cashRet_o" for="cashRet"></output></div><input type="range" id="cashRet" min="-10" max="20" step="0.1"></div>
-      <div class="ctrl"><div class="row"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><output id="cashVol_o" for="cashVol"></output></div><input type="range" id="cashVol" min="0" max="50" step="0.1"></div>
+      <div class="ctrl"><div class="row"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><output id="cashRet_o" for="cashRet"></output></div><input type="range" id="cashRet" min="-5" max="5" step="0.1"></div>
+      <div class="ctrl"><div class="row"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><output id="cashVol_o" for="cashVol"></output></div><input type="range" id="cashVol" min="0" max="10" step="0.1"></div>
     </details>
     <details open><summary>Gastos familiares, ingresos y salud</summary>
-      <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><input type="range" id="childAnnual" min="0" max="1000000" step="10000"></div>
-      <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><input type="range" id="childStartAge" min="0" max="110" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><input type="range" id="childEndAge" min="0" max="110" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="pensionAnnual">Ingreso recurrente anual desde jubilación (€)</label><output id="pensionAnnual_o" for="pensionAnnual"></output></div><input type="range" id="pensionAnnual" min="0" max="10000000" step="100000"></div>
-      <div class="ctrl"><div class="row"><label for="pensionStartAge">Edad de inicio del ingreso supuesto</label><output id="pensionStartAge_o" for="pensionStartAge"></output></div><input type="range" id="pensionStartAge" min="0" max="110" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><output id="healthcareAnnual_o" for="healthcareAnnual"></output></div><input type="range" id="healthcareAnnual" min="0" max="1000000" step="10000"></div>
-      <div class="ctrl"><div class="row"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><output id="healthcareStartAge_o" for="healthcareStartAge"></output></div><input type="range" id="healthcareStartAge" min="0" max="110" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><input type="range" id="childAnnual" min="0" max="30000" step="500"></div>
+      <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><input type="range" id="childStartAge" min="18" max="80" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><input type="range" id="childEndAge" min="19" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="pensionAnnual">Ingreso recurrente anual desde jubilación (€)</label><output id="pensionAnnual_o" for="pensionAnnual"></output></div><input type="range" id="pensionAnnual" min="0" max="60000" step="500"></div>
+      <div class="ctrl"><div class="row"><label for="pensionStartAge">Edad de inicio del ingreso supuesto</label><output id="pensionStartAge_o" for="pensionStartAge"></output></div><input type="range" id="pensionStartAge" min="55" max="80" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><output id="healthcareAnnual_o" for="healthcareAnnual"></output></div><input type="range" id="healthcareAnnual" min="0" max="30000" step="500"></div>
+      <div class="ctrl"><div class="row"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><output id="healthcareStartAge_o" for="healthcareStartAge"></output></div><input type="range" id="healthcareStartAge" min="40" max="90" step="1"></div>
       <div class="ctrl"><label for="lumpSums">Pagos únicos (JSON: lista de año, mes e importe €)</label><textarea id="lumpSums" rows="3" maxlength="12000" aria-describedby="lumpSumHelp">[]</textarea><p id="lumpSumHelp" class="hint">Ejemplo: [{"year":2030,"month":6,"amount":-5000}]. Importe negativo = gasto; máximo 100 eventos y ±10 M€ por evento.</p></div>
     </details>
     <p id="assumptionError" role="alert" aria-live="assertive"></p>
@@ -644,7 +644,7 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="brNet">Brasil, tu 50 % neto de impuestos (€)</label><output id="brNet_o" for="brNet"></output></div>
-        <input type="range" id="brNet" min="0" max="450000" step="5000">
+        <input type="range" id="brNet" min="0" max="450000" step="1000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="brStart">Primera venta en Brasil</label><output id="brStart_o" for="brStart"></output></div>
@@ -662,7 +662,7 @@ body:not(.pro) .pro-only{display:none}
       <p class="grouphint">Lo que ya tienes ahorrado, repartido en dos cestas con comportamiento distinto: renta variable tradicional y Bitcoin.</p>
       <div class="ctrl">
         <div class="row"><label for="startEq">Renta variable inicial (€)</label><output id="startEq_o" for="startEq"></output></div>
-        <input type="range" id="startEq" min="0" max="400000" step="2500">
+        <input type="range" id="startEq" min="0" max="400000" step="500">
         <p class="hint">Este importe se modela como 100 % renta variable; no hay una reserva de efectivo separada.</p>
       </div>
       <div class="ctrl">
@@ -697,11 +697,11 @@ body:not(.pro) .pro-only{display:none}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="basicFO">Básico copiloto (AED/mes)</label><output id="basicFO_o" for="basicFO"></output></div>
-        <input type="range" id="basicFO" min="18000" max="40000" step="250">
+        <input type="range" id="basicFO" min="18000" max="40000" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="basicCA">Básico comandante (AED/mes)</label><output id="basicCA_o" for="basicCA"></output></div>
-        <input type="range" id="basicCA" min="28000" max="60000" step="250">
+        <input type="range" id="basicCA" min="28000" max="60000" step="50">
       </div>
       <div class="ctrl">
         <div class="row"><label for="provCo">Aportación de Emirates</label><output id="provCo_o" for="provCo"></output></div>
@@ -1186,13 +1186,15 @@ function validateSimulationParams(raw){
     NavlogCore.validateHorizon({currentAge:p.ageNow,endAge:p.horizonAge,startAge:p.ageNow});
   }catch(e){ throw new RangeError(translateValidation(e)); }
   const lastCareerYear=START_YEAR+(p.horizonAge-p.ageNow);
-  if(!Number.isInteger(p.careerYear)||p.careerYear<2026||p.careerYear>Math.min(2106,lastCareerYear)) throw new RangeError('El año de inicio debe ser un entero dentro del horizonte.');
+  if(!Number.isInteger(p.careerYear)||p.careerYear<2026||p.careerYear>Math.min(CAREER_YEAR_MAX,lastCareerYear)) throw new RangeError('El año de inicio debe ser un entero dentro del horizonte.');
   // An interval that starts after the horizon simply never applies, so ages are only
   // bounded by the control range (0-110), not by the horizon.
   for(const key of ['childStartAge','childEndAge','pensionStartAge','healthcareStartAge']) if(!Number.isInteger(p[key])||p[key]<0||p[key]>110) throw new RangeError('Las edades adicionales deben ser enteros entre 0 y 110.');
   if(p.childEndAge<p.childStartAge) throw new RangeError('La edad final del gasto por hijo debe ser posterior a la inicial.');
   return p;
 }
+// Latest career start offered by the careerYear slider (keep in sync with its max in the markup).
+const CAREER_YEAR_MAX=2040;
 function syncHorizonControl(){
   const horizon=el.horizonAge, career=el.careerYear;
   if(!horizon) return;
@@ -1204,10 +1206,42 @@ function syncHorizonControl(){
   if(!Number.isFinite(selected) || selected<min) horizon.value=String(min);
   else if(selected>max) horizon.value=String(max);
   if(career){
-    const careerMax=Math.min(2106,START_YEAR+(Number(horizon.value)-current));
+    const careerMax=Math.min(CAREER_YEAR_MAX,START_YEAR+(Number(horizon.value)-current));
     career.max=String(careerMax);
     if(Number(career.value)>careerMax) career.value=String(careerMax);
   }
+}
+
+// Efectivo + Bonos + Acciones must add up to 100: Acciones is the computed remainder.
+// The static min/max in the markup stay 0..100; only allocBonds.max is dynamic (JS-only).
+function syncAllocation(){
+  const cash=el.allocCash, bonds=el.allocBonds, eq=el.allocEquities;
+  if(!cash || !bonds || !eq) return;
+  const c=Math.min(100,Math.max(0,Number(cash.value)||0));
+  const room=100-c;
+  bonds.max=String(room);
+  const b=Math.min(room,Math.max(0,Number(bonds.value)||0));
+  if(Number(bonds.value)!==b) bonds.value=String(b);
+  eq.disabled=true;
+  eq.value=String(100-c-b);
+}
+// Keeps the child spending interval non-empty: the end age is always above the start age.
+function syncChildAges(){
+  const start=el.childStartAge, end=el.childEndAge;
+  if(!start || !end) return;
+  const min=Number(start.value)+1;
+  if(!Number.isFinite(min)) return;
+  end.min=String(min);
+  if(Number(end.value)<min) end.value=String(min);
+}
+// Names the controls whose final value differs from the requested one (the browser silently
+// snaps/clamps range inputs). intended: {id:number}; actual: {id:value as shown by the control}.
+function describeAdjustedValues(intended, actual){
+  const changed=Object.keys(intended).filter(id=>Math.abs(Number(actual[id])-intended[id])>1e-9 || !Number.isFinite(Number(actual[id])));
+  if(!changed.length) return '';
+  const shown=changed.slice(0,6).join(', ');
+  const extra=changed.length>6 ? ' y '+(changed.length-6)+' más' : '';
+  return 'Valores ajustados al rango actual: '+shown+extra+'.';
 }
 
 // Reads every control's raw value into a plain object with no cross-field validation.
@@ -2470,6 +2504,7 @@ function buildWorkerSource(){
     '"use strict";',
     'const START_YEAR='+START_YEAR+', START_MONTH='+START_MONTH+';',
     'const CAREER_YEAR='+CAREER_YEAR+', CAREER_MONTH='+CAREER_MONTH+';',
+    'const CAREER_YEAR_MAX='+CAREER_YEAR_MAX+';',
     'const FS1_GAP='+FS1_GAP+';',
     'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
     'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
@@ -2625,14 +2660,14 @@ async function runFullPrecision(p){
 // the sliders are currently set to, holding everything else fixed — a classic
 // one-at-a-time sensitivity/tornado analysis.
 const SENSITIVITY_PARAMS = [
-  {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, min:-10, max:20, fmt:v=>v.toFixed(1)+' %'},
-  {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, min:0, max:60, fmt:v=>v.toFixed(1)+' %'},
-  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-20, max:30, fmt:v=>v.toFixed(1)+' %'},
-  {key:'vida', label:'Vida en Dubái (gasto mensual)', delta:p=>p.vida*0.1, fmt:v=>eur(v)+'/mes'},
-  {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, min:1, max:8, fmt:v=>v.toFixed(2)+' %'},
-  {key:'salG', label:'Crecimiento salarial anual', delta:0.5, min:-5, max:10, fmt:v=>v.toFixed(1)+' %'},
-  {key:'startDelay', label:'Retraso en empezar la carrera', delta:6, min:0, max:36, fmt:v=>v.toFixed(0)+' meses'},
-  {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, min:0, max:3000, fmt:v=>eur(v)+'/mes'},
+  {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, min:2, max:9, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, min:0, max:26, fmt:v=>v.toFixed(1)+' %'},
+  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-10, max:20, fmt:v=>v.toFixed(1)+' %'},
+  {key:'vida', label:'Vida en Dubái (gasto mensual)', delta:p=>p.vida*0.1, min:1800, max:7000, fmt:v=>eur(v)+'/mes'},
+  {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, min:2.4, max:4.6, fmt:v=>v.toFixed(2)+' %'},
+  {key:'salG', label:'Crecimiento salarial anual', delta:0.5, min:-1, max:2.5, fmt:v=>v.toFixed(1)+' %'},
+  {key:'startDelay', label:'Retraso en empezar la carrera', delta:6, min:0, max:18, fmt:v=>v.toFixed(0)+' meses'},
+  {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, min:0, max:1400, fmt:v=>eur(v)+'/mes'},
 ];
 
 // Runs each SENSITIVITY_PARAMS entry both up and down from baseParams, at the
@@ -2968,6 +3003,10 @@ ids.forEach(k=>{
 el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
 if(el.ageNow) el.ageNow.addEventListener('input',syncHorizonControl);
 if(el.horizonAge) el.horizonAge.addEventListener('input',syncHorizonControl);
+if(el.allocCash) el.allocCash.addEventListener('input',syncAllocation);
+if(el.allocBonds) el.allocBonds.addEventListener('input',syncAllocation);
+if(el.childStartAge) el.childStartAge.addEventListener('input',syncChildAges);
+if(el.childEndAge) el.childEndAge.addEventListener('input',syncChildAges);
 // ccaaPreset is a UI shortcut, not a simulate() input: it just pre-fills the two
 // sliders that actually drive the calculation, which stay editable afterward.
 const CCAA_PRESETS=[
@@ -2988,6 +3027,8 @@ document.getElementById('reset').addEventListener('click',()=>{
   ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
   document.body.classList.toggle('pro',DEFAULTS.proMode);
   syncHorizonControl();
+  syncAllocation();
+  syncChildAges();
   safeRun('full');
 });
 
@@ -3147,16 +3188,24 @@ function loadScenario(id){
   if(!sc) return;
   // Stored scenarios are untrusted data: only own properties of the expected type are
   // applied (a bad value would otherwise surface as NaN or an unrelated control state).
+  // Drop the dynamic bounds first so they cannot clamp values that are valid together.
+  if(el.allocBonds) el.allocBonds.max='100';
+  if(el.childEndAge) el.childEndAge.min='19';
+  const intended={};
   ids.forEach(k=>{
     const n=el[k]; if(!n || !Object.prototype.hasOwnProperty.call(sc.params,k)) return;
     const value=sc.params[k];
     if(n.type==='checkbox'){ if(typeof value==='boolean') n.checked=value; }
     else if(k==='seed'){ if(value===null || typeof value==='number') n.value=value===null ? '' : String(value); }
     else if(k==='lumpSums'){ if(typeof value==='string') n.value=value; else if(Array.isArray(value)) n.value=JSON.stringify(value); }
-    else if(typeof DEFAULTS[k]==='number' && typeof value==='number' && Number.isFinite(value)) n.value=value;
+    else if(typeof DEFAULTS[k]==='number' && typeof value==='number' && Number.isFinite(value)){ n.value=value; if(k!=='allocEquities') intended[k]=value; }
   });
   document.body.classList.toggle('pro', sc.params.proMode===true);
   syncHorizonControl();
+  syncAllocation();
+  syncChildAges();
+  const finalValues={}; Object.keys(intended).forEach(k=>{ finalValues[k]=el[k].value; });
+  showScenarioMsg(describeAdjustedValues(intended,finalValues));
   initVisibleLabels();
   safeRun('full');
 }
@@ -3234,6 +3283,8 @@ renderModelLimits();
 ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFAULTS[k];else n.value=DEFAULTS[k];});
 document.body.classList.toggle('pro',DEFAULTS.proMode);
 syncHorizonControl();
+syncAllocation();
+syncChildAges();
 initVisibleLabels();
 safeRun('full').catch(e=>{
   // Keep the controls usable and values visible even if a browser-specific runtime issue occurs.
