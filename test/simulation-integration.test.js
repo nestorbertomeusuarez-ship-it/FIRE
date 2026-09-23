@@ -27,7 +27,7 @@ assert.throws(()=>simulate({...DEFAULTS,cashRet:NaN},2),/cashRet.*n.mero finito/
 assert.match(html,/function serializeScenarioParams\(params\)/,'scenario saves serialize reconstructed payment schedules');
 assert.match(html,/exportScenarios[\s\S]*?addEventListener/,'scenario export control is wired');
 assert.match(html,/exportCsv[\s\S]*?addEventListener/,'report export control is wired');
-assert.match(html,/id="ageNow"[^>]*min="18"[^>]*max="109"/,'current age is an editable bounded control');
+assert.match(html,/id="ageNow"[^>]*min="18"[^>]*max="75"/,'current age is an editable bounded control');
 assert.match(html,/function syncHorizonControl\(\)[\s\S]*?current\+80/,'horizon maximum is synchronized to the engine limit');
 const syncSource=inline.slice(inline.indexOf('function syncHorizonControl(){'),inline.indexOf('\nfunction readParams(){'));
 const loadSource=inline.slice(inline.indexOf('function loadScenario(id){'),inline.indexOf('\nfunction deleteScenario',inline.indexOf('function loadScenario(id){')));
@@ -35,7 +35,7 @@ const scenarioControls={
   ageNow:{type:'number',value:'60'}, horizonAge:{type:'number',value:'109'}, careerYear:{type:'number',value:'2080'},
   proMode:{type:'checkbox',checked:false}, seed:{type:'number',value:''}
 };
-const scenarioContext={Number,String,Math,Object,JSON,Array,START_YEAR:2026,el:scenarioControls,ids:['ageNow','horizonAge','careerYear','proMode','seed'],
+const scenarioContext={Number,String,Math,Object,JSON,Array,START_YEAR:2026,CAREER_YEAR_MAX:2040,showScenarioMsg:()=>{},el:scenarioControls,ids:['ageNow','horizonAge','careerYear','proMode','seed'],
   DEFAULTS:{ageNow:28,horizonAge:90,careerYear:2027,proMode:false,seed:null},
   savedScenarios:[{id:'saved-at-28',params:{ageNow:28,horizonAge:90,careerYear:2080,proMode:false}},
     {id:'hostile',params:{ageNow:'evil',horizonAge:true,careerYear:NaN,proMode:5,seed:-3,__proto__:{ageNow:1}}},
@@ -47,7 +47,7 @@ scenarioContext.loadScenarioForTest('saved-at-28');
 assert.equal(scenarioControls.ageNow.value,28,'scenario load restores its saved current age');
 assert.equal(scenarioControls.horizonAge.value,90,'scenario load restores its saved horizon');
 assert.equal(scenarioControls.horizonAge.max,'108','loaded age synchronizes the 80-year horizon cap');
-assert.equal(scenarioControls.careerYear.max,'2088','loaded age and horizon synchronize the career-year cap');
+assert.equal(scenarioControls.careerYear.max,'2040','loaded age and horizon synchronize the career-year cap (capped by CAREER_YEAR_MAX)');
 scenarioControls.ageNow.value='60'; scenarioControls.horizonAge.value='80'; scenarioControls.careerYear.value='2040';
 scenarioContext.loadScenarioForTest('hostile');
 assert.equal(scenarioControls.ageNow.value,'60','a non-numeric saved age is ignored, never written into the control');
