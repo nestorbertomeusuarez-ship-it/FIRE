@@ -378,7 +378,7 @@ section[id],#notas{scroll-margin-top:88px}
 
   <div class="partBand" aria-hidden="true">Resultados</div>
   <section id="resultados">
-    <h2>Waypoints de patrimonio</h2>
+    <h2>Hitos de patrimonio</h2>
     <table>
       <thead>
         <tr><th>Hito</th><th>Mediana</th><th>P10</th><th>P90</th></tr>
@@ -395,7 +395,7 @@ section[id],#notas{scroll-margin-top:88px}
       </thead>
       <tbody id="ruinTable"></tbody>
     </table>
-    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación (2092), sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
+    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación, sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
   </section>
 
   <section>
@@ -466,7 +466,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
     </div>
     <div class="chartbox">
-      <canvas id="chartModalCanvas" width="1600" height="900" role="img" aria-label="Vista ampliada de la trayectoria. Usa la tabla Waypoints de patrimonio como alternativa textual."></canvas>
+      <canvas id="chartModalCanvas" width="1600" height="900" role="img" aria-label="Vista ampliada de la trayectoria. Usa la tabla Hitos de patrimonio como alternativa textual."></canvas>
       <div class="chart-tip" id="chartTipModal"></div>
     </div>
     <div class="legend" id="legendModal">
@@ -957,7 +957,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o" for="glideTargetYear"></output></div>
-        <input type="range" id="glideTargetYear" min="2027" max="2092" step="1">
+        <input type="range" id="glideTargetYear" min="2027" max="2106" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="glideStartYears">Años antes de empezar a des-arriesgar</label><output id="glideStartYears_o" for="glideStartYears"></output></div>
@@ -1514,8 +1514,8 @@ function simulate(p, paths){
   const trackBuckets=!!p.debugTrackBuckets; let minBucket=Infinity;
   const earlyWealth=trackBuckets ? new Float64Array(paths) : null; // wealth after the first year, per path
   const srrShockActive=!!p.srrShockOn;
-  const srrShockMonths=p.srrShockMonths||12;
-  const srrShockMonthlyMult=Math.pow(1+(p.srrShockPct||-30)/100, 1/srrShockMonths);
+  const srrShockMonths=Number.isFinite(p.srrShockMonths)&&p.srrShockMonths>0?p.srrShockMonths:12;
+  const srrShockMonthlyMult=Math.pow(1+(Number.isFinite(p.srrShockPct)?p.srrShockPct:-30)/100, 1/srrShockMonths);
   // Not PRO-gated, like profitShareWeeks/gratuityYears: off by default, lives
   // in the base "Mercado" group next to the theoretical return/vol sliders it
   // replaces for the equity leg.
@@ -1853,7 +1853,7 @@ function simulate(p, paths){
         if(!licenseLossPath && total+gratuityEUR>=target && !ruinedPath){
           retired=true;
           fireMonth[k]=i;
-          if(gratuityActive) vEq+=gratuityEUR;
+          if(gratuityActive){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           curSpendAnnual=p.gasto;
           // Only a voluntary FIRE arms the shock — the test is specifically "what if
           // markets crash right when I choose to retire", not a forced exit.
@@ -1866,7 +1866,7 @@ function simulate(p, paths){
           retired=true;
           forcedOutPath=true;
           fireMonth[k]=i;
-          if(gratuityActive) vEq+=gratuityEUR;
+          if(gratuityActive){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           curSpendAnnual=p.gasto;
         }
       } else if(!ruinedPath && (!lifeActive || i<=lifeMonth)){
@@ -2013,7 +2013,7 @@ function simulate(p, paths){
             const move=Math.min(vCons,-diff);
             const basisMoved=basisCons*(move/vCons);
             const riskySum=(vEq+vBtc+(goldActive?vGold:0))||1;
-            const shareEq=vEq/riskySum||1, shareBtc=vBtc/riskySum, shareGold=goldActive?vGold/riskySum:0;
+            const shareEq=(vEq+vBtc+(goldActive?vGold:0))>0?vEq/riskySum:1, shareBtc=vBtc/riskySum, shareGold=goldActive?vGold/riskySum:0;
             vCons-=move; basisCons-=basisMoved;
             vEq+=move*shareEq; vBtc+=move*shareBtc; if(goldActive) vGold+=move*shareGold;
             basisEq+=basisMoved*shareEq; basisBtc+=basisMoved*shareBtc; if(goldActive) basisGold+=basisMoved*shareGold;
@@ -2938,8 +2938,7 @@ async function run(mode){
   const pathsUsed=r.fireMonthAll.length;
   const successRate=r.fireMonths.length/pathsUsed;
 
-  lastAgeMedText=fm50===null?'—':String(Math.floor(p.ageNow+yearFrac(fm50)));
-  lastSuccessRate=successRate;
+  if(!isPreview){ lastAgeMedText=fm50===null?'—':String(Math.floor(p.ageNow+yearFrac(fm50))); lastSuccessRate=successRate; }
   document.getElementById('ageMed').textContent=fm50===null?'—':Math.floor(p.ageNow+yearFrac(fm50));
   document.getElementById('yearMed').textContent=fm50===null?'no FIRE exitoso':ymdLabel(fm50)+' · P50 · éxito '+Math.round(successRate*100)+'%';
   document.getElementById('ageP10').textContent=fmConservative===null?'—':Math.floor(p.ageNow+yearFrac(fmConservative));
@@ -2971,7 +2970,7 @@ async function run(mode){
   const licenseLossRate=pathsUsed?licenseLossCount/pathsUsed:0;
   renderOutcomeDashboard(cohortCounts,pathsUsed);
 
-  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1)));
+  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1), p.proMode&&p.lifeExpOn ? Math.round((p.lifeExp-p.ageNow)*12)+1 : Infinity));
   renderRuinTable(ruinCurve);
   ruinChart.update(ruinCurve, null);
 
@@ -3215,7 +3214,8 @@ function serializeScenarioParams(params){
 }
 
 function saveCurrentScenario(){
-  const currentParams=readParams();
+  let currentParams;
+  try { currentParams=readParams(); } catch(err){ reportError(err); return; }
   if(activeRunsPending || fullRunsPending || !lastSeries || !lastFullParams || !NavlogCore.sameParameterSnapshot(currentParams,lastFullParams)){
     showScenarioMsg('Espera a que termine el cálculo completo de los parámetros actuales antes de guardar.'); return;
   }
@@ -3249,8 +3249,8 @@ function loadScenario(id){
   if(el.childEndAge) el.childEndAge.min='19';
   const intended={};
   ids.forEach(k=>{
-    const n=el[k]; if(!n || !Object.prototype.hasOwnProperty.call(sc.params,k)) return;
-    const value=sc.params[k];
+    const n=el[k]; if(!n) return;
+    const value=Object.prototype.hasOwnProperty.call(sc.params,k) ? sc.params[k] : DEFAULTS[k];
     if(n.type==='checkbox'){ if(typeof value==='boolean') n.checked=value; }
     else if(k==='seed'){ if(value===null || typeof value==='number') n.value=value===null ? '' : String(value); }
     else if(k==='lumpSums'){ if(typeof value==='string') n.value=value; else if(Array.isArray(value)) n.value=JSON.stringify(value); }

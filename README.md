@@ -14,11 +14,13 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
   the bare directory as a module path, not a test glob), so on Windows run
   each file individually instead, e.g. from PowerShell:
   `Get-ChildItem test/*.test.js | ForEach-Object { node --test $_.FullName }`.
-  Current files: `feature-audit.test.js`, `index-publico-sensitivity.test.js`,
-  `index-sensitivity-bounds.test.js`, `input-validation.test.js`,
-  `post-fix-regressions.test.js`, `reproducibility.test.js`,
-  `simulation-core.test.js`, `simulation-integration.test.js`,
-  `simulation-jobs.test.js`, `tax-accumulation.test.js`, `ui-behaviour.test.js`,
+  Current files: `engine-audit-fixes.test.js`, `feature-audit.test.js`,
+  `index-publico-sensitivity.test.js`, `index-sensitivity-bounds.test.js`,
+  `input-validation.test.js`, `label-painting.test.js`,
+  `page-structure.test.js`, `post-fix-regressions.test.js`,
+  `reproducibility.test.js`, `simulation-core.test.js`,
+  `simulation-integration.test.js`, `simulation-jobs.test.js`,
+  `slider-ranges.test.js`, `tax-accumulation.test.js`, `ui-behaviour.test.js`,
   `worker-parity.test.js`.
 
 ## Deploy

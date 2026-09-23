@@ -109,7 +109,7 @@ test('parts appear in the agreed order', () => {
   assert.ok(idAt('calcAnnounce') < idAt('resultados'), 'status block is above Resultados');
 
   assertAscending([
-    ['#resultados', idAt('resultados')], ['Waypoints', at('<h2>Waypoints de patrimonio</h2>')], ['#wpts', idAt('wpts')],
+    ['#resultados', idAt('resultados')], ['Waypoints', at('<h2>Hitos de patrimonio</h2>')], ['#wpts', idAt('wpts')],
     ['Riesgo de ruina', at('<h2>Riesgo de ruina tras el FIRE</h2>')], ['#ruinTable', idAt('ruinTable')],
     ['#chart', idAt('chart')], ['#contribChart', idAt('contribChart')], ['#ruinChartCanvas', idAt('ruinChartCanvas')],
     ['#chartModal', idAt('chartModal')], ['#outcomesDashboard', idAt('outcomesDashboard')], ['#parametros', idAt('parametros')],
