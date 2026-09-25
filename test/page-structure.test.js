@@ -234,3 +234,20 @@ test('no position-dependent wording remains in the rendered markup', () => {
     assert.equal(hit, null, 'position-dependent wording remains: ' + (hit && hit[0]));
   }
 });
+
+// U5/U6: the same check, but over the rendered strings the inline script builds at runtime
+// (summarizeContribution, renderOutcomeDashboard, etc.), which the markup-only check above
+// never sees. \b-bounded arriba/abajo avoid false positives on words like "trabajo"; the
+// phrase patterns are specific enough (tabla/fila/gráfico/sección + anterior/siguiente) not
+// to catch ordinary prose like "los cinco años siguientes".
+test('no position-dependent wording remains in strings the inline script renders', () => {
+  const script = inlineScript(html);
+  const forbidden = [
+    /\barriba\b/i, /\babajo\b/i, /tabla (anterior|siguiente)/i, /fila (anterior|siguiente)/i,
+    /gr[áa]fico (anterior|siguiente)/i, /secci[óo]n (anterior|siguiente)/i,
+  ];
+  for (const pattern of forbidden) {
+    const hit = script.match(new RegExp('.{0,40}' + pattern.source + '.{0,20}', pattern.flags));
+    assert.equal(hit, null, 'position-dependent wording remains in the inline script: ' + (hit && hit[0]));
+  }
+});
