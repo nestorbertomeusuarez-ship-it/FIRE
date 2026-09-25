@@ -643,11 +643,12 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcRet">Rentabilidad real media de BTC</label><output id="btcRet_o" for="btcRet"></output></div>
-        <input type="range" id="btcRet" min="-10" max="20" step="0.5">
+        <input type="range" id="btcRet" min="-10" max="30" step="0.5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcVol">Volatilidad de BTC</label><output id="btcVol_o" for="btcVol"></output></div>
-        <input type="range" id="btcVol" min="20" max="110" step="2">
+        <input type="range" id="btcVol" min="20" max="110" step="1">
+        <p class="hint">La rentabilidad es una media: con mucha volatilidad, la ruta típica (mediana) crece bastante menos (≈ media − volatilidad²/2). Con 10 % de media y 55 % de volatilidad la mediana queda cerca de −5 % al año; con 70 % de volatilidad caería a ≈ −13 %.</p>
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o" for="btcRho"></output></div>
@@ -1163,7 +1164,7 @@ const DEFAULTS = {
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
   gasto:60000, swr:3.25,
   startEq:3000, startBtc:15000,
-  btcRet:5, btcVol:70, btcRho:40, btcAporte:0,
+  btcRet:10, btcVol:55, btcRho:40, btcAporte:0,
   basicFO:26485, basicCA:40100, provCo:12, provOn:true, gratuityYears:0,
 
   // ---- Modo PRO ----
@@ -2878,7 +2879,7 @@ async function runFullPrecision(p, onPathsKnown){
 const SENSITIVITY_PARAMS = [
   {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, min:2, max:9, fmt:v=>v.toFixed(1)+' %'},
   {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, min:0, max:26, fmt:v=>v.toFixed(1)+' %'},
-  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-10, max:20, fmt:v=>v.toFixed(1)+' %'},
+  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-10, max:30, fmt:v=>v.toFixed(1)+' %'},
   {key:'vida', label:'Vida en Dubái (gasto mensual)', delta:p=>p.vida*0.1, min:1800, max:7000, fmt:v=>eur(v)+'/mes'},
   {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, min:2.4, max:4.6, fmt:v=>v.toFixed(2)+' %'},
   {key:'salG', label:'Crecimiento salarial anual', delta:0.5, min:-1, max:2.5, fmt:v=>v.toFixed(1)+' %'},
