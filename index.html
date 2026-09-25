@@ -788,6 +788,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="ctrl"><div class="row"><label for="feeEq">TER renta variable</label><output id="feeEq_o" for="feeEq"></output></div><input type="range" id="feeEq" min="0" max="3" step="0.01"></div>
       <div class="ctrl"><div class="row"><label for="feeBtc">Coste BTC</label><output id="feeBtc_o" for="feeBtc"></output></div><input type="range" id="feeBtc" min="0" max="3" step="0.01"></div>
       <div class="ctrl"><div class="row"><label for="feeGold">Coste oro</label><output id="feeGold_o" for="feeGold"></output></div><input type="range" id="feeGold" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeProv">Coste Provident</label><output id="feeProv_o" for="feeProv"></output></div><input type="range" id="feeProv" min="0" max="3" step="0.01"></div>
       <div class="ctrl">
         <div class="row"><label for="burrTaxRate">Tipo sobre la venta de Burriana</label><output id="burrTaxRate_o" for="burrTaxRate"></output></div>
         <p class="hint">Burriana es un inmueble en España: Hacienda grava su venta aunque todavía no residas allí ni hayas activado la Ley Beckham — la exclusión de Beckham solo cubre renta y patrimonio de fuera de España, nunca un inmueble español. Por defecto 19 %, el tipo fijo para no residentes UE/EEE sobre plusvalías inmobiliarias (24 % fuera de la UE/EEE). Brasil no lleva este tratamiento: su cifra ya viene neta de impuestos.</p>
@@ -1224,7 +1225,7 @@ const DEFAULTS = {
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
-  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0, feeCons:0, feeEq:0, feeBtc:0, feeGold:0, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
+  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0, feeCons:0, feeEq:0, feeBtc:0, feeGold:0, feeProv:0, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
   lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
@@ -1522,7 +1523,7 @@ function paintLabels(p){
   set('taxRate',p.taxRate.toFixed(1)+' %');
   set('taxRateProv',p.taxRateProv.toFixed(1)+' %');
   set('taxRegion',['Cataluña','Comunitat Valenciana'][Math.round(p.taxRegion)]);
-  for(const key of ['feeCash','feeCons','feeEq','feeBtc','feeGold']) set(key,p[key].toFixed(2)+' %/año');
+  for(const key of ['feeCash','feeCons','feeEq','feeBtc','feeGold','feeProv']) set(key,p[key].toFixed(2)+' %/año');
   set('burrTaxRate',p.burrTaxRate.toFixed(1)+' %');
   set('lolAnnualProb',p.lolAnnualProb.toFixed(1)+' %/año');
   set('lolPremiumMonthly',eur(p.lolPremiumMonthly)+'/mes');
@@ -1836,7 +1837,7 @@ function simulate(p, paths){
       const rEqEff=inflActive ? rEq-inflShockM*(1-eqInflBeta) : rEq;
       const rBtcEff=inflActive ? rBtc-inflShockM*(1-eqInflBeta) : rBtc;
 
-      vEq*=1+NavlogCore.netMonthlyReturn(rEqEff,p.feeEq); vBtc*=1+NavlogCore.netMonthlyReturn(rBtcEff,p.feeBtc); vProv*=1+rEqEff;
+      vEq*=1+NavlogCore.netMonthlyReturn(rEqEff,p.feeEq); vBtc*=1+NavlogCore.netMonthlyReturn(rBtcEff,p.feeBtc); vProv*=1+NavlogCore.netMonthlyReturn(rEqEff,p.feeProv);
       if(goldActive){
         const z3=gauss();
         const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
