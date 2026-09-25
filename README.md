@@ -14,16 +14,21 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
   the bare directory as a module path, not a test glob), so on Windows run
   each file individually instead, e.g. from PowerShell:
   `Get-ChildItem test/*.test.js | ForEach-Object { node --test $_.FullName }`.
-  Current files: `end-of-service.test.js`, `engine-audit-fixes.test.js`,
+  Current files: `calendar-final-year.test.js`, `end-of-service.test.js`,
+  `engine-audit-fixes.test.js`,
   `feature-audit.test.js`, `index-publico-gratuity.test.js`,
   `index-publico-sensitivity.test.js`,
   `index-sensitivity-bounds.test.js`, `input-validation.test.js`,
   `label-painting.test.js`, `lol-emirates.test.js`, `manual-calc.test.js`,
-  `page-structure.test.js`, `param-unification.test.js`, `portfolio-costs.test.js`,
-  `post-fix-regressions.test.js`, `remaining-audit-fixes.test.js`,
-  `reproducibility.test.js`, `simulation-core.test.js`,
+  `page-structure.test.js`, `pagenav-fade.test.js`, `param-unification.test.js`,
+  `paths-full-max-memory.test.js`, `portfolio-costs.test.js`,
+  `post-fix-regressions.test.js`, `print-css.test.js`,
+  `remaining-audit-fixes.test.js`,
+  `reproducibility.test.js`, `sensitivity-progress.test.js`,
+  `simulation-core.test.js`,
   `simulation-integration.test.js`, `simulation-jobs.test.js`,
-  `slider-ranges.test.js`, `tax-accumulation.test.js`, `ui-behaviour.test.js`,
+  `slider-ranges.test.js`, `small-buttons-min-height.test.js`,
+  `tax-accumulation.test.js`, `ui-behaviour.test.js`,
   `wd-strategy-visibility.test.js`, `withdrawal-strategies.test.js`,
   `worker-parity.test.js`.
 
@@ -66,7 +71,9 @@ file is retained as a historical comparison and is not the canonical app.
 - The outcome dashboard separates voluntary FIRE, post-FIRE ruin, forced retirement, loss of licence, and routes that do not retire in the selected horizon.
 - Modo PRO offers six mutually exclusive withdrawal strategies (SWR fijo, Guyton-Klinger, go-go/slow-go/no-go phases, VPW/Bogleheads, floor & ceiling/Bengen, and Yield Shield), plus an independent Prime Harvesting toggle that can combine with any of them and applies the same way whether retirement is voluntary, mandatory, or a Loss-of-License forced exit.
 - Sliders/inputs no longer recalculate in real time: they only repaint labels and mark the result stale (visible notice + dimmed results). Press "Calcular" to run the full-precision simulation, with a precision selector ("Rápida" ~4s default, "Alta" ~12s, "Máxima" ~30s, or a custom 5-120s target) that trades wait time for more simulated paths. Reset and loading a saved scenario still recalculate immediately, as does the initial page load.
-- Save up to four local scenarios. They can be exported/imported as validated JSON. A CSV report contains the current full-precision assumptions and percentile series; printing the page can be saved as PDF by the browser.
+- The yearly percentile series (chart, CSV, Hitos table) always includes the run's own final month as its last point, even when that month is not December (an integer-age horizon starting in September rarely lands there); wealth tax, the glide-path rebalance, and the Prime Harvesting sweep also apply in that final partial year when active.
+- "Calcular sensibilidad" shows live progress ("Calculando… X de N simulaciones") as each parameter's paired low/high run finishes, instead of a static message for the ~30-60s the full sweep can take.
+- Save up to four local scenarios. They can be exported/imported as validated JSON. A CSV report contains the current full-precision assumptions and percentile series; printing the page can be saved as PDF by the browser (the interactive parameters section is hidden in the printed/PDF output in favor of the printed assumptions summary).
 - Current embedded-data review date: 2026-09-21. Source attributions in the app are informational only. Before relying on any tax, pension, salary, healthcare, or market figure, replace it with a current, personally verified source.
 
 ## Privacy and saved scenarios

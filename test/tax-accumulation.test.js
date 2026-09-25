@@ -18,10 +18,13 @@ const params = { ...DEFAULTS, seed: 1, proMode: true, startEq: 400e6, startBtc: 
   vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0,
   allocCash: 0, allocBonds: 0, allocEquities: 100, horizonAge: 38 };
 
+// Mirrors simulate()'s own year-end snapshot gate: every December, PLUS this
+// run's own final month (a partial year for an integer-age horizon, since the
+// model always starts in September).
 function model(p, months, resetEveryJanuary = true) {
   const monthly = Math.pow(1 + p.ret / 100, 1 / 12) - 1;
   let balance = p.startEq, basis = p.startEq, ytd = 0, maxYtd = 0;
-  const decemberBalances = [];
+  const snapshotBalances = [];
   for (let i = 0; i < months; i++) {
     const month = ((8 + i) % 12) + 1;
     if (month === 1 && resetEveryJanuary) ytd = 0;
@@ -33,22 +36,22 @@ function model(p, months, resetEveryJanuary = true) {
       basis = Math.max(0, basis - basis * (gross / balance));
       balance -= gross; ytd += gross * fraction; maxYtd = Math.max(maxYtd, ytd);
     }
-    if (month === 12) decemberBalances.push(balance);
+    if (month === 12 || i === months - 1) snapshotBalances.push(balance);
   }
-  return { decemberBalances, maxYtd };
+  return { snapshotBalances, maxYtd };
 }
 const result = simulate(params, 3);
 assert.equal(result.fireMonthAll[0], 0, 'retires in the first month');
 const expected = model(params, Math.floor((params.horizonAge - params.ageNow) * 12) + 1);
 assert.ok(expected.maxYtd > 300000, 'model realises more than 300k of gains in a year, so every bracket is exercised (got ' + Math.round(expected.maxYtd) + ')');
-assert.equal(result.series.length, expected.decemberBalances.length);
+assert.equal(result.series.length, expected.snapshotBalances.length);
 result.series.forEach((point, index) => {
-  const want = expected.decemberBalances[index];
+  const want = expected.snapshotBalances[index];
   assert.ok(Math.abs(point.p50 - want) <= Math.max(1, want * 1e-9), 'year ' + point.year + ': engine ' + point.p50 + ' vs model ' + want);
 });
 // The January reset matters: a model that never resets is visibly different, so a missing reset would be caught.
 const months = Math.floor((params.horizonAge - params.ageNow) * 12) + 1;
-const neverReset = model(params, months, false).decemberBalances;
-assert.ok(Math.abs(neverReset[6] - expected.decemberBalances[6]) > 10000, 'never resetting the year-to-date gains changes the outcome materially');
+const neverReset = model(params, months, false).snapshotBalances;
+assert.ok(Math.abs(neverReset[6] - expected.snapshotBalances[6]) > 10000, 'never resetting the year-to-date gains changes the outcome materially');
 assert.ok(Math.abs(result.series[6].p50 - neverReset[6]) > 10000, 'the engine does not behave like a model without the January reset');
 console.log('tax accumulation: OK');
