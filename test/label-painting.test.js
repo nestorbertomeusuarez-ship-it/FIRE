@@ -58,18 +58,23 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.equal(el('cashRet_o').textContent, '2.0 %', 'the dragged label reflects the new value immediately, even though the run was refused');
   setValue('childStartAge', childStart); setValue('childEndAge', childEnd); setValue('cashRet', String(app.run('DEFAULTS.cashRet')));
 
-  // ---- a genuinely valid drag (no cross-field constraint) still paints AND still computes ----
+  // ---- a genuinely valid drag (no cross-field constraint) still paints, but no longer computes on
+  // its own: it only marks the result stale. Pressing "Calcular" (#runCalc) is what computes. ----
   setValue('allocCash', '10'); el('allocCash').fire('input'); await quiesce(); // restore the default allocation
   assert.equal(el('assumptionError').textContent, '', 'allocation is valid again');
   const announcedBefore = el('calcAnnounce').textHistory.length;
   setValue('ret', '7.5');
-  el('ret').fire('input'); // slider drag: schedules a debounced preview
+  el('ret').fire('input'); // slider drag: only repaints/marks stale now
   await quiesce();
   assert.equal(el('assumptionError').textContent, '', 'a valid drag keeps the assumption error clear');
   assert.equal(el('ret_o').textContent, '7.5 %', 'a valid drag paints its own label');
-  el('ret').fire('change'); // committing the drag: schedules the full run
+  el('ret').fire('change');
   await quiesce();
-  assert.ok(el('calcAnnounce').textHistory.length > announcedBefore, 'a valid drag still triggers a real full computation (no regression to the happy path)');
+  assert.equal(el('calcAnnounce').textHistory.length, announcedBefore, 'dragging/releasing a slider no longer triggers a computation by itself');
+  assert.equal(el('staleNotice').style.display, 'block', 'the result is marked stale instead');
+  await app.run("safeRun('full')");
+  await quiesce();
+  assert.ok(el('calcAnnounce').textHistory.length > announcedBefore, 'pressing Calcular does trigger a real full computation');
 
   console.log('label-painting.test.js: all assertions passed');
 })().catch(error => { console.error(error); process.exit(1); });

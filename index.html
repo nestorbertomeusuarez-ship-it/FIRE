@@ -271,6 +271,24 @@ button.reset:focus-visible{outline:2px solid var(--route);outline-offset:2px}
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--route);
   margin-top:4px;
 }
+.staleNotice{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8A5A00;
+  margin-top:4px;
+}
+body.stale .readout,body.stale #resultados{opacity:.55}
+.precisionRow{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.precisionRow label{
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;
+  letter-spacing:.04em;color:var(--ink);
+}
+.precisionRow select{
+  font-family:'IBM Plex Mono',monospace;font-size:12px;
+  background:var(--paper);color:var(--ink);border:1px solid var(--rule);
+  padding:6px 8px;
+}
+button.runCalc{background:var(--route);color:var(--paper);border-color:var(--route);font-weight:700}
+button.runCalc:hover{background:var(--ink);border-color:var(--ink)}
+button.runCalc:disabled{opacity:.6;cursor:default}
 @media (max-width:520px){
   .masthead h1{font-size:30px}
   .readout .big{font-size:44px}
@@ -373,6 +391,7 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="calc" id="calc"></p>
       <p class="srOnly" id="calcAnnounce" role="status" aria-live="polite"></p>
       <p class="hint" id="simulationContext"></p>
+      <p class="staleNotice" id="staleNotice" style="display:none">Parámetros cambiados — pulsa Calcular para actualizar.</p>
       <p class="calcLoading" id="calcLoading" style="display:none">Calculando con el máximo de rutas que caben en ~3-5s…</p>
   </div>
 
@@ -1012,6 +1031,21 @@ section[id],#notas{scroll-margin-top:88px}
         <label for="seed">Semilla (opcional)</label>
         <input type="number" id="seed" min="0" max="4294967295" step="1" placeholder="Vacía = aleatoria" aria-describedby="simulationContext">
       </div>
+      <div class="precisionRow">
+        <label for="calcPrecision">Precisión del cálculo</label>
+        <select id="calcPrecision">
+          <option value="fast">Rápida (~4 s)</option>
+          <option value="high">Alta (~12 s)</option>
+          <option value="max">Máxima (~30 s)</option>
+          <option value="custom">Personalizada</option>
+        </select>
+        <div class="ctrl" id="calcSecondsWrap" style="display:none">
+          <div class="row"><label for="calcSeconds">Tiempo de cálculo objetivo</label><output id="calcSeconds_o" for="calcSeconds"></output></div>
+          <input type="range" id="calcSeconds" min="5" max="120" step="5" value="5">
+        </div>
+      </div>
+      <button type="button" class="reset runCalc" id="runCalc">Calcular</button>
+      <p class="calcLoading" id="runCalcProgress" style="display:none"></p>
     </div>
   </section>
 
@@ -1169,6 +1203,30 @@ const CALIB_N1 = 100, CALIB_N2 = 900;
 // needs to be ~65% of the actually-desired wait to land in that range.
 const FULL_TIME_BUDGET_MS = 2600; // targets ~3.5-5s of real wait for maximum precision
 const PATHS_PREVIEW = 250;
+// "Calcular" button precision presets (#calcPrecision): each maps to a target wall-clock wait
+// in seconds, converted to a calibration time budget with the same empirical correction factor
+// FULL_TIME_BUDGET_MS already applies to its own ~4s target (see the comment above). "Rápida" is
+// exactly the pre-existing default budget/behaviour, so unchanged installs see no difference.
+const CALC_TIME_RATIO = FULL_TIME_BUDGET_MS / 4000;
+const CALC_PRECISION_SECONDS = { fast: 4, high: 12, max: 30 };
+// PATHS_FULL_MAX scales proportionally with the chosen time budget (a longer budget can afford
+// more paths), capped well short of where the O(paths log paths) sort of each of the ~67 annual
+// snapshots (see simulate()'s percentile pass) would make the linear calibration extrapolation
+// unreliable and the wait balloon past what the user asked for.
+function pathsFullMaxFor(timeBudgetMs){
+  return Math.min(500000, Math.round(PATHS_FULL_MAX * timeBudgetMs / FULL_TIME_BUDGET_MS));
+}
+function selectedTimeBudgetMs(){
+  const sel=document.getElementById('calcPrecision');
+  const value = sel ? sel.value : 'fast';
+  if(value==='custom'){
+    const secondsEl=document.getElementById('calcSeconds');
+    const raw=secondsEl ? Number(secondsEl.value) : 5;
+    const secs=Number.isFinite(raw) ? Math.max(5,Math.min(120,raw)) : 5;
+    return secs*1000*CALC_TIME_RATIO;
+  }
+  return (CALC_PRECISION_SECONDS[value] || CALC_PRECISION_SECONDS.fast)*1000*CALC_TIME_RATIO;
+}
 const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
 const END_YEAR = 2107, END_MONTH = 12;          // maximum supported simulation date
@@ -2788,21 +2846,27 @@ const SEEDED_PATHS_FULL = 5000;
 const SEEDED_PATHS_SENSITIVITY = 2000;
 async function calibratePathsFull(p, purpose){
   if(p.seed!=null) return purpose==='sensitivity' ? SEEDED_PATHS_SENSITIVITY : SEEDED_PATHS_FULL;
+  // Sensitivity/stress keep the original fixed budget/ceiling (#calcPrecision only affects the
+  // main "Calcular" full run): they already run 16/2 full-precision simulations back to back,
+  // so letting them inherit a higher precision preset would multiply an already-long wait.
+  const timeBudgetMs = purpose==='sensitivity' ? FULL_TIME_BUDGET_MS : selectedTimeBudgetMs();
   const [c1,c2]=await Promise.all([
     requestSimulation(p, CALIB_N1, {calibrate:true}),
     requestSimulation(p, CALIB_N2, {calibrate:true})
   ]);
   const msPerPath=Math.max(0.0005, (c2.ms-c1.ms)/(CALIB_N2-CALIB_N1));
-  let pathsFull=Math.round(FULL_TIME_BUDGET_MS/msPerPath);
+  let pathsFull=Math.round(timeBudgetMs/msPerPath);
   // Without a Worker, requestSimulation() runs simulate() synchronously on the
-  // main thread — calibrating toward the same PATHS_FULL_MAX there would block
+  // main thread — calibrating toward the same pathsMax there would block
   // the UI (unresponsive sliders/scroll) for the full multi-second budget.
-  const pathsCeiling = jobs.hasWorker() ? PATHS_FULL_MAX : 5000;
+  const pathsMax = purpose==='sensitivity' ? PATHS_FULL_MAX : pathsFullMaxFor(timeBudgetMs);
+  const pathsCeiling = jobs.hasWorker() ? pathsMax : 5000;
   return Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
 }
 
-async function runFullPrecision(p){
+async function runFullPrecision(p, onPathsKnown){
   const pathsFull=await calibratePathsFull(p);
+  if(onPathsKnown) onPathsKnown(pathsFull);
   return requestSimulation(p, pathsFull);
 }
 
@@ -2850,6 +2914,10 @@ async function runSensitivity(baseParams){
       requestAnalysisSimulation({...baseParams,[def.key]:pair.low,seed:pairSeed}, pathsFull, {calibrate:true}),
       requestAnalysisSimulation({...baseParams,[def.key]:pair.high,seed:pairSeed}, pathsFull, {calibrate:true}),
     ]);
+    // A newer sensitivity/stress click can supersede this one on the shared analysisJobs worker
+    // (cancelPending()/supersedeOlderJobs() resolve dropped requests as {stale:true}, no .result):
+    // signal that upward instead of dereferencing an absent .result.
+    if(!lowR || !lowR.result || !highR || !highR.result) return null;
     const ageOf=r=>{ const fm=fireQuantileMonth(r.result.fireMonths,.50); return fm===null?null:baseParams.ageNow+yearFrac(fm); };
     const ageLow=ageOf(lowR), ageHigh=ageOf(highR);
     return {
@@ -2859,6 +2927,7 @@ async function runSensitivity(baseParams){
     };
   });
   const results=await Promise.all(jobs);
+  if(results.some(r=>r===null)) return null; // superseded mid-flight: let the caller silently ignore this run
   results.sort((a,b)=>b.impact-a.impact);
   return results;
 }
@@ -2892,6 +2961,8 @@ async function runSrrStress(baseParams, shockPct, shockMonths){
     requestAnalysisSimulation({...baseParams,seed:stressSeed}, pathsFull, {calibrate:true}),
     requestAnalysisSimulation({...baseParams,seed:stressSeed, srrShockOn:true, srrShockPct:shockPct, srrShockMonths:shockMonths}, pathsFull, {calibrate:true}),
   ]);
+  // Same supersede guard as runSensitivity() above.
+  if(!baseR || !baseR.result || !shockR || !shockR.result) return null;
   const ruinRateOf=r=>{
     const n=r.result.fireMonthAll.length;
     let fired=0, ruined=0;
@@ -3005,6 +3076,46 @@ function renderOutcomeDashboard(counts, pathsUsed){
   host.replaceChildren(list);
 }
 
+// Single source of truth for "is the current on-screen result still valid for the current slider
+// values": both the stale notice/CSS class and saveScenario's enabled state read it, so they can
+// never disagree (saveCurrentScenario() below re-checks the same NavlogCore.sameParameterSnapshot
+// at click time, since these two can only ever be re-synced on the next param change or run()).
+function currentParamsOrNull(){
+  try { return readParams(); } catch(e){ return null; }
+}
+function toggleBodyClass(name, on){
+  const classes=(document.body.className||'').split(/\s+/).filter(c=>c && c!==name);
+  if(on) classes.push(name);
+  document.body.className=classes.join(' ');
+}
+function updateStaleUI(){
+  const current=currentParamsOrNull();
+  const stale = !(current && lastFullParams && NavlogCore.sameParameterSnapshot(current,lastFullParams));
+  toggleBodyClass('stale', stale);
+  const notice=document.getElementById('staleNotice');
+  if(notice){ notice.textContent='Parámetros cambiados — pulsa Calcular para actualizar.'; notice.style.display = stale ? 'block' : 'none'; }
+}
+function updateSaveButtonState(){
+  const saveButton=document.getElementById('saveScenario');
+  if(!saveButton) return;
+  if(activeRunsPending>0 || fullRunsPending>0){ saveButton.disabled=true; return; }
+  const current=currentParamsOrNull();
+  saveButton.disabled = !(current && lastSeries && lastFullParams && NavlogCore.sameParameterSnapshot(current,lastFullParams));
+}
+// Every slider/checkbox/text/seed control change: repaint its label and any dynamic constraint
+// (syncHorizonControl/syncAllocation/syncChildAges are wired separately, above, and run first),
+// surface validation errors immediately (cheap: no simulation runs), and mark the result stale.
+// No preview or full run is scheduled here any more — pressing "Calcular" (#runCalc) is the only
+// way to recompute; see run()/runFullPrecision() and the #runCalc listener below.
+function onParamInput(){
+  try { paintLabels(collectRawParams()); } catch(e) {}
+  const error=document.getElementById('assumptionError');
+  try { readParams(); if(error) error.textContent=''; }
+  catch(e){ if(error) error.textContent = e && e.message ? e.message : 'No se pudo calcular este escenario.'; }
+  updateStaleUI();
+  updateSaveButtonState();
+}
+
 async function run(mode){
   const t0=performance.now(), raw=collectRawParams();
   // Paint slider values before validation/calculation so the UI never freezes a
@@ -3014,19 +3125,34 @@ async function run(mode){
   paintLabels(raw);
   const p=validateSimulationParams(raw);
   const isPreview = mode==='preview';
+  const runCalcBtn=document.getElementById('runCalc'), runCalcProgressEl=document.getElementById('runCalcProgress');
   let loadingTimer=null;
   if(!isPreview) loadingTimer=setTimeout(()=>{ if(calcLoadingEl) calcLoadingEl.style.display='inline'; },350);
   activeRunsPending++;
-  if(!isPreview){ fullRunsPending++; const saveButton=document.getElementById('saveScenario'); if(saveButton) saveButton.disabled=true; }
+  if(!isPreview){
+    fullRunsPending++;
+    if(runCalcBtn) runCalcBtn.disabled=true;
+    if(runCalcProgressEl){ runCalcProgressEl.style.display='inline'; runCalcProgressEl.textContent='Calculando…'; }
+  }
+  updateSaveButtonState();
   let response;
-  try { response = isPreview ? await requestSimulation(p, PATHS_PREVIEW) : await runFullPrecision(p); }
-  finally {
+  try {
+    response = isPreview ? await requestSimulation(p, PATHS_PREVIEW)
+      : await runFullPrecision(p, pathsFull=>{ if(runCalcProgressEl) runCalcProgressEl.textContent='Calculando… '+pathsFull.toLocaleString('es-ES')+' rutas'; });
+  } finally {
     activeRunsPending=Math.max(0,activeRunsPending-1);
-    if(!isPreview){ fullRunsPending=Math.max(0,fullRunsPending-1); }
-    const saveButton=document.getElementById('saveScenario'); if(saveButton) saveButton.disabled=activeRunsPending>0;
+    if(!isPreview){
+      fullRunsPending=Math.max(0,fullRunsPending-1);
+      if(runCalcBtn) runCalcBtn.disabled=fullRunsPending>0;
+      if(runCalcProgressEl && fullRunsPending===0) runCalcProgressEl.style.display='none';
+    }
+    updateSaveButtonState();
   }
   clearTimeout(loadingTimer);
-  if(response.stale) return;
+  // A superseded run (see createSimulationJobs' supersedeOlderJobs()/cancelPending()) resolves
+  // with {stale:true} and no .result: bail out quietly instead of overwriting a newer result
+  // or dereferencing a missing .result.
+  if(!response || response.stale || !response.result) return;
   const r=response.result;
   if(calcLoadingEl) calcLoadingEl.style.display='none';
   const s=r.series, target=r.target;
@@ -3103,7 +3229,7 @@ async function run(mode){
   document.getElementById('simulationContext').textContent=describeSimulationContext(p.seed, pathsUsed, se);
   document.getElementById('contribSummary').textContent=summarizeContribution(s);
   renderPrintAssumptions(p, pathsUsed);
-  if(!isPreview) announceResult(announcementText(p, fm50, successRate, ruinRate, pathsUsed));
+  if(!isPreview){ announceResult(announcementText(p, fm50, successRate, ruinRate, pathsUsed)); updateStaleUI(); updateSaveButtonState(); }
 }
 
 // The number of paths in a full run is calibrated to the device speed, so the
@@ -3140,28 +3266,46 @@ function safeRun(mode){
   return run(mode).catch(reportError);
 }
 
-// Dragging a range slider fires 'input' continuously: run a cheap preview
-// (PATHS_PREVIEW) with a short debounce so it feels instant. Releasing it fires
-// 'change' once: run the full-precision simulation. Checkboxes only have 'input'
-// (no drag phase) and always go straight to full precision.
-let tPreview=null, tFull=null;
-function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>safeRun('preview'),50); }
-function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>safeRun('full'),40); }
-
-ids.forEach(k=>{
-  const n=el[k]; if(!n) return;
-  if(n.type==='range'){ n.addEventListener('input',scheduleInput); n.addEventListener('change',scheduleFull); }
-  // The seed is free text: a full run costs seconds, so wait for the user to commit it.
-  else if(k==='seed'){ n.addEventListener('change',scheduleFull); }
-  else { n.addEventListener('input',scheduleFull); }
-});
-el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+// Dragging a slider or flipping a checkbox never runs a preview or a full simulation any more:
+// it only repaints its own label/output and any dynamic constraint (the syncHorizonControl/
+// syncAllocation/syncChildAges listeners just below run first, so onParamInput reads already
+// -adjusted values), surfaces validation errors, and marks the result stale. The actual
+// calculation only happens by pressing "Calcular" (#runCalc below) or via reset/loadScenario/
+// the initial page load, all of which call safeRun('full') directly.
 if(el.ageNow) el.ageNow.addEventListener('input',syncHorizonControl);
 if(el.horizonAge) el.horizonAge.addEventListener('input',syncHorizonControl);
 if(el.allocCash) el.allocCash.addEventListener('input',syncAllocation);
 if(el.allocBonds) el.allocBonds.addEventListener('input',syncAllocation);
 if(el.childStartAge) el.childStartAge.addEventListener('input',syncChildAges);
 if(el.childEndAge) el.childEndAge.addEventListener('input',syncChildAges);
+
+ids.forEach(k=>{
+  const n=el[k]; if(!n) return;
+  if(n.type==='range'){ n.addEventListener('input',onParamInput); n.addEventListener('change',onParamInput); }
+  else if(k==='seed'){ n.addEventListener('change',onParamInput); }
+  else { n.addEventListener('input',onParamInput); }
+});
+el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+const runCalcBtnEl=document.getElementById('runCalc');
+if(runCalcBtnEl) runCalcBtnEl.addEventListener('click',()=>safeRun('full'));
+// Enter in the seed field is a natural "commit and calculate" gesture (it is free text, so it has
+// no drag phase to release); other controls are sliders/checkboxes/selects with no meaningful Enter.
+if(el.seed) el.seed.addEventListener('keydown',e=>{ if(e.key==='Enter'){ if(e.preventDefault) e.preventDefault(); safeRun('full'); } });
+const calcPrecisionEl=document.getElementById('calcPrecision'), calcSecondsEl=document.getElementById('calcSeconds'),
+  calcSecondsOutEl=document.getElementById('calcSeconds_o'), calcSecondsWrapEl=document.getElementById('calcSecondsWrap');
+// "Rápida" is the first <option> and thus the browser's own default, but set it explicitly so the
+// value is never environment-dependent (e.g. a DOM shim with no default-selection algorithm).
+if(calcPrecisionEl && !calcPrecisionEl.value) calcPrecisionEl.value='fast';
+function syncPrecisionControl(){
+  if(calcSecondsWrapEl) calcSecondsWrapEl.style.display = (calcPrecisionEl && calcPrecisionEl.value==='custom') ? 'block' : 'none';
+}
+function paintCalcSecondsLabel(){
+  if(calcSecondsEl && calcSecondsOutEl) calcSecondsOutEl.textContent=calcSecondsEl.value+' s';
+}
+if(calcPrecisionEl) calcPrecisionEl.addEventListener('change',syncPrecisionControl);
+if(calcSecondsEl) calcSecondsEl.addEventListener('input',paintCalcSecondsLabel);
+syncPrecisionControl();
+paintCalcSecondsLabel();
 // ccaaPreset is a UI shortcut, not a simulate() input: it just pre-fills the two
 // sliders that actually drive the calculation, which stay editable afterward.
 const CCAA_PRESETS=[
@@ -3395,29 +3539,35 @@ document.getElementById('importScenariosFile').addEventListener('change',event=>
 document.getElementById('exportCsv').addEventListener('click',exportCurrentReport);
 document.getElementById('printReport').addEventListener('click',()=>window.print());
 
+// Generation counters: a click's own finally must only touch the button/loading indicator if no
+// later click has superseded it in the meantime (otherwise a slow, superseded response would
+// re-enable the button / hide the loading text that the newer, still-running click owns).
+let sensGeneration=0, srrGeneration=0;
 document.getElementById('runSensitivity').addEventListener('click', async () => {
+  const myGen=++sensGeneration;
   const btn=document.getElementById('runSensitivity'), loadingEl=document.getElementById('sensLoading');
   btn.disabled=true; loadingEl.style.display='inline';
   try{
     const error=document.getElementById('assumptionError'); if(error) error.textContent='';
     const results=await runSensitivity(readParams());
-    renderSensitivity(results);
-  } catch(err){ reportError(err);
+    if(results && myGen===sensGeneration) renderSensitivity(results); // null => superseded: leave the previous render alone
+  } catch(err){ if(myGen===sensGeneration) reportError(err);
   } finally {
-    btn.disabled=false; loadingEl.style.display='none';
+    if(myGen===sensGeneration){ btn.disabled=false; loadingEl.style.display='none'; }
   }
 });
 document.getElementById('runSrrStress').addEventListener('click', async () => {
+  const myGen=++srrGeneration;
   const btn=document.getElementById('runSrrStress'), loadingEl=document.getElementById('srrLoading');
   btn.disabled=true; loadingEl.style.display='inline';
   try{
     const error=document.getElementById('assumptionError'); if(error) error.textContent='';
     const p=readParams();
     const res=await runSrrStress(p, p.srrShockPct, p.srrShockMonths);
-    renderSrrStress(res, p.srrShockPct, p.srrShockMonths);
-  } catch(err){ reportError(err);
+    if(res && myGen===srrGeneration) renderSrrStress(res, p.srrShockPct, p.srrShockMonths);
+  } catch(err){ if(myGen===srrGeneration) reportError(err);
   } finally {
-    btn.disabled=false; loadingEl.style.display='none';
+    if(myGen===srrGeneration){ btn.disabled=false; loadingEl.style.display='none'; }
   }
 });
 document.getElementById('scenarioList').addEventListener('click', e=>{

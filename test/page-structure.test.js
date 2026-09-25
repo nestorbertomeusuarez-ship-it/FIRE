@@ -56,6 +56,8 @@ const EXPECTED_IDS = [
   'simulationContext', 'calcLoading',
 ];
 const NEW_IDS = ['resultados', 'parametros', 'analisis', 'escenarios', 'notas'];
+// Phase 3: manual "Calcular" button + precision selector (see test/manual-calc.test.js).
+const MANUAL_CALC_IDS = ['staleNotice', 'calcPrecision', 'calcSecondsWrap', 'calcSeconds_o', 'calcSeconds', 'runCalc', 'runCalcProgress'];
 
 const bodyOf = (source) => source.slice(0, source.indexOf('<script src="simulation-core.js">'));
 const body = bodyOf(html);
@@ -85,8 +87,9 @@ test('every id survives exactly once and none is duplicated', () => {
   assert.deepEqual(duplicated, [], 'no duplicate ids: ' + duplicated.join(', '));
   for (const id of EXPECTED_IDS) assert.equal(counts.get(id), 1, 'id "' + id + '" must exist exactly once');
   for (const id of NEW_IDS) assert.equal(counts.get(id), 1, 'new id "' + id + '" must exist exactly once');
+  for (const id of MANUAL_CALC_IDS) assert.equal(counts.get(id), 1, 'manual-calc id "' + id + '" must exist exactly once');
   assert.equal(counts.has('extendedAssumptions'), false, '#extendedAssumptions is dissolved');
-  const unexpected = ids.filter((id) => !EXPECTED_IDS.includes(id) && !NEW_IDS.includes(id));
+  const unexpected = ids.filter((id) => !EXPECTED_IDS.includes(id) && !NEW_IDS.includes(id) && !MANUAL_CALC_IDS.includes(id));
   assert.deepEqual(unexpected, [], 'no unplanned ids');
 });
 
