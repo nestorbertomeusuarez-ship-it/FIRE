@@ -1755,6 +1755,7 @@ function simulate(p, paths){
   }
   const snapVals=annualSnapshots.map(()=>new Float64Array(paths));
   const contribVals=annualSnapshots.map(()=>new Float64Array(paths));
+  const feeVals=annualSnapshots.map(()=>new Float64Array(paths));
   const fireMonth=new Int32Array(paths); fireMonth.fill(-1);
   const ruined=new Uint8Array(paths);
   // Left the company at the mandatory retirement age without having hit the FIRE
@@ -1791,7 +1792,7 @@ function simulate(p, paths){
     // takeFromBucket's comment above.
     let basisEq=vEq, basisBtc=p.startBtc;
     let basisGold=goldActive?p.startGold:0, basisCons=vCons, basisCash=vCash, basisRE=reActive?p.reValue:0;
-    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1;
+    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1, cumFees=0;
     // Running year-to-date realized gain on the capital-gains-taxed buckets, reset
     // every January — feeds irpfBracketRate() when useIrpfBrackets is on.
     let ytdGainCartera=0, ytdProvidentIncome=0;
@@ -1837,14 +1838,17 @@ function simulate(p, paths){
       const rEqEff=inflActive ? rEq-inflShockM*(1-eqInflBeta) : rEq;
       const rBtcEff=inflActive ? rBtc-inflShockM*(1-eqInflBeta) : rBtc;
 
-      vEq*=1+NavlogCore.netMonthlyReturn(rEqEff,p.feeEq); vBtc*=1+NavlogCore.netMonthlyReturn(rBtcEff,p.feeBtc); vProv*=1+NavlogCore.netMonthlyReturn(rEqEff,p.feeProv);
+      const rEqNet=NavlogCore.netMonthlyReturn(rEqEff,p.feeEq), rBtcNet=NavlogCore.netMonthlyReturn(rBtcEff,p.feeBtc), rProvNet=NavlogCore.netMonthlyReturn(rEqEff,p.feeProv);
+      cumFees+=vEq*(rEqEff-rEqNet)+vBtc*(rBtcEff-rBtcNet)+vProv*(rEqEff-rProvNet);
+      vEq*=1+rEqNet; vBtc*=1+rBtcNet; vProv*=1+rProvNet;
       if(goldActive){
         const z3=gauss();
         const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
-        vGold*=1+NavlogCore.netMonthlyReturn(rGold,p.feeGold);
+        const rGoldNet=NavlogCore.netMonthlyReturn(rGold,p.feeGold); cumFees+=vGold*(rGold-rGoldNet); vGold*=1+rGoldNet;
       }
-      vCons*=1+NavlogCore.netMonthlyReturn(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet,p.feeCons);
-      vCash*=1+NavlogCore.netMonthlyReturn(cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet,p.feeCash);
+      const rCons=consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet, rCash=cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet;
+      const rConsNet=NavlogCore.netMonthlyReturn(rCons,p.feeCons), rCashNet=NavlogCore.netMonthlyReturn(rCash,p.feeCash);
+      cumFees+=vCons*(rCons-rConsNet)+vCash*(rCash-rCashNet); vCons*=1+rConsNet; vCash*=1+rCashNet;
       if(reActive) vRE*=1+reApprM;
       cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
 
@@ -2189,6 +2193,7 @@ function simulate(p, paths){
         const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         snapVals[snap][k]=Math.max(0,totalNow);
         contribVals[snap][k]=totalNow-cumGrowth;
+        feeVals[snap][k]=cumFees;
         snap++;
       }
     }
@@ -2201,6 +2206,7 @@ function simulate(p, paths){
   const series=annualSnapshots.map((idx,j)=>{
     const a=Float64Array.from(snapVals[j]).sort();
     const cSorted=Float64Array.from(contribVals[j]).sort();
+    const fSorted=Float64Array.from(feeVals[j]).sort();
     return {idx, year:MONTH_DATES[idx].y,
       p10:a[Math.floor((paths-1)*0.10)],
       p25:a[Math.floor((paths-1)*0.25)],
@@ -2210,7 +2216,8 @@ function simulate(p, paths){
       // Median of cumulative net contributions across paths — an independent
       // measurement, not derived from p50 above, so it can occasionally run a
       // touch higher than p50 for the same year; the chart clamps for display.
-      contrib50:cSorted[Math.floor((paths-1)*0.50)]
+      contrib50:cSorted[Math.floor((paths-1)*0.50)],
+      fee50:fSorted[Math.floor((paths-1)*0.50)]
     };
   });
 
@@ -3496,9 +3503,9 @@ function csvCell(value){
 }
 // UTF-8 BOM first so Excel detects the encoding of accents and the euro sign.
 function buildReportCsv(params, series, target){
-  const header=['kind','year','p10','p50','p90','target'];
-  const assumptions=Object.entries(params).map(([key,value])=>['assumption',key,Array.isArray(value)?JSON.stringify(value):value,'','','']);
-  const rows=series.map(point=>['projection',point.year,point.p10,point.p50,point.p90,target]);
+  const header=['kind','year','p10','p50','p90','fee50','target'];
+  const assumptions=Object.entries(params).map(([key,value])=>['assumption',key,Array.isArray(value)?JSON.stringify(value):value,'','','','']);
+  const rows=series.map(point=>['projection',point.year,point.p10,point.p50,point.p90,point.fee50,target]);
   return '\ufeff'+[header,...assumptions,...rows].map(row=>row.map(csvCell).join(';')).join('\n');
 }
 function exportCurrentReport(){
