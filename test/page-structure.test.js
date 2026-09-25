@@ -42,7 +42,7 @@ const EXPECTED_IDS = [
   'gratuityYears_o', 'gratuityYears', 'taxOn', 'useIrpfBrackets', 'taxRate_o', 'taxRate', 'taxRateProv_o', 'taxRateProv',
   'burrTaxRate_o', 'burrTaxRate', 'taxRepatDelay_o', 'taxRepatDelay', 'beckhamOn', 'beckhamYears_o', 'beckhamYears', 'wealthTaxOn',
   'ccaaPreset_o', 'ccaaPreset', 'wealthExempt_o', 'wealthExempt', 'wealthRate_o', 'wealthRate', 'wealthBonusPct_o', 'wealthBonusPct',
-  'mortgageBalance_o', 'mortgageBalance', 'lolOn', 'lolAnnualProb_o', 'lolAnnualProb', 'lolPremiumMonthly_o', 'lolPremiumMonthly', 'lolPayoutMode_o',
+  'mortgageBalance_o', 'mortgageBalance', 'lolOn', 'lolEmiratesOn', 'lolAgeCurveOn', 'lolAnnualProb_o', 'lolAnnualProb', 'lolPremiumMonthly_o', 'lolPremiumMonthly', 'lolPayoutMode_o',
   'lolPayoutMode', 'lolPayout_o', 'lolPayout', 'lolReplacePct_o', 'lolReplacePct', 'lolReplaceYears_o', 'lolReplaceYears', 'fxVolOn',
   'fxVol_o', 'fxVol', 'fxMeanRevert_o', 'fxMeanRevert', 'inflOn', 'inflVol_o', 'inflVol', 'wdStrategy_o',
   'wdStrategy', 'gkGuard_o', 'gkGuard', 'gkCut_o', 'gkCut', 'gkRaise_o', 'gkRaise', 'gkFreq_o',

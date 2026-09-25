@@ -831,24 +831,34 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="checkbox" id="lolOn">
         <label for="lolOn">Modelar riesgo de LOL</label>
       </div>
+      <div class="toggle">
+        <input type="checkbox" id="lolEmiratesOn">
+        <label for="lolEmiratesOn">Cobertura LOL del contrato de Emirates</label>
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="lolAgeCurveOn">
+        <label for="lolAgeCurveOn">Riesgo de LOL según la edad (curva de bañera)</label>
+      </div>
+      <p class="hint">El riesgo no es igual a todas las edades. Con esta opción activada, cada mes se usa la probabilidad anual de tu edad en ese momento: 0,1 % hasta los 40 años (sobre todo accidentes o debuts de enfermedades graves), 0,3 % de 40 a 50, sube en línea recta hasta el 1 % entre 50 y 55, y a partir de ahí crece un 15 % al año (≈ 2 % a los 60), con un tope del 5 %. Son cifras orientativas, no una tabla actuarial. Con la curva activada, el slider de probabilidad fija no se usa.</p>
+      <p class="hint">Cláusula 10.2 del contrato: si pierdes la licencia de forma permanente por accidente o enfermedad, Emirates te paga 36 meses de salario básico hasta los 62 años, 24 meses de 62 a 63, 12 meses de 63 a 64 y nada a partir de 64. Se calcula con el básico de tu rango en ese momento (copiloto o comandante) y el tipo AED→EUR de ese mes. Con los valores por defecto, un LOL como copiloto son 36 × 26.485 AED × 0,235 ≈ 224.000 €; como comandante, 36 × 40.100 AED × 0,235 ≈ 339.000 €. Lo paga la compañía, sin prima. Los controles de prima e indemnización son para un seguro privado adicional, que por defecto está a 0.</p>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="lolAnnualProb">Probabilidad anual de LOL</label><output id="lolAnnualProb_o" for="lolAnnualProb"></output></div>
         <p class="hint">Se sortea cada mes mientras vuelas en activo; una vez ocurre, es un estado permanente — no vuelves a volar en esa ruta. Con 0 % no cambia nada respecto a no tenerlo en cuenta.</p>
         <input type="range" id="lolAnnualProb" min="0" max="3" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="lolPremiumMonthly">Prima mensual del seguro LOL (€)</label><output id="lolPremiumMonthly_o" for="lolPremiumMonthly"></output></div>
+        <div class="row"><label for="lolPremiumMonthly">Prima mensual del seguro LOL privado (€)</label><output id="lolPremiumMonthly_o" for="lolPremiumMonthly"></output></div>
         <p class="hint">Coste recurrente mientras estás cubierto y en activo — se descuenta de tu flujo de caja como cualquier otro gasto. Deja de pagarse en cuanto dejas de volar, por el motivo que sea.</p>
         <input type="range" id="lolPremiumMonthly" min="0" max="400" step="10">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="lolPayoutMode">Tipo de indemnización</label><output id="lolPayoutMode_o" for="lolPayoutMode"></output></div>
+        <div class="row"><label for="lolPayoutMode">Tipo de indemnización del seguro privado</label><output id="lolPayoutMode_o" for="lolPayoutMode"></output></div>
         <p class="hint">Elige cómo cobras si ocurre el LOL: "Pago único" añade de golpe el importe de "Pago único (€)" a tu cartera gravable; "Sustitución de ingreso" en cambio te paga cada mes un % de tu último salario durante la "Duración de la sustitución" que configures. Solo uno de los dos modos aplica a la vez, según cuál esté seleccionado.</p>
         <input type="range" id="lolPayoutMode" min="0" max="1" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="lolPayout">Pago único (€)</label><output id="lolPayout_o" for="lolPayout"></output></div>
-        <p class="hint">Solo cuenta si "Tipo de indemnización" está en "Pago único": ese importe se suma de una vez a tu cartera (renta variable) el mes exacto del LOL, como un capital indemnizatorio del seguro. Con el valor por defecto son 150.000 €; ajústalo al capital que realmente cubre tu póliza.</p>
+        <div class="row"><label for="lolPayout">Pago único del seguro privado (€)</label><output id="lolPayout_o" for="lolPayout"></output></div>
+        <p class="hint">Solo cuenta si "Tipo de indemnización" está en "Pago único": ese importe se suma de una vez a tu cartera (renta variable) el mes exacto del LOL, como un capital indemnizatorio del seguro. Por defecto es 0 € (sin seguro privado); pon el capital que cubra tu póliza si contratas una además de la cobertura de Emirates.</p>
         <input type="range" id="lolPayout" min="0" max="500000" step="10000">
       </div>
       <div class="ctrl">
@@ -1214,7 +1224,7 @@ const DEFAULTS = {
   proMode:false,
   // fiscalidad España
   taxOn:false, useIrpfBrackets:false, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
-  lolOn:false, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:150000, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:80,
+  lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
   wealthTaxOn:false, ccaaPreset:0, wealthExempt:700000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
@@ -1567,6 +1577,17 @@ function gauss(){
   const f=Math.sqrt(-2*Math.log(q)/q); spare=v*f; return u*f;
 }
 function normal(mu,sd){ return mu+sd*gauss(); }
+// Emirates contract (clause 10.2): permanent loss of licence pays a number of months of
+// basic salary that depends on the crew member's age when it happens.
+function lolEmiratesMonths(age){ return age<62 ? 36 : age<63 ? 24 : age<64 ? 12 : 0; }
+// Illustrative age profile for the annual LOL probability (%): residual before 40, higher in
+// the 40s, a linear ramp to 1 % between 50 and 55, then +15 %/year compounding, capped at 5 %.
+function lolAnnualPctAtAge(age){
+  if(age<40) return 0.1;
+  if(age<50) return 0.3;
+  if(age<55) return 0.3+(age-50)/5*0.7;
+  return Math.min(5, Math.pow(1.15, age-55));
+}
 function logParams(mean,vol){
   const m=1+mean;
   const s2=Math.log(1+(vol*vol)/(m*m));
@@ -1628,6 +1649,10 @@ function simulate(p, paths){
   const inflActive=p.proMode && p.inflOn;
   const lolFeatureActive=p.proMode && p.lolOn;
   const lolMonthlyProb=lolFeatureActive ? 1-Math.pow(1-p.lolAnnualProb/100, 1/12) : 0;
+  // With the age curve on, each month uses the probability for the age reached that month
+  // (precomputed once, path-independent); otherwise every month uses the flat slider value.
+  const lolMonthlyProbByMonth=lolFeatureActive && p.lolAgeCurveOn
+    ? Float64Array.from({length:MONTHS}, (_,i)=>1-Math.pow(1-lolAnnualPctAtAge(p.ageNow+i/12)/100, 1/12)) : null;
   // Sequence-of-returns stress test: a one-off runtime flag (like calibrate:true),
   // never a persistent slider — absent/false on every normal run. Shocks only the
   // equity leg (BTC/gold keep independent draws) for N months right after each
@@ -1832,7 +1857,7 @@ function simulate(p, paths){
       const lolDraw=lolFeatureActive ? eventRandom() : 1;
       const profitShareDraw=profitShareActive && d.m===12 ? eventRandom() : 0;
       if(lolFeatureActive && !retired && !lolTriggered && i>=careerStart && i<mandatoryRetireMonth
-         && lolDraw<lolMonthlyProb){
+         && lolDraw<(lolMonthlyProbByMonth ? lolMonthlyProbByMonth[i] : lolMonthlyProb)){
         lolTriggered=true; lolMonthIdx=i;
       }
       const isWorking=!retired && i>=careerStart && i<mandatoryRetireMonth && !lolTriggered;
@@ -1875,6 +1900,10 @@ function simulate(p, paths){
         if(gratuityActive){
           const lolGratuityEUR=gratuityCappedDays*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff;
           vEq+=lolGratuityEUR; basisEq+=lolGratuityEUR;
+        }
+        if(p.lolEmiratesOn){
+          const lolContractEUR=lolEmiratesMonths(p.ageNow+i/12)*(i>=captMonth?p.basicCA:p.basicFO)*fxEff;
+          vEq+=lolContractEUR; basisEq+=lolContractEUR;
         }
         if(p.lolPayoutMode===0){ vEq+=p.lolPayout; basisEq+=p.lolPayout; }
         else {
@@ -2735,6 +2764,8 @@ function buildWorkerSource(){
     'const monthIndex='+monthIndex.toString()+';',
         'const gauss='+gauss.toString()+';',
     'const normal='+normal.toString()+';',
+    'const lolEmiratesMonths='+lolEmiratesMonths.toString()+';',
+    'const lolAnnualPctAtAge='+lolAnnualPctAtAge.toString()+';',
     'const logParams='+logParams.toString()+';',
     'const translateValidation='+translateValidation.toString()+';',
     'const validateSimulationParams='+validateSimulationParams.toString()+';',
@@ -3258,7 +3289,7 @@ async function run(mode){
     else if(p.taxOn && p.taxRateProv!==p.taxRate) calcTxt+=' · retirada optimizada: '+(p.taxRateProv<p.taxRate?'Provident antes que la cartera':'cartera antes que el Provident')+' ('+p.taxRateProv.toFixed(1)+'% vs '+p.taxRate.toFixed(1)+'%)';
     if(p.beckhamOn) calcTxt+=' · Ley Beckham activa ('+p.beckhamYears+'a, IRPF y patrimonio en pausa)';
     if(p.wealthTaxOn) calcTxt+=' · patrimonio neto > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año'+(p.wealthBonusPct>0?' (bonif. '+p.wealthBonusPct.toFixed(0)+'%)':'')+(p.mortgageBalance>0?' (deuda deducida)':'');
-    if(p.lolOn) calcTxt+=' · riesgo LOL '+p.lolAnnualProb.toFixed(1)+'%/año';
+    if(p.lolOn) calcTxt+=' · riesgo LOL '+(p.lolAgeCurveOn?'según la edad':p.lolAnnualProb.toFixed(1)+'%/año')+(p.lolEmiratesOn?' · cobertura Emirates':'');
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
     if(p.inflOn) calcTxt+=' · inflación estocástica';
     if(p.glideOn) calcTxt+=' · glide path activo';
