@@ -271,6 +271,12 @@ button.reset:focus-visible{outline:2px solid var(--route);outline-offset:2px}
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--route);
   margin-top:4px;
 }
+.methodTag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin:0 6px 6px 0;border:1px solid currentColor}
+.methodTag.mc{color:var(--route)}
+.methodTag.hist{color:#1F6F8B}
+.methodGuide{border-left:3px solid var(--route);padding:4px 0 4px 14px;margin:0 0 22px}
+.methodGuide ul{margin:8px 0 0;padding-left:18px}
+.methodGuide li{margin:4px 0}
 .staleNotice{
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8A5A00;
   margin-top:4px;
@@ -397,6 +403,7 @@ section[id],#notas{scroll-margin-top:88px}
 
   <div class="partBand" aria-hidden="true">Resultados</div>
   <section id="resultados">
+    <p class="hint"><span class="methodTag mc">Simulación Monte Carlo</span>Todo lo de esta parte sale de miles de futuros aleatorios generados con tus parámetros. Son medianas y percentiles de esos futuros, no una predicción.</p>
     <h2>Hitos de patrimonio</h2>
     <table>
       <thead>
@@ -1052,16 +1059,26 @@ section[id],#notas{scroll-margin-top:88px}
 
   <div class="partBand" aria-hidden="true">Análisis avanzado</div>
   <section id="analisis">
+    <div class="methodGuide">
+      <p class="hint"><b>Tres herramientas distintas.</b> Las dos primeras reutilizan la <b>simulación Monte Carlo</b> de Resultados (miles de futuros aleatorios con tus parámetros) y cambian una sola cosa para medir su efecto. La tercera no simula nada: recorre la <b>historia real</b> de la bolsa con sus propios números.</p>
+      <ul class="hint">
+        <li><span class="methodTag mc">Monte Carlo</span><b>Sensibilidad</b>: ¿qué parámetro mueve más tu fecha de FIRE?</li>
+        <li><span class="methodTag mc">Monte Carlo + caída forzada</span><b>Riesgo de secuencia</b>: ¿y si la bolsa se hunde justo al dejar de trabajar?</li>
+        <li><span class="methodTag hist">Historia real</span><b>Backtest histórico</b>: ¿habría durado este capital en cada periodo desde 1928?</li>
+      </ul>
+    </div>
     <h2>Sensibilidad</h2>
+    <span class="methodTag mc">Monte Carlo</span>
     <button type="button" class="reset" id="runSensitivity">Calcular sensibilidad</button>
     <p class="calcLoading" id="sensLoading" style="display:none">Calculando…</p>
     <div class="sensList" id="sensList" aria-live="polite"></div>
-    <p class="hint">Prueba, uno a uno, cuánto cambia la edad mediana de FIRE al mover cada parámetro un margen razonable por encima y por debajo del valor actual, dejando el resto tal cual está. Ordenado de mayor a menor impacto — te dice dónde merece la pena afinar la estimación (o dejar margen de seguridad) y dónde da igual acertar al milímetro. Usa la misma precisión máxima que el cálculo principal (no una vista previa), así que puede tardar bastante — de varios segundos a un par de minutos según el dispositivo, porque las 16 simulaciones corren una detrás de otra.</p>
+    <p class="hint"><b>Qué hace:</b> repite la simulación Monte Carlo moviendo un solo parámetro cada vez un margen razonable por encima y por debajo de su valor actual, con el resto sin tocar (16 simulaciones).<br><b>Qué te dice:</b> cuántos años adelanta o retrasa cada parámetro tu edad mediana de FIRE, de mayor a menor impacto. Así sabes dónde merece la pena afinar la estimación o dejar margen de seguridad, y dónde da igual acertar al milímetro.<br>Usa la precisión máxima, así que puede tardar de unos segundos a un par de minutos.</p>
   </section>
 
   <section>
     <h2>Riesgo de secuencia al jubilarte</h2>
-    <p class="hint">La pregunta de mayor ansiedad práctica al acercarse al FIRE: ¿qué pasa si el mercado se hunde justo cuando dejo de trabajar? Compara tu escenario normal contra la misma ruta pero forzando una caída de bolsa concreta durante los primeros meses tras el FIRE (solo afecta a renta variable, no a BTC/oro, para no exagerar el golpe). Solo se aplica a rutas que llegan al FIRE de forma voluntaria, no a una jubilación forzosa.</p>
+    <span class="methodTag mc">Monte Carlo + caída forzada</span>
+    <p class="hint"><b>La pregunta:</b> ¿qué pasa si la bolsa se hunde justo cuando dejo de trabajar? Los primeros años de jubilación son los más delicados: si vendes con el mercado caído para pagar tus gastos, ese dinero ya no se recupera cuando el mercado rebota.<br><b>Qué hace:</b> corre dos veces la simulación Monte Carlo con las mismas rutas aleatorias: una normal y otra en la que, justo en el mes en que cada ruta se jubila, se fuerza la caída y la duración que elijas en estos controles. La caída solo afecta a la renta variable (no a BTC ni al oro) y solo a las rutas que se jubilan voluntariamente, no a las jubilaciones forzosas.<br><b>Qué te dice:</b> cuánto sube el porcentaje de jubilados que acaban quedándose sin dinero.</p>
     <div class="ctrl">
       <div class="row"><label for="srrShockPct">Caída acumulada de la bolsa</label><output id="srrShockPct_o" for="srrShockPct"></output></div>
       <input type="range" id="srrShockPct" min="-60" max="-10" step="5">
@@ -1076,8 +1093,9 @@ section[id],#notas{scroll-margin-top:88px}
   </section>
 
   <section id="historicalBacktest">
-    <h2>Backtest histórico secuencial</h2>
-    <p class="hint">Reproduce retiradas mensuales sobre las rentabilidades reales anuales del S&amp;P 500 usadas por el simulador (1928–2025). No incluye impuestos, comisiones ni predice el futuro; cada inicio es un periodo histórico distinto.</p>
+    <h2>Backtest con la historia real (1928–2025)</h2>
+    <span class="methodTag hist">Historia real · no es Monte Carlo</span>
+    <p class="hint"><b>La pregunta:</b> si me hubiera jubilado en un año concreto del pasado con este dinero y gastando esto cada año, ¿me habría llegado?<br><b>Qué hace:</b> no simula futuros. Te «jubila» en 1928 con el capital indicado, 100 % en el S&amp;P 500, aplica año a año lo que la bolsa hizo de verdad y te retira cada mes la parte proporcional del gasto anual. Luego repite lo mismo empezando en 1929, 1930… hasta el último año con datos suficientes. Estos tres controles son solo de esta prueba: no usan tus parámetros ni afectan al resto.<br><b>Qué te dice:</b> en cuántos de esos periodos el dinero duró hasta el final, en qué años de inicio te habrías arruinado y con cuánto habrías acabado en un periodo malo (P10), típico (mediana) y bueno (P90).<br><b>Letra pequeña:</b> rentabilidades reales, ya sin inflación, así que la retirada mantiene su poder de compra. Sin impuestos ni comisiones. Es la bolsa de EE. UU. del siglo XX y no predice el futuro.</p>
     <div class="ctrl"><div class="row"><label for="btCapital">Capital inicial (€ reales)</label><output id="btCapitalValue"></output></div><input id="btCapital" type="range" min="50000" max="2000000" step="10000" value="600000"></div>
     <div class="ctrl"><div class="row"><label for="btSpend">Retirada anual (€ reales)</label><output id="btSpendValue"></output></div><input id="btSpend" type="range" min="12000" max="120000" step="1000" value="24000"></div>
     <div class="ctrl"><div class="row"><label for="btYears">Años de retirada</label><output id="btYearsValue"></output></div><input id="btYears" type="range" min="10" max="40" step="1" value="30"></div>
