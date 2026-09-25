@@ -60,7 +60,7 @@ const EXPECTED_RANGES = {
     bounds[def.key] = { min: def.min, max: def.max };
     assert.deepEqual({ min: def.min, max: def.max }, { min: slider.min, max: slider.max }, 'SENSITIVITY_PARAMS ' + def.key + ' matches its slider');
   }
-  assert.equal(Object.keys(bounds).length, 9, 'all nine sensitivity entries were compared');
+  assert.equal(Object.keys(bounds).length, 14, 'all fourteen sensitivity entries were compared');
 
   // ---- (c) allocation: Efectivo + Bonos + Acciones == 100 ----
   const quiesce = async () => { for (let round = 0; round < 4; round++) { env.flushTimers(); await app.settle(); } };

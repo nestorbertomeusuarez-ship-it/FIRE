@@ -180,7 +180,7 @@ const { loadApp } = require('./helpers/fake-app.js');
   // ---- and the click handler itself must not let a late, superseded response clobber the UI
   // state (disabled/loading) that a winning, more recent click already owns. Every request is
   // intercepted and its resolver captured (never auto-resolved), so the test controls resolution
-  // order explicitly instead of racing real timing: click 1's 9 pairs (18 requests) are resolved
+  // order explicitly instead of racing real timing: click 1's 14 pairs (28 requests) are resolved
   // strictly AFTER click 2's, reproducing "a late, superseded worker response arrives after the
   // newer click has already finished" deterministically.
   {
@@ -191,16 +191,16 @@ const { loadApp } = require('./helpers/fake-app.js');
       requestAnalysisSimulation = () => new Promise(resolve => { __pending.push(resolve); });
     `);
     const first = btn.fireAsync('click');
-    for (let i = 0; i < 20 && app.run('__pending.length') < 18; i++) await Promise.resolve();
-    assert.equal(app.run('__pending.length'), 18, 'click 1 issued its 9 pairs (18 requests) and is now blocked on them');
+    for (let i = 0; i < 20 && app.run('__pending.length') < 28; i++) await Promise.resolve();
+    assert.equal(app.run('__pending.length'), 28, 'click 1 issued its 14 pairs (28 requests) and is now blocked on them');
     const second = btn.fireAsync('click');
-    for (let i = 0; i < 20 && app.run('__pending.length') < 36; i++) await Promise.resolve();
-    assert.equal(app.run('__pending.length'), 36, 'click 2 issued its own 18 requests on top');
-    app.run('__pending.slice(18, 36).forEach(resolve => resolve({ stale: true }));'); // resolve click 2 (the winner) first
+    for (let i = 0; i < 20 && app.run('__pending.length') < 56; i++) await Promise.resolve();
+    assert.equal(app.run('__pending.length'), 56, 'click 2 issued its own 28 requests on top');
+    app.run('__pending.slice(28, 56).forEach(resolve => resolve({ stale: true }));'); // resolve click 2 (the winner) first
     await second;
     assert.equal(btn.disabled, false, 'the winning (second) click leaves the button enabled');
     assert.equal(loadingEl.style.display, 'none', 'the winning (second) click hides the loading indicator');
-    app.run('__pending.slice(0, 18).forEach(resolve => resolve({ stale: true }));'); // now resolve click 1 (superseded), late
+    app.run('__pending.slice(0, 28).forEach(resolve => resolve({ stale: true }));'); // now resolve click 1 (superseded), late
     await first;
     assert.equal(btn.disabled, false, 'the late, superseded click must not re-disable the button');
     assert.equal(loadingEl.style.display, 'none', 'the late, superseded click must not show the loading indicator again');
