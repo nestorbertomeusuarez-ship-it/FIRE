@@ -23,7 +23,7 @@
     return tax;
   }
   function netMonthlyReturn(grossMonthlyReturn, annualFeePct) {
-    const fee = Math.max(0, Number(annualFeePct) || 0) / 100;
+    const fee = Math.min(1, Math.max(0, Number(annualFeePct) || 0) / 100);
     if (fee === 0) return grossMonthlyReturn;
     return (1 + grossMonthlyReturn) * Math.pow(1 - fee, 1 / 12) - 1;
   }
@@ -127,7 +127,7 @@
   }
   function historicalWithdrawalBacktest(realAnnualReturns, capital, annualSpend, years, annualFeePct = 0) {
     if (!Array.isArray(realAnnualReturns) || !Number.isFinite(capital) || !Number.isFinite(annualSpend) || !Number.isInteger(years) || years < 1) return [];
-    const annualFee = Math.max(0, Number(annualFeePct) || 0) / 100;
+    const annualFee = Math.min(1, Math.max(0, Number(annualFeePct) || 0) / 100);
     const result = [];
     for (let start = 0; start + years <= realAnnualReturns.length; start++) {
       let balance = capital;
