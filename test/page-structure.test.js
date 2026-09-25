@@ -7,12 +7,12 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
-const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 // Baseline: HEAD. Phase 2 is uncommitted while this runs, so HEAD is the Phase 1 commit and the script must not differ
 // from it. (After the change is committed the comparison is trivially true; EXPECTED_IDS keeps guarding the markup.)
 let baselineHtml = null;
 try {
-  baselineHtml = execFileSync('git', ['show', 'HEAD:index.html'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+  baselineHtml = execFileSync('git', ['show', 'HEAD:index.html'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }).replace(/\r\n/g, '\n');
 } catch (error) {
   baselineHtml = null; // not a git checkout: the script comparison is skipped below
 }
@@ -35,14 +35,14 @@ const EXPECTED_IDS = [
   'captY_o', 'captY', 'captDelay_o', 'captDelay', 'startDelay_o', 'startDelay', 'salG_o', 'salG',
   'profitShareWeeks_o', 'profitShareWeeks', 'mandatoryRetireOn', 'mandatoryRetireAge_o', 'mandatoryRetireAge', 'ret_o', 'ret', 'vol_o',
   'vol', 'histMarketOn', 'vida_o', 'vida', 'vidaG_o', 'vidaG', 'hip_o', 'hip',
-  'hipEnd_o', 'hipEnd', 'nur_o', 'nur', 'burr_o', 'burr', 'brOn', 'brNet_o',
+  'hipEnd_o', 'hipEnd', 'burr_o', 'burr', 'brOn', 'brNet_o',
   'brNet', 'brStart_o', 'brStart', 'brYears_o', 'brYears', 'startEq_o', 'startEq', 'startBtc_o',
   'startBtc', 'btcRet_o', 'btcRet', 'btcVol_o', 'btcVol', 'btcRho_o', 'btcRho', 'btcAporte_o',
   'btcAporte', 'provOn', 'basicFO_o', 'basicFO', 'basicCA_o', 'basicCA', 'provCo_o', 'provCo',
-  'gratuityYears_o', 'gratuityYears', 'taxOn', 'useIrpfBrackets', 'taxRate_o', 'taxRate', 'taxRateProv_o', 'taxRateProv',
+  'taxOn', 'useIrpfBrackets', 'taxRate_o', 'taxRate', 'taxRateProv_o', 'taxRateProv',
   'burrTaxRate_o', 'burrTaxRate', 'taxRepatDelay_o', 'taxRepatDelay', 'beckhamOn', 'beckhamYears_o', 'beckhamYears', 'wealthTaxOn',
   'ccaaPreset_o', 'ccaaPreset', 'wealthExempt_o', 'wealthExempt', 'wealthRate_o', 'wealthRate', 'wealthBonusPct_o', 'wealthBonusPct',
-  'mortgageBalance_o', 'mortgageBalance', 'lolOn', 'lolAnnualProb_o', 'lolAnnualProb', 'lolPremiumMonthly_o', 'lolPremiumMonthly', 'lolPayoutMode_o',
+  'mortgageBalance_o', 'mortgageBalance', 'lolOn', 'lolEmiratesOn', 'lolAgeCurveOn', 'lolAnnualProb_o', 'lolAnnualProb', 'lolPremiumMonthly_o', 'lolPremiumMonthly', 'lolPayoutMode_o',
   'lolPayoutMode', 'lolPayout_o', 'lolPayout', 'lolReplacePct_o', 'lolReplacePct', 'lolReplaceYears_o', 'lolReplaceYears', 'fxVolOn',
   'fxVol_o', 'fxVol', 'fxMeanRevert_o', 'fxMeanRevert', 'inflOn', 'inflVol_o', 'inflVol', 'wdStrategy_o',
   'wdStrategy', 'gkGuard_o', 'gkGuard', 'gkCut_o', 'gkCut', 'gkRaise_o', 'gkRaise', 'gkFreq_o',
@@ -56,6 +56,8 @@ const EXPECTED_IDS = [
   'simulationContext', 'calcLoading',
 ];
 const NEW_IDS = ['resultados', 'parametros', 'analisis', 'escenarios', 'notas'];
+// Phase 3: manual "Calcular" button + precision selector (see test/manual-calc.test.js).
+const MANUAL_CALC_IDS = ['staleNotice', 'calcPrecision', 'calcSecondsWrap', 'calcSeconds_o', 'calcSeconds', 'runCalc', 'runCalcProgress'];
 
 const bodyOf = (source) => source.slice(0, source.indexOf('<script src="simulation-core.js">'));
 const body = bodyOf(html);
@@ -85,8 +87,9 @@ test('every id survives exactly once and none is duplicated', () => {
   assert.deepEqual(duplicated, [], 'no duplicate ids: ' + duplicated.join(', '));
   for (const id of EXPECTED_IDS) assert.equal(counts.get(id), 1, 'id "' + id + '" must exist exactly once');
   for (const id of NEW_IDS) assert.equal(counts.get(id), 1, 'new id "' + id + '" must exist exactly once');
+  for (const id of MANUAL_CALC_IDS) assert.equal(counts.get(id), 1, 'manual-calc id "' + id + '" must exist exactly once');
   assert.equal(counts.has('extendedAssumptions'), false, '#extendedAssumptions is dissolved');
-  const unexpected = ids.filter((id) => !EXPECTED_IDS.includes(id) && !NEW_IDS.includes(id));
+  const unexpected = ids.filter((id) => !EXPECTED_IDS.includes(id) && !NEW_IDS.includes(id) && !MANUAL_CALC_IDS.includes(id));
   assert.deepEqual(unexpected, [], 'no unplanned ids');
 });
 
@@ -109,7 +112,7 @@ test('parts appear in the agreed order', () => {
   assert.ok(idAt('calcAnnounce') < idAt('resultados'), 'status block is above Resultados');
 
   assertAscending([
-    ['#resultados', idAt('resultados')], ['Waypoints', at('<h2>Waypoints de patrimonio</h2>')], ['#wpts', idAt('wpts')],
+    ['#resultados', idAt('resultados')], ['Waypoints', at('<h2>Hitos de patrimonio</h2>')], ['#wpts', idAt('wpts')],
     ['Riesgo de ruina', at('<h2>Riesgo de ruina tras el FIRE</h2>')], ['#ruinTable', idAt('ruinTable')],
     ['#chart', idAt('chart')], ['#contribChart', idAt('contribChart')], ['#ruinChartCanvas', idAt('ruinChartCanvas')],
     ['#chartModal', idAt('chartModal')], ['#outcomesDashboard', idAt('outcomesDashboard')], ['#parametros', idAt('parametros')],
@@ -155,13 +158,13 @@ test('Parametros is one section with the groups in the agreed order', () => {
   expectGroup('Objetivo', ['gasto', 'swr']);
   expectGroup('Tú y el horizonte', ['ageNow', 'horizonAge', 'careerYear']);
   expectGroup('Carrera', ['fx', 'salFO', 'salCA', 'captY', 'mandatoryRetireAge']);
-  expectGroup('Gastos', ['vida', 'vidaG', 'hip', 'hipEnd', 'nur', 'childAnnual', 'childStartAge', 'childEndAge', 'healthcareAnnual', 'healthcareStartAge']);
+  expectGroup('Gastos', ['vida', 'vidaG', 'hip', 'hipEnd', 'mortgageBalance', 'childAnnual', 'childStartAge', 'childEndAge', 'healthcareAnnual', 'healthcareStartAge']);
   assertAscending([
-    ['nur', section.indexOf('id="nur"')], ['childAnnual', section.indexOf('id="childAnnual"')],
-    ['healthcareAnnual', section.indexOf('id="healthcareAnnual"')],
-  ], 'family controls follow the existing Gastos controls');
+    ['hipEnd', section.indexOf('id="hipEnd"')], ['mortgageBalance', section.indexOf('id="mortgageBalance"')],
+    ['childAnnual', section.indexOf('id="childAnnual"')], ['healthcareAnnual', section.indexOf('id="healthcareAnnual"')],
+  ], 'mortgage and family controls follow the existing Gastos controls');
   expectGroup('Ingresos en jubilación', ['pensionAnnual', 'pensionStartAge', 'lumpSums', 'lumpSumHelp']);
-  expectGroup('Reparto de la cartera básica', ['allocCash', 'allocBonds', 'allocEquities', 'cashRet', 'cashVol']);
+  expectGroup('Reparto de la cartera básica', ['allocCash', 'allocBonds', 'consRet', 'consVol', 'allocEquities', 'cashRet', 'cashVol']);
 
   const proRow = section.indexOf('class="proRow"');
   assert.ok(proRow > groupStart('Mercado') && proRow < groupStart('PRO · Fiscalidad España'), 'PRO switch sits right before the PRO groups');

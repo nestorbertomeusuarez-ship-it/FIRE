@@ -14,11 +14,14 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
   the bare directory as a module path, not a test glob), so on Windows run
   each file individually instead, e.g. from PowerShell:
   `Get-ChildItem test/*.test.js | ForEach-Object { node --test $_.FullName }`.
-  Current files: `feature-audit.test.js`, `index-publico-sensitivity.test.js`,
-  `index-sensitivity-bounds.test.js`, `input-validation.test.js`,
-  `post-fix-regressions.test.js`, `reproducibility.test.js`,
-  `simulation-core.test.js`, `simulation-integration.test.js`,
-  `simulation-jobs.test.js`, `tax-accumulation.test.js`, `ui-behaviour.test.js`,
+  Current files: `engine-audit-fixes.test.js`, `feature-audit.test.js`,
+  `index-publico-sensitivity.test.js`, `index-sensitivity-bounds.test.js`,
+  `input-validation.test.js`, `label-painting.test.js`,
+  `page-structure.test.js`, `post-fix-regressions.test.js`,
+  `remaining-audit-fixes.test.js`,
+  `reproducibility.test.js`, `simulation-core.test.js`,
+  `simulation-integration.test.js`, `simulation-jobs.test.js`,
+  `slider-ranges.test.js`, `tax-accumulation.test.js`, `ui-behaviour.test.js`,
   `worker-parity.test.js`.
 
 ## Deploy
@@ -55,6 +58,7 @@ file is retained as a historical comparison and is not the canonical app.
 
 - Additional assumptions include an editable current age and end age. The end age is dynamically constrained to at most 80 years after the current age, never above 110; this maps the fixed September 2026 simulation start to the supported calendar through September 2106. Career start is constrained to that same window. Cash/bond/equity allocation, recurring retirement income, health costs, child costs, and dated one-off cash flows are user inputs, not forecasts.
 - The outcome dashboard separates voluntary FIRE, post-FIRE ruin, forced retirement, loss of licence, and routes that do not retire in the selected horizon.
+- Sliders/inputs no longer recalculate in real time: they only repaint labels and mark the result stale (visible notice + dimmed results). Press "Calcular" to run the full-precision simulation, with a precision selector ("Rápida" ~4s default, "Alta" ~12s, "Máxima" ~30s, or a custom 5-120s target) that trades wait time for more simulated paths. Reset and loading a saved scenario still recalculate immediately, as does the initial page load.
 - Save up to four local scenarios. They can be exported/imported as validated JSON. A CSV report contains the current full-precision assumptions and percentile series; printing the page can be saved as PDF by the browser.
 - Current embedded-data review date: 2026-09-21. Source attributions in the app are informational only. Before relying on any tax, pension, salary, healthcare, or market figure, replace it with a current, personally verified source.
 

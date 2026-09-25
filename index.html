@@ -271,6 +271,30 @@ button.reset:focus-visible{outline:2px solid var(--route);outline-offset:2px}
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--route);
   margin-top:4px;
 }
+.methodTag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin:0 6px 6px 0;border:1px solid currentColor}
+.methodTag.mc{color:var(--route)}
+.methodTag.hist{color:#1F6F8B}
+.methodGuide{border-left:3px solid var(--route);padding:4px 0 4px 14px;margin:0 0 22px}
+.methodGuide ul{margin:8px 0 0;padding-left:18px}
+.methodGuide li{margin:4px 0}
+.staleNotice{
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8A5A00;
+  margin-top:4px;
+}
+body.stale .readout,body.stale #resultados{opacity:.55}
+.precisionRow{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.precisionRow label{
+  font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;
+  letter-spacing:.04em;color:var(--ink);
+}
+.precisionRow select{
+  font-family:'IBM Plex Mono',monospace;font-size:12px;
+  background:var(--paper);color:var(--ink);border:1px solid var(--rule);
+  padding:6px 8px;
+}
+button.runCalc{background:var(--route);color:var(--paper);border-color:var(--route);font-weight:700}
+button.runCalc:hover{background:var(--ink);border-color:var(--ink)}
+button.runCalc:disabled{opacity:.6;cursor:default}
 @media (max-width:520px){
   .masthead h1{font-size:30px}
   .readout .big{font-size:44px}
@@ -314,7 +338,9 @@ body:not(.pro) .pro-only{display:none}
   padding:9px 0;margin:0;
   font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
 }
-.pageNav{scrollbar-width:none}
+.pageNav{scrollbar-width:none;box-shadow:0 6px 10px -8px rgba(0,0,0,.35)}
+/* Anchor jumps from the sticky nav must not hide the section heading under it. */
+main [id]{scroll-margin-top:52px}
 .pageNav::-webkit-scrollbar{display:none}
 .pageNav a{color:var(--ink);text-decoration:none;white-space:nowrap;padding:2px 0;border-bottom:2px solid transparent}
 .pageNav a:hover{color:var(--route);border-bottom-color:var(--route)}
@@ -373,12 +399,14 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="calc" id="calc"></p>
       <p class="srOnly" id="calcAnnounce" role="status" aria-live="polite"></p>
       <p class="hint" id="simulationContext"></p>
+      <p class="staleNotice" id="staleNotice" style="display:none">Parámetros cambiados — pulsa Calcular para actualizar.</p>
       <p class="calcLoading" id="calcLoading" style="display:none">Calculando con el máximo de rutas que caben en ~3-5s…</p>
   </div>
 
   <div class="partBand" aria-hidden="true">Resultados</div>
   <section id="resultados">
-    <h2>Waypoints de patrimonio</h2>
+    <p class="hint"><span class="methodTag mc">Simulación Monte Carlo</span>Todo lo de esta parte sale de miles de futuros aleatorios generados con tus parámetros. Son medianas y percentiles de esos futuros, no una predicción.</p>
+    <h2>Hitos de patrimonio</h2>
     <table>
       <thead>
         <tr><th>Hito</th><th>Mediana</th><th>P10</th><th>P90</th></tr>
@@ -395,19 +423,19 @@ section[id],#notas{scroll-margin-top:88px}
       </thead>
       <tbody id="ruinTable"></tbody>
     </table>
-    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación (2092), sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
+    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación, sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
   </section>
 
   <section>
     <div class="chartHead">
       <h2>Trayectoria</h2>
       <div class="chartTools">
-        <a href="#" class="zoomReset" id="zoomReset" style="display:none">Restablecer zoom</a>
+        <button type="button" class="zoomReset" id="zoomReset" style="display:none">Restablecer zoom</button>
         <button type="button" class="expandBtn" id="expandChart">⤢ Ampliar</button>
       </div>
     </div>
     <div class="chartbox">
-      <canvas id="chart" width="1400" height="800" role="img" aria-label="Trayectoria simulada; la tabla de hitos contiene el equivalente textual."></canvas>
+      <canvas id="chart" tabindex="0" width="1400" height="800" role="img" aria-label="Trayectoria simulada; la tabla de hitos contiene el equivalente textual."></canvas>
       <div class="chart-tip" id="chartTip"></div>
     </div>
     <div class="legend" id="legend">
@@ -423,11 +451,11 @@ section[id],#notas{scroll-margin-top:88px}
     <div class="chartHead">
       <h2>Aportado vs. rendimiento</h2>
       <div class="chartTools">
-        <a href="#" class="zoomReset" id="zoomResetContrib" style="display:none">Restablecer zoom</a>
+        <button type="button" class="zoomReset" id="zoomResetContrib" style="display:none">Restablecer zoom</button>
       </div>
     </div>
     <div class="chartbox">
-      <canvas id="contribChart" width="1400" height="700" role="img" aria-label="Aportado frente a rendimiento de la ruta mediana." aria-describedby="contribSummary"></canvas>
+      <canvas id="contribChart" tabindex="0" width="1400" height="700" role="img" aria-label="Aportado frente a rendimiento de la ruta mediana." aria-describedby="contribSummary"></canvas>
       <p class="srOnly" id="contribSummary"></p>
       <div class="chart-tip" id="contribChartTip"></div>
     </div>
@@ -444,11 +472,11 @@ section[id],#notas{scroll-margin-top:88px}
     <div class="chartHead">
       <h2>Probabilidad acumulada de ruina desde el FIRE</h2>
       <div class="chartTools">
-        <a href="#" class="zoomReset" id="zoomResetRuin" style="display:none">Restablecer zoom</a>
+        <button type="button" class="zoomReset" id="zoomResetRuin" style="display:none">Restablecer zoom</button>
       </div>
     </div>
     <div class="chartbox">
-      <canvas id="ruinChartCanvas" width="1400" height="700" role="img" aria-label="Probabilidad acumulada de ruina; la tabla de riesgo de ruina contiene el equivalente textual."></canvas>
+      <canvas id="ruinChartCanvas" tabindex="0" width="1400" height="700" role="img" aria-label="Probabilidad acumulada de ruina; la tabla de riesgo de ruina contiene el equivalente textual."></canvas>
       <div class="chart-tip" id="ruinChartTip"></div>
     </div>
     <div class="legend">
@@ -461,12 +489,12 @@ section[id],#notas{scroll-margin-top:88px}
     <div class="chartModalHead">
       <h2>Trayectoria — vista ampliada</h2>
       <div class="chartTools">
-        <a href="#" class="zoomReset" id="zoomResetModal" style="display:none">Restablecer zoom</a>
+        <button type="button" class="zoomReset" id="zoomResetModal" style="display:none">Restablecer zoom</button>
         <button type="button" class="closeBtn" id="closeChartModal">✕ Cerrar</button>
       </div>
     </div>
     <div class="chartbox">
-      <canvas id="chartModalCanvas" width="1600" height="900" role="img" aria-label="Vista ampliada de la trayectoria. Usa la tabla Waypoints de patrimonio como alternativa textual."></canvas>
+      <canvas id="chartModalCanvas" tabindex="0" width="1600" height="900" role="img" aria-label="Vista ampliada de la trayectoria. Usa la tabla Hitos de patrimonio como alternativa textual."></canvas>
       <div class="chart-tip" id="chartTipModal"></div>
     </div>
     <div class="legend" id="legendModal">
@@ -578,11 +606,12 @@ section[id],#notas{scroll-margin-top:88px}
         <div class="row"><label for="hipEnd">Fin de hipoteca</label><output id="hipEnd_o" for="hipEnd"></output></div>
         <input type="range" id="hipEnd" min="2027" max="2065" step="1">
       </div>
-      <div class="ctrl">
-        <div class="row"><label for="nur">Guardería por hijo (€/año)</label><output id="nur_o" for="nur"></output></div>
-        <input type="range" id="nur" min="0" max="20000" step="250">
+      <div class="ctrl pro-only">
+        <div class="row"><label for="mortgageBalance">Saldo pendiente hoy de esa hipoteca (€)</label><output id="mortgageBalance_o" for="mortgageBalance"></output></div>
+        <p class="hint">Se usa solo para el cálculo del impuesto de patrimonio (patrimonio neto = bienes menos deudas): se amortiza en línea recta hasta 0 en el año de "Fin de hipoteca" que hayas fijado.</p>
+        <input type="range" id="mortgageBalance" min="0" max="500000" step="5000">
       </div>
-      <p class="subhead">Hijos</p>
+      <p class="subhead">Hijos (guardería, colegio y otros gastos)</p>
       <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><input type="range" id="childAnnual" min="0" max="30000" step="500"></div>
       <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><input type="range" id="childStartAge" min="18" max="80" step="1"></div>
       <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><input type="range" id="childEndAge" min="19" max="100" step="1"></div>
@@ -605,6 +634,14 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="grouphint">La cartera básica se reparte entre efectivo, bonos y acciones; el reparto suma siempre 100 %: Acciones se calcula solo con lo que queda. Rendimientos y prestaciones no son previsiones.</p>
       <div class="ctrl"><div class="row"><label for="allocCash">Efectivo (%)</label><output id="allocCash_o" for="allocCash"></output></div><input type="range" id="allocCash" min="0" max="100" step="1"></div>
       <div class="ctrl"><div class="row"><label for="allocBonds">Bonos (%)</label><output id="allocBonds_o" for="allocBonds"></output></div><input type="range" id="allocBonds" min="0" max="100" step="1"></div>
+      <div class="ctrl">
+        <div class="row"><label for="consRet">Rentabilidad real de bonos / cartera conservadora</label><output id="consRet_o" for="consRet"></output></div>
+        <input type="range" id="consRet" min="0" max="4" step="0.25">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="consVol">Volatilidad de bonos / cartera conservadora</label><output id="consVol_o" for="consVol"></output></div>
+        <input type="range" id="consVol" min="0" max="8" step="0.5">
+      </div>
       <div class="ctrl"><div class="row"><label for="allocEquities">Acciones (%)</label><output id="allocEquities_o" for="allocEquities"></output></div><input type="range" id="allocEquities" min="0" max="100" step="1"></div>
       <div class="ctrl"><div class="row"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><output id="cashRet_o" for="cashRet"></output></div><input type="range" id="cashRet" min="-5" max="5" step="0.1"></div>
       <div class="ctrl"><div class="row"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><output id="cashVol_o" for="cashVol"></output></div><input type="range" id="cashVol" min="0" max="10" step="0.1"></div>
@@ -612,11 +649,11 @@ section[id],#notas{scroll-margin-top:88px}
 
     <div class="group">
       <h3>Cartera hoy</h3>
-      <p class="grouphint">Lo que ya tienes ahorrado, repartido en dos cestas con comportamiento distinto: renta variable tradicional y Bitcoin.</p>
+      <p class="grouphint">Lo que ya tienes ahorrado, repartido en dos cestas con comportamiento distinto: cartera líquida y Bitcoin.</p>
       <div class="ctrl">
-        <div class="row"><label for="startEq">Renta variable inicial (€)</label><output id="startEq_o" for="startEq"></output></div>
+        <div class="row"><label for="startEq">Cartera líquida inicial (€)</label><output id="startEq_o" for="startEq"></output></div>
         <input type="range" id="startEq" min="0" max="400000" step="500">
-        <p class="hint">Este importe se modela como 100 % renta variable; no hay una reserva de efectivo separada.</p>
+        <p class="hint">Este importe se reparte según los porcentajes de "Reparto de la cartera básica" (efectivo / bonos / acciones); no es 100 % renta variable.</p>
       </div>
       <div class="ctrl">
         <div class="row"><label for="startBtc">Bitcoin (€)</label><output id="startBtc_o" for="startBtc"></output></div>
@@ -624,11 +661,12 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcRet">Rentabilidad real media de BTC</label><output id="btcRet_o" for="btcRet"></output></div>
-        <input type="range" id="btcRet" min="-10" max="20" step="0.5">
+        <input type="range" id="btcRet" min="-10" max="30" step="0.5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcVol">Volatilidad de BTC</label><output id="btcVol_o" for="btcVol"></output></div>
-        <input type="range" id="btcVol" min="20" max="110" step="2">
+        <input type="range" id="btcVol" min="20" max="110" step="1">
+        <p class="hint">La rentabilidad es una media: con mucha volatilidad, la ruta típica (mediana) crece bastante menos (≈ media − volatilidad²/2). Con 10 % de media y 55 % de volatilidad la mediana queda cerca de −5 % al año; con 70 % de volatilidad caería a ≈ −13 %.</p>
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o" for="btcRho"></output></div>
@@ -686,22 +724,18 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="provCo" min="0" max="20" step="0.5">
       </div>
       <p class="note">Emirates aporta el 12 % del básico (15 % a partir de 10 años de servicio) y tú el 5 %, que sale de tu nómina. Solo se cobra al dejar la compañía — y como dejarla es justo lo que significa jubilarse, cuenta para el objetivo. Antes de 5 años solo te llevas parte de lo que puso Emirates.</p>
-      <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="gratuityYears">Años de servicio con gratuity (antes de DEWS)</label><output id="gratuityYears_o" for="gratuityYears"></output></div>
-        <p class="hint">El Provident Scheme (DEWS) de este grupo solo cubre los años desde que se creó (2020). Los años de servicio anteriores generaban la indemnización de fin de servicio clásica de la ley laboral de EAU: 21 días de básico por año los primeros 5 años y 30 días/año a partir del sexto, con un tope de 2 años de básico — se cobra en un único pago al dejar la compañía, sobre el básico vigente en ese momento (copiloto o comandante). Con 0 años (valor por defecto) no cambia nada.</p>
-        <input type="range" id="gratuityYears" min="0" max="15" step="0.5">
-      </div>
+      <p class="note">Indemnización de fin de servicio (gratuity, ley laboral de EAU): 21 días de básico por año de servicio los 5 primeros años y 30 días por año a partir del sexto, con un mínimo de 1 año de servicio y un tope de 2 años de básico. Emirates paga la gratuity <b>o</b> el Provident, el que sea mayor, nunca los dos. El simulador lo calcula solo con tus años de servicio al dejar la compañía (FIRE, jubilación obligatoria o LOL): como el Provident casi siempre es mayor, normalmente no añade nada; si desactivas el Provident, se cobra la gratuity entera.</p>
     </div>
 
     <div class="group">
       <h3>Mercado</h3>
       <p class="grouphint">Estos dos números definen cómo se comporta la bolsa mes a mes en la simulación: cuánto sube de media y cuánto oscila alrededor de esa media.</p>
       <div class="ctrl">
-        <div class="row"><label for="ret">Rentabilidad real media</label><output id="ret_o" for="ret"></output></div>
+        <div class="row"><label for="ret">Rentabilidad real media de la bolsa</label><output id="ret_o" for="ret"></output></div>
         <input type="range" id="ret" min="2" max="9" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="vol">Volatilidad anual</label><output id="vol_o" for="vol"></output></div>
+        <div class="row"><label for="vol">Volatilidad anual de la bolsa</label><output id="vol_o" for="vol"></output></div>
         <p class="hint">Cuánto se desvía un año típico de la media. Con 17 %, en torno a 1 de cada 3 años el resultado se aleja de la rentabilidad media en más de ese porcentaje, para bien o para mal.</p>
         <input type="range" id="vol" min="0" max="26" step="0.5">
       </div>
@@ -775,6 +809,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="wealthRate">Tipo medio anual sobre el exceso</label><output id="wealthRate_o" for="wealthRate"></output></div>
+        <p class="hint">Se aplica cada diciembre sobre la parte de tu patrimonio neto que supera el mínimo exento, ya con la bonificación autonómica descontada. Con el 0,5 % por defecto y, por ejemplo, 1.000.000 € de exceso sobre el mínimo, la cuota de ese año sería de 5.000 €. Los tipos reales de patrimonio son progresivos por tramos (hasta ~3,5 % en los más altos); esta cifra es un tipo medio simplificado, no la tarifa exacta.</p>
         <input type="range" id="wealthRate" min="0" max="3.5" step="0.05">
       </div>
       <div class="ctrl">
@@ -782,12 +817,7 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Varias comunidades (Madrid, Andalucía, Cantabria, Extremadura) no cambian el mínimo exento sino que bonifican el 100 % de la cuota resultante — el impuesto sale a pagar 0 € aunque tengas mucho patrimonio.</p>
         <input type="range" id="wealthBonusPct" min="0" max="100" step="5">
       </div>
-      <div class="ctrl">
-        <div class="row"><label for="mortgageBalance">Hipoteca pendiente (saldo actual, €)</label><output id="mortgageBalance_o" for="mortgageBalance"></output></div>
-        <p class="hint">La base del impuesto de patrimonio es tu patrimonio neto (bienes menos deudas), no el bruto. Este saldo se amortiza en línea recta hasta 0 en el año de "Fin de hipoteca" que fijaste en Gastos.</p>
-        <input type="range" id="mortgageBalance" min="0" max="500000" step="5000">
-      </div>
-      <p class="note">El "año de repatriación" se cuenta desde la fecha FIRE de cada ruta, no como un año fijo: el FIRE es first-passage y varía ruta a ruta. Los impuestos se detraen directamente de la cartera, así que todas las cifras de resultados ya quedan netas. Los mínimos/bonificaciones por comunidad son orientativos (2025): Madrid/Andalucía/Cantabria/Extremadura bonifican el 100 %, Cataluña fija 500.000 € de mínimo, Comunidad Valenciana 1.000.000 € — confírmalo con tu asesor antes de tomar decisiones.</p>
+      <p class="note">La base del impuesto de patrimonio es tu patrimonio neto (bienes menos deudas): la hipoteca pendiente que configures en Gastos se resta del bruto. El "año de repatriación" se cuenta desde la fecha FIRE de cada ruta, no como un año fijo: el FIRE es first-passage y varía ruta a ruta. Los impuestos se detraen directamente de la cartera, así que todas las cifras de resultados ya quedan netas. Los mínimos/bonificaciones por comunidad son orientativos (2025): Madrid/Andalucía/Cantabria/Extremadura bonifican el 100 %, Cataluña fija 500.000 € de mínimo, Comunidad Valenciana 1.000.000 € — confírmalo con tu asesor antes de tomar decisiones.</p>
     </div>
 
     <div class="group pro-only">
@@ -797,30 +827,44 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="checkbox" id="lolOn">
         <label for="lolOn">Modelar riesgo de LOL</label>
       </div>
+      <div class="toggle">
+        <input type="checkbox" id="lolEmiratesOn">
+        <label for="lolEmiratesOn">Cobertura LOL del contrato de Emirates</label>
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="lolAgeCurveOn">
+        <label for="lolAgeCurveOn">Riesgo de LOL según la edad (curva de bañera)</label>
+      </div>
+      <p class="hint">El riesgo no es igual a todas las edades. Con esta opción activada, cada mes se usa la probabilidad anual de tu edad en ese momento: 0,1 % hasta los 40 años (sobre todo accidentes o debuts de enfermedades graves), 0,3 % de 40 a 50, sube en línea recta hasta el 1,6 % entre 50 y 55, y se mantiene en 1,6 % a partir de ahí. Están ancladas en datos publicados: la FAA registra ~0,1 %/año de retiradas de certificado médico a los 25–29 años y ~1,6 %/año a los 55–59, y EASA observa que pasados los 60 el riesgo deja de subir (los pilotos menos sanos ya han salido). Son una aproximación, no una tabla actuarial de tu aseguradora. Con la curva activada, el slider de probabilidad fija no se usa.</p>
+      <p class="hint">Cláusula 10.2 del contrato: si pierdes la licencia de forma permanente por accidente o enfermedad, Emirates te paga 36 meses de salario básico hasta los 62 años, 24 meses de 62 a 63, 12 meses de 63 a 64 y nada a partir de 64. Se calcula con el básico de tu rango en ese momento (copiloto o comandante) y el tipo AED→EUR de ese mes. Con los valores por defecto, un LOL como copiloto son 36 × 26.485 AED × 0,235 ≈ 224.000 €; como comandante, 36 × 40.100 AED × 0,235 ≈ 339.000 €. Lo paga la compañía, sin prima. Los controles de prima e indemnización son para un seguro privado adicional, que por defecto está a 0.</p>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="lolAnnualProb">Probabilidad anual de LOL</label><output id="lolAnnualProb_o" for="lolAnnualProb"></output></div>
         <p class="hint">Se sortea cada mes mientras vuelas en activo; una vez ocurre, es un estado permanente — no vuelves a volar en esa ruta. Con 0 % no cambia nada respecto a no tenerlo en cuenta.</p>
         <input type="range" id="lolAnnualProb" min="0" max="3" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="lolPremiumMonthly">Prima mensual del seguro LOL (€)</label><output id="lolPremiumMonthly_o" for="lolPremiumMonthly"></output></div>
+        <div class="row"><label for="lolPremiumMonthly">Prima mensual del seguro LOL privado (€)</label><output id="lolPremiumMonthly_o" for="lolPremiumMonthly"></output></div>
         <p class="hint">Coste recurrente mientras estás cubierto y en activo — se descuenta de tu flujo de caja como cualquier otro gasto. Deja de pagarse en cuanto dejas de volar, por el motivo que sea.</p>
         <input type="range" id="lolPremiumMonthly" min="0" max="400" step="10">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="lolPayoutMode">Tipo de indemnización</label><output id="lolPayoutMode_o" for="lolPayoutMode"></output></div>
+        <div class="row"><label for="lolPayoutMode">Tipo de indemnización del seguro privado</label><output id="lolPayoutMode_o" for="lolPayoutMode"></output></div>
+        <p class="hint">Elige cómo cobras si ocurre el LOL: "Pago único" añade de golpe el importe de "Pago único (€)" a tu cartera gravable; "Sustitución de ingreso" en cambio te paga cada mes un % de tu último salario durante la "Duración de la sustitución" que configures. Solo uno de los dos modos aplica a la vez, según cuál esté seleccionado.</p>
         <input type="range" id="lolPayoutMode" min="0" max="1" step="1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="lolPayout">Pago único (€)</label><output id="lolPayout_o" for="lolPayout"></output></div>
+        <div class="row"><label for="lolPayout">Pago único del seguro privado (€)</label><output id="lolPayout_o" for="lolPayout"></output></div>
+        <p class="hint">Solo cuenta si "Tipo de indemnización" está en "Pago único": ese importe se suma de una vez a tu cartera (renta variable) el mes exacto del LOL, como un capital indemnizatorio del seguro. Por defecto es 0 € (sin seguro privado); pon el capital que cubra tu póliza si contratas una además de la cobertura de Emirates.</p>
         <input type="range" id="lolPayout" min="0" max="500000" step="10000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="lolReplacePct">Sustitución de ingreso (% del último salario)</label><output id="lolReplacePct_o" for="lolReplacePct"></output></div>
+        <p class="hint">Solo cuenta si "Tipo de indemnización" está en "Sustitución de ingreso": cada mes cobras este % de tu último salario en euros, en vez de un pago único. Con el 60 % por defecto, si tu último salario mensual eran 5.000 €, cobrarías 3.000 €/mes mientras dure la sustitución.</p>
         <input type="range" id="lolReplacePct" min="0" max="100" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="lolReplaceYears">Duración de la sustitución (años)</label><output id="lolReplaceYears_o" for="lolReplaceYears"></output></div>
+        <p class="hint">Solo cuenta en modo "Sustitución de ingreso": número de años tras el LOL durante los que sigues cobrando ese % del salario. Con el valor por defecto de 3 años, pasado ese plazo el ingreso se corta y solo queda lo que ya hayas acumulado en la cartera.</p>
         <input type="range" id="lolReplaceYears" min="1" max="10" step="1">
       </div>
       <p class="note">Al ocurrir un LOL se considera que dejas la compañía (cobras gratuity si aplica), igual que una jubilación normal, pero no cuenta como FIRE exitoso ni voluntario.</p>
@@ -835,6 +879,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="fxVol">Volatilidad anual del tipo de cambio</label><output id="fxVol_o" for="fxVol"></output></div>
+        <p class="hint">Cuánto puede desviarse mes a mes el tipo AED→EUR alrededor del valor base de Carrera, antes de que la reversión a la media lo empuje de vuelta. Con el 4 % por defecto los meses malos son suaves; súbelo (por ejemplo a 10-15 %) para simular un dírham que pudiera desvincularse del dólar o un euro más inestable.</p>
         <input type="range" id="fxVol" min="0" max="15" step="0.5">
       </div>
       <div class="ctrl">
@@ -848,6 +893,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="inflVol">Volatilidad anual de la sorpresa de inflación</label><output id="inflVol_o" for="inflVol"></output></div>
+        <p class="hint">Ruido mensual alrededor de la inflación real ya asumida en el resto del modelo, no una segunda tasa de inflación aparte. Cuando la sorpresa es al alza, erosiona algo el retorno de ese mes en bolsa y BTC (el mercado absorbe el 30 % del golpe) y abarata en términos reales la hipoteca nominal fija. Con el 1,2 %/año por defecto el efecto es discreto; súbelo para estresar carteras y deuda fija frente a inflación más errática.</p>
         <input type="range" id="inflVol" min="0" max="4" step="0.1">
       </div>
       <p class="note">El modelo ya trabaja en euros reales de 2026. Esto no reintroduce una base nominal completa: añade ruido alrededor de esa base real, erosionando algo el retorno de mercado y abaratando en términos reales la hipoteca nominal fija cuando la inflación sorprende al alza.</p>
@@ -858,46 +904,56 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="grouphint">En el modo simple, una vez jubilado retiras siempre la misma cantidad cada año. Aquí puedes probar alternativas que ajustan el gasto según cómo le va a la cartera o según la edad.</p>
       <div class="ctrl">
         <div class="row"><label for="wdStrategy">Estrategia</label><output id="wdStrategy_o" for="wdStrategy"></output></div>
+        <p class="hint">Elige cómo se calcula el gasto mes a mes tras el FIRE, entre tres opciones excluyentes: "SWR fijo" (idéntico al modo simple: siempre el gasto configurado), "Guyton-Klinger" (ajusta el gasto según cómo evoluciona la cartera, con los quitamiedos de esta misma sección) o "Fases go-go/slow-go/no-go" (ajusta el gasto según los años transcurridos desde el FIRE). Solo los sliders del grupo correspondiente a la opción elegida afectan al resultado.</p>
         <input type="range" id="wdStrategy" min="0" max="2" step="1">
       </div>
       <p class="subhead">Guyton-Klinger (guardrails)</p>
-      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más.</p>
+      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más. Solo actúa cuando "Estrategia" está en "Guyton-Klinger".</p>
       <div class="ctrl">
         <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o" for="gkGuard"></output></div>
+        <p class="hint">Define el techo y el suelo de la banda como un % por encima y por debajo del SWR objetivo (Objetivo → Tasa de retiro segura, 3,25 % por defecto). Con el 20 % por defecto: techo = 3,25 %×1,20 = 3,9 %, suelo = 3,25 %×0,80 = 2,6 %. Si la tasa de retiro efectiva (gasto actual / cartera total) supera el 3,9 % se aplica el "Recorte de gasto al tocar el techo"; si cae por debajo del 2,6 % se aplica la "Subida de gasto al tocar el suelo".</p>
         <input type="range" id="gkGuard" min="10" max="30" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkCut">Recorte de gasto al tocar el techo</label><output id="gkCut_o" for="gkCut"></output></div>
+        <p class="hint">% que se descuenta del gasto anual vigente la próxima vez que toque revisión (según la "Frecuencia de revisión" configurada) si la tasa de retiro efectiva está por encima del techo de la banda. Con el 10 % por defecto y un gasto de 60.000 €/año, ese recorte lo deja en 54.000 €/año; el recorte se aplica sobre el gasto ya vigente, así que se acumula si vuelve a activarse en revisiones sucesivas.</p>
         <input type="range" id="gkCut" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkRaise">Subida de gasto al tocar el suelo</label><output id="gkRaise_o" for="gkRaise"></output></div>
+        <p class="hint">% que se añade al gasto anual vigente cuando, en la revisión periódica, la tasa de retiro efectiva está por debajo del suelo de la banda (la cartera ha ido mejor de lo esperado). Con el 10 % por defecto y un gasto de 60.000 €/año, la subida lo deja en 66.000 €/año.</p>
         <input type="range" id="gkRaise" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkFreq">Frecuencia de revisión (meses)</label><output id="gkFreq_o" for="gkFreq"></output></div>
+        <p class="hint">Cada cuántos meses tras el FIRE se comprueba si la tasa de retiro efectiva se ha salido de la banda y, si toca, se aplica el recorte o la subida. Con los 12 meses por defecto la revisión es anual; en los meses intermedios el gasto se mantiene igual aunque la cartera se mueva.</p>
         <input type="range" id="gkFreq" min="6" max="24" step="6">
       </div>
       <p class="subhead">Fases go-go / slow-go / no-go</p>
-      <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go).</p>
+      <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go). Las tres fases son consecutivas y cubren siempre todo el tiempo tras el FIRE: primero go-go, luego slow-go, y no-go el resto de años, sin fecha de fin. Solo actúa cuando "Estrategia" está en "Fases go-go/slow-go/no-go".</p>
       <div class="ctrl">
         <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o" for="goGoMult"></output></div>
+        <p class="hint">Multiplicador que se aplica al gasto base (Objetivo → Gasto anual al jubilarte, 60.000 € por defecto) durante los primeros años tras el FIRE. Con el 115 % por defecto, el gasto real en esta fase es 69.000 €/año — a diferencia de Guyton-Klinger, aquí el gasto no depende de cómo vaya la cartera, solo de los años transcurridos.</p>
         <input type="range" id="goGoMult" min="80" max="150" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="goGoYears">Duración go-go (años)</label><output id="goGoYears_o" for="goGoYears"></output></div>
+        <p class="hint">Cuántos años dura la fase go-go antes de pasar a slow-go, contados desde el FIRE de cada ruta (que varía ruta a ruta). Con el valor por defecto de 10 años, del año 0 al 10 se gasta al multiplicador go-go y a partir del año 10 se pasa a slow-go.</p>
         <input type="range" id="goGoYears" min="0" max="20" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="slowGoMult">Gasto fase slow-go (% del base)</label><output id="slowGoMult_o" for="slowGoMult"></output></div>
+        <p class="hint">Multiplicador sobre el gasto base durante la fase intermedia, tras acabar go-go. Con el 90 % por defecto y un gasto base de 60.000 €/año, el gasto en esta fase es 54.000 €/año.</p>
         <input type="range" id="slowGoMult" min="60" max="120" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="slowGoYears">Duración slow-go (años)</label><output id="slowGoYears_o" for="slowGoYears"></output></div>
+        <p class="hint">Cuántos años dura la fase slow-go antes de pasar a no-go. Se cuenta a partir de que termina go-go: con los valores por defecto (10 años de go-go + 10 de slow-go), slow-go va del año 10 al 20 tras el FIRE, y desde el año 20 en adelante se aplica no-go indefinidamente.</p>
         <input type="range" id="slowGoYears" min="0" max="20" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="noGoMult">Gasto fase no-go (% del base)</label><output id="noGoMult_o" for="noGoMult"></output></div>
+        <p class="hint">Multiplicador sobre el gasto base a partir de que terminan go-go y slow-go, y hasta el final del horizonte. Con el 100 % por defecto el gasto vuelve a ser igual al gasto base (60.000 €/año) — sube o baja este valor si esperas gastar más o menos en la vejez que en la fase intermedia.</p>
         <input type="range" id="noGoMult" min="50" max="110" step="5">
       </div>
       <p class="note">Con "SWR fijo" el gasto es idéntico al modo simple. Guyton-Klinger ajusta el gasto anual cuando la tasa de retiro efectiva se sale de la banda alrededor del SWR objetivo. Las fases aplican un multiplicador al gasto base según los años transcurridos desde el FIRE de cada ruta.</p>
@@ -909,14 +965,17 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="subhead">Oro</p>
       <div class="ctrl">
         <div class="row"><label for="startGold">Oro hoy (€)</label><output id="startGold_o" for="startGold"></output></div>
+        <p class="hint">Valor de oro que ya tienes al empezar la simulación, aparte de la renta variable y BTC. Por defecto es 0 €: el oro solo se modela como clase de activo si pones algo aquí o en "Del ahorro nuevo, a oro" — con los dos en 0 el oro no interviene en absoluto en los resultados.</p>
         <input type="range" id="startGold" min="0" max="100000" step="1000">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="goldRet">Rentabilidad real media</label><output id="goldRet_o" for="goldRet"></output></div>
+        <div class="row"><label for="goldRet">Rentabilidad real media del oro</label><output id="goldRet_o" for="goldRet"></output></div>
+        <p class="hint">Rentabilidad media anual del oro, ya descontada la inflación, usada junto con su volatilidad para simular un retorno mensual aleatorio (igual que con acciones o BTC). Con el 1,5 % por defecto el oro rinde poco de media pero amortigua la cartera gracias a su correlación negativa con la bolsa.</p>
         <input type="range" id="goldRet" min="-5" max="10" step="0.5">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="goldVol">Volatilidad anual</label><output id="goldVol_o" for="goldVol"></output></div>
+        <div class="row"><label for="goldVol">Volatilidad anual del oro</label><output id="goldVol_o" for="goldVol"></output></div>
+        <p class="hint">Cuánto oscila el retorno del oro de un año a otro. Con el 15 % por defecto es bastante más estable que la bolsa (17 %) o BTC (55 %) — súbelo si quieres modelar un oro más volátil que el histórico habitual.</p>
         <input type="range" id="goldVol" min="5" max="30" step="1">
       </div>
       <div class="ctrl">
@@ -926,6 +985,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="goldAporte">Del ahorro nuevo, a oro</label><output id="goldAporte_o" for="goldAporte"></output></div>
+        <p class="hint">% del ahorro mensual que se destina a oro, antes de repartir el resto entre acciones/bonos/efectivo según tu allocation básica (igual mecánica que "% de aportación en BTC"). Por defecto es 0 %: nada del ahorro nuevo va a oro salvo que subas este valor.</p>
         <input type="range" id="goldAporte" min="0" max="30" step="1">
       </div>
       <p class="subhead">Inmueble en alquiler</p>
@@ -935,10 +995,12 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="reValue">Valor del inmueble (€)</label><output id="reValue_o" for="reValue"></output></div>
+        <p class="hint">Valor de mercado del inmueble en alquiler al empezar la simulación (por defecto 0 €, es decir sin efecto salvo que actives "Contar un inmueble en alquiler" y pongas aquí un importe). Este valor no se suma directamente a tu capital FIRE salvo que marques "Contar el inmueble como capital FIRE".</p>
         <input type="range" id="reValue" min="0" max="500000" step="5000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="reYield">Rentabilidad neta de alquiler</label><output id="reYield_o" for="reYield"></output></div>
+        <p class="hint">Ingreso neto anual de alquiler como % del valor del inmueble, ya descontados gastos e impuestos del alquiler; entra cada mes como cash flow adicional (se suma al ahorro o reduce la retirada de cartera). Con el 3,5 % por defecto y un inmueble de 200.000 €, son 7.000 €/año (~583 €/mes) de ingreso neto.</p>
         <input type="range" id="reYield" min="0" max="8" step="0.25">
       </div>
       <div class="ctrl">
@@ -957,25 +1019,20 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o" for="glideTargetYear"></output></div>
-        <input type="range" id="glideTargetYear" min="2027" max="2092" step="1">
+        <p class="hint">Fecha en la que el glide path debe haber terminado de des-arriesgar, usada como referencia fija para calcular cuántos años faltan cada vez que se revisa (una vez al año). Con el valor por defecto de 2045 y 7 años de rampa, el des-arriesgado empieza en 2038; ajústalo para que se acerque a la mediana de FIRE de tu ruta, ya que el FIRE real varía de una simulación a otra.</p>
+        <input type="range" id="glideTargetYear" min="2027" max="2106" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="glideStartYears">Años antes de empezar a des-arriesgar</label><output id="glideStartYears_o" for="glideStartYears"></output></div>
+        <p class="hint">Duración de la rampa: cuántos años antes del "Año FIRE esperado" empieza a moverse dinero de renta variable/BTC/oro hacia la cartera conservadora. Mientras falten más años que este valor, el reparto se mantiene 100 % en activos de riesgo; a partir de ahí, el % en riesgo baja de forma lineal hasta llegar al mínimo configurado justo en la fecha ancla. Con el valor por defecto de 7 años y ancla en 2045, la rampa va de 2038 a 2045.</p>
         <input type="range" id="glideStartYears" min="1" max="15" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="glideEqFloor">Mínimo en riesgo al llegar la fecha</label><output id="glideEqFloor_o" for="glideEqFloor"></output></div>
+        <p class="hint">% mínimo de la cartera de riesgo+conservadora que sigue en activos de riesgo (acciones, BTC, oro) una vez llegada la fecha ancla; el resto queda en la cartera conservadora. Con el 50 % por defecto, en 2045 la mitad de esa cartera sigue en riesgo y la otra mitad ya está des-arriesgada — nunca baja de este suelo por mucho que pasen los años.</p>
         <input type="range" id="glideEqFloor" min="20" max="90" step="5">
       </div>
-      <div class="ctrl">
-        <div class="row"><label for="consRet">Cartera conservadora, rentabilidad real</label><output id="consRet_o" for="consRet"></output></div>
-        <input type="range" id="consRet" min="0" max="4" step="0.25">
-      </div>
-      <div class="ctrl">
-        <div class="row"><label for="consVol">Cartera conservadora, volatilidad</label><output id="consVol_o" for="consVol"></output></div>
-        <input type="range" id="consVol" min="0" max="8" step="0.5">
-      </div>
-      <p class="note">"Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
+      <p class="note">El dinero des-arriesgado por el glide path va a la misma cartera conservadora que los "Bonos (%)" de la sección "Reparto de la cartera básica": ajusta su rentabilidad y volatilidad ahí (rentabilidad/volatilidad de bonos), no aquí. "Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
     </div>
 
     <div class="group pro-only">
@@ -996,6 +1053,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o" for="baristaIncome"></output></div>
+        <p class="hint">Se resta directamente, mes a mes, de la retirada que tocaría hacer de la cartera (no se suma como ahorro nuevo). Con el gasto base de 60.000 €/año (5.000 €/mes) y el valor por defecto de 12.000 €/año (1.000 €/mes), solo hace falta retirar 4.000 €/mes de la cartera durante los años que dure este ingreso.</p>
         <input type="range" id="baristaIncome" min="0" max="40000" step="1000">
       </div>
       <div class="ctrl">
@@ -1012,21 +1070,46 @@ section[id],#notas{scroll-margin-top:88px}
         <label for="seed">Semilla (opcional)</label>
         <input type="number" id="seed" min="0" max="4294967295" step="1" placeholder="Vacía = aleatoria" aria-describedby="simulationContext">
       </div>
+      <div class="precisionRow">
+        <label for="calcPrecision">Precisión del cálculo</label>
+        <select id="calcPrecision">
+          <option value="fast">Rápida (~4 s)</option>
+          <option value="high">Alta (~12 s)</option>
+          <option value="max">Máxima (~30 s)</option>
+          <option value="custom">Personalizada</option>
+        </select>
+        <div class="ctrl" id="calcSecondsWrap" style="display:none">
+          <div class="row"><label for="calcSeconds">Tiempo de cálculo objetivo</label><output id="calcSeconds_o" for="calcSeconds"></output></div>
+          <input type="range" id="calcSeconds" min="5" max="120" step="5" value="5">
+        </div>
+      </div>
+      <button type="button" class="reset runCalc" id="runCalc">Calcular</button>
+      <p class="calcLoading" id="runCalcProgress" style="display:none"></p>
     </div>
   </section>
 
   <div class="partBand" aria-hidden="true">Análisis avanzado</div>
   <section id="analisis">
+    <div class="methodGuide">
+      <p class="hint"><b>Tres herramientas distintas.</b> Las dos primeras reutilizan la <b>simulación Monte Carlo</b> de Resultados (miles de futuros aleatorios con tus parámetros) y cambian una sola cosa para medir su efecto. La tercera no simula nada: recorre la <b>historia real</b> de la bolsa con sus propios números.</p>
+      <ul class="hint">
+        <li><span class="methodTag mc">Monte Carlo</span><b>Sensibilidad</b>: ¿qué parámetro mueve más tu fecha de FIRE?</li>
+        <li><span class="methodTag mc">Monte Carlo + caída forzada</span><b>Riesgo de secuencia</b>: ¿y si la bolsa se hunde justo al dejar de trabajar?</li>
+        <li><span class="methodTag hist">Historia real</span><b>Backtest histórico</b>: ¿habría durado este capital en cada periodo desde 1928?</li>
+      </ul>
+    </div>
     <h2>Sensibilidad</h2>
+    <span class="methodTag mc">Monte Carlo</span>
     <button type="button" class="reset" id="runSensitivity">Calcular sensibilidad</button>
     <p class="calcLoading" id="sensLoading" style="display:none">Calculando…</p>
     <div class="sensList" id="sensList" aria-live="polite"></div>
-    <p class="hint">Prueba, uno a uno, cuánto cambia la edad mediana de FIRE al mover cada parámetro un margen razonable por encima y por debajo del valor actual, dejando el resto tal cual está. Ordenado de mayor a menor impacto — te dice dónde merece la pena afinar la estimación (o dejar margen de seguridad) y dónde da igual acertar al milímetro. Usa la misma precisión máxima que el cálculo principal (no una vista previa), así que puede tardar bastante — de varios segundos a un par de minutos según el dispositivo, porque las 16 simulaciones corren una detrás de otra.</p>
+    <p class="hint"><b>Qué hace:</b> repite la simulación Monte Carlo moviendo un solo parámetro cada vez un margen razonable por encima y por debajo de su valor actual, con el resto sin tocar (16 simulaciones).<br><b>Qué te dice:</b> cuántos años adelanta o retrasa cada parámetro tu edad mediana de FIRE, de mayor a menor impacto. Así sabes dónde merece la pena afinar la estimación o dejar margen de seguridad, y dónde da igual acertar al milímetro.<br>Usa la precisión máxima, así que puede tardar de unos segundos a un par de minutos.</p>
   </section>
 
   <section>
     <h2>Riesgo de secuencia al jubilarte</h2>
-    <p class="hint">La pregunta de mayor ansiedad práctica al acercarse al FIRE: ¿qué pasa si el mercado se hunde justo cuando dejo de trabajar? Compara tu escenario normal contra la misma ruta pero forzando una caída de bolsa concreta durante los primeros meses tras el FIRE (solo afecta a renta variable, no a BTC/oro, para no exagerar el golpe). Solo se aplica a rutas que llegan al FIRE de forma voluntaria, no a una jubilación forzosa.</p>
+    <span class="methodTag mc">Monte Carlo + caída forzada</span>
+    <p class="hint"><b>La pregunta:</b> ¿qué pasa si la bolsa se hunde justo cuando dejo de trabajar? Los primeros años de jubilación son los más delicados: si vendes con el mercado caído para pagar tus gastos, ese dinero ya no se recupera cuando el mercado rebota.<br><b>Qué hace:</b> corre dos veces la simulación Monte Carlo con las mismas rutas aleatorias: una normal y otra en la que, justo en el mes en que cada ruta se jubila, se fuerza la caída y la duración que elijas en estos controles. La caída solo afecta a la renta variable (no a BTC ni al oro) y solo a las rutas que se jubilan voluntariamente, no a las jubilaciones forzosas.<br><b>Qué te dice:</b> cuánto sube el porcentaje de jubilados que acaban quedándose sin dinero.</p>
     <div class="ctrl">
       <div class="row"><label for="srrShockPct">Caída acumulada de la bolsa</label><output id="srrShockPct_o" for="srrShockPct"></output></div>
       <input type="range" id="srrShockPct" min="-60" max="-10" step="5">
@@ -1041,8 +1124,9 @@ section[id],#notas{scroll-margin-top:88px}
   </section>
 
   <section id="historicalBacktest">
-    <h2>Backtest histórico secuencial</h2>
-    <p class="hint">Reproduce retiradas mensuales sobre las rentabilidades reales anuales del S&amp;P 500 usadas por el simulador (1928–2025). No incluye impuestos, comisiones ni predice el futuro; cada inicio es un periodo histórico distinto.</p>
+    <h2>Backtest con la historia real (1928–2025)</h2>
+    <span class="methodTag hist">Historia real · no es Monte Carlo</span>
+    <p class="hint"><b>La pregunta:</b> si me hubiera jubilado en un año concreto del pasado con este dinero y gastando esto cada año, ¿me habría llegado?<br><b>Qué hace:</b> no simula futuros. Te «jubila» en 1928 con el capital indicado, 100 % en el S&amp;P 500, aplica año a año lo que la bolsa hizo de verdad y te retira cada mes la parte proporcional del gasto anual. Luego repite lo mismo empezando en 1929, 1930… hasta el último año con datos suficientes. Estos tres controles son solo de esta prueba: no usan tus parámetros ni afectan al resto.<br><b>Qué te dice:</b> en cuántos de esos periodos el dinero duró hasta el final, en qué años de inicio te habrías arruinado y con cuánto habrías acabado en un periodo malo (P10), típico (mediana) y bueno (P90).<br><b>Letra pequeña:</b> rentabilidades reales, ya sin inflación, así que la retirada mantiene su poder de compra. Sin impuestos ni comisiones. Es la bolsa de EE. UU. del siglo XX y no predice el futuro.</p>
     <div class="ctrl"><div class="row"><label for="btCapital">Capital inicial (€ reales)</label><output id="btCapitalValue"></output></div><input id="btCapital" type="range" min="50000" max="2000000" step="10000" value="600000"></div>
     <div class="ctrl"><div class="row"><label for="btSpend">Retirada anual (€ reales)</label><output id="btSpendValue"></output></div><input id="btSpend" type="range" min="12000" max="120000" step="1000" value="24000"></div>
     <div class="ctrl"><div class="row"><label for="btYears">Años de retirada</label><output id="btYearsValue"></output></div><input id="btYears" type="range" min="10" max="40" step="1" value="30"></div>
@@ -1122,21 +1206,21 @@ const DEFAULTS = {
   ageNow:28, horizonAge:90, careerYear:2027,
   allocCash:10, allocBonds:20, allocEquities:70, cashRet:1, cashVol:1.5,
   pensionAnnual:0, pensionStartAge:67, healthcareAnnual:0, healthcareStartAge:65,
-  childAnnual:0, childStartAge:30, childEndAge:40, lumpSums:'[]',
+  childAnnual:10000, childStartAge:29, childEndAge:32, lumpSums:'[]',
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
   mandatoryRetireOn:false, mandatoryRetireAge:60,
-  ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056, nur:10000,
+  ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
   gasto:60000, swr:3.25,
   startEq:3000, startBtc:15000,
-  btcRet:5, btcVol:70, btcRho:40, btcAporte:0,
-  basicFO:26485, basicCA:40100, provCo:12, provOn:true, gratuityYears:0,
+  btcRet:10, btcVol:55, btcRho:40, btcAporte:0,
+  basicFO:26485, basicCA:40100, provCo:12, provOn:true,
 
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
   taxOn:false, useIrpfBrackets:false, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
-  lolOn:false, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:150000, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:80,
+  lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
   wealthTaxOn:false, ccaaPreset:0, wealthExempt:700000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
@@ -1169,6 +1253,30 @@ const CALIB_N1 = 100, CALIB_N2 = 900;
 // needs to be ~65% of the actually-desired wait to land in that range.
 const FULL_TIME_BUDGET_MS = 2600; // targets ~3.5-5s of real wait for maximum precision
 const PATHS_PREVIEW = 250;
+// "Calcular" button precision presets (#calcPrecision): each maps to a target wall-clock wait
+// in seconds, converted to a calibration time budget with the same empirical correction factor
+// FULL_TIME_BUDGET_MS already applies to its own ~4s target (see the comment above). "Rápida" is
+// exactly the pre-existing default budget/behaviour, so unchanged installs see no difference.
+const CALC_TIME_RATIO = FULL_TIME_BUDGET_MS / 4000;
+const CALC_PRECISION_SECONDS = { fast: 4, high: 12, max: 30 };
+// PATHS_FULL_MAX scales proportionally with the chosen time budget (a longer budget can afford
+// more paths), capped well short of where the O(paths log paths) sort of each of the ~67 annual
+// snapshots (see simulate()'s percentile pass) would make the linear calibration extrapolation
+// unreliable and the wait balloon past what the user asked for.
+function pathsFullMaxFor(timeBudgetMs){
+  return Math.min(500000, Math.round(PATHS_FULL_MAX * timeBudgetMs / FULL_TIME_BUDGET_MS));
+}
+function selectedTimeBudgetMs(){
+  const sel=document.getElementById('calcPrecision');
+  const value = sel ? sel.value : 'fast';
+  if(value==='custom'){
+    const secondsEl=document.getElementById('calcSeconds');
+    const raw=secondsEl ? Number(secondsEl.value) : 5;
+    const secs=Number.isFinite(raw) ? Math.max(5,Math.min(120,raw)) : 5;
+    return secs*1000*CALC_TIME_RATIO;
+  }
+  return (CALC_PRECISION_SECONDS[value] || CALC_PRECISION_SECONDS.fast)*1000*CALC_TIME_RATIO;
+}
 const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
 const END_YEAR = 2107, END_MONTH = 12;          // maximum supported simulation date
@@ -1205,6 +1313,24 @@ const MONTH_DATES = (() => {
 })();
 
 const NUMERIC_PARAM_KEYS=Object.keys(DEFAULTS).filter(key=>typeof DEFAULTS[key]==='number');
+// Range bounds for every numeric param, derived from the slider min/max attributes in the
+// markup (single source of truth) so imported/stored scenarios and direct worker calls can't
+// produce NaN/Infinity downstream (e.g. ret:-100 -> NaN, swr:0 -> Infinity target). A few keys
+// are intentionally excluded because they already have dedicated, wider or dynamic validation
+// elsewhere: ageNow/horizonAge (validateHorizon), allocCash/allocBonds/allocEquities
+// (validateAllocation), careerYear (its own horizon-aware check below), and the four extra
+// ages (childStartAge/childEndAge/pensionStartAge/healthcareStartAge), which are deliberately
+// allowed beyond their slider range up to the full 0-110 control range (an interval that
+// starts after the horizon simply never applies — see the loop below).
+const PARAM_BOUNDS_EXCLUDED=['ageNow','horizonAge','allocCash','allocBonds','allocEquities','careerYear','childStartAge','childEndAge','pensionStartAge','healthcareStartAge'];
+const PARAM_BOUNDS={};
+NUMERIC_PARAM_KEYS.forEach(key=>{
+  if(PARAM_BOUNDS_EXCLUDED.includes(key)) return;
+  const control=el[key];
+  const min=control && control.min!=='' && control.min!=null ? Number(control.min) : NaN;
+  const max=control && control.max!=='' && control.max!=null ? Number(control.max) : NaN;
+  PARAM_BOUNDS[key]=[Number.isFinite(min)?min:-Infinity, Number.isFinite(max)?max:Infinity];
+});
 function numericControlValue(key, control){
   const fallback=DEFAULTS[key];
   if(!control) return fallback;
@@ -1234,6 +1360,10 @@ function validateSimulationParams(raw){
   if(!raw || typeof raw!=='object') throw new TypeError('Parámetros de simulación no válidos.');
   const p={...raw};
   for(const key of NUMERIC_PARAM_KEYS) if(!Number.isFinite(p[key])) throw new RangeError('El campo '+key+' debe ser un número finito.');
+  for(const key of NUMERIC_PARAM_KEYS){
+    const bounds=PARAM_BOUNDS[key];
+    if(bounds && (p[key]<bounds[0] || p[key]>bounds[1])) throw new RangeError('El campo '+key+' debe estar entre '+bounds[0]+' y '+bounds[1]+'.');
+  }
   if(p.seed!==null && (!Number.isInteger(p.seed)||p.seed<0||p.seed>4294967295)) throw new RangeError('La semilla debe ser un entero entre 0 y 4294967295, o estar vacía.');
   try{ p.lumpSums=Array.isArray(p.lumpSums) ? NavlogCore.validateLumpSums(p.lumpSums) : NavlogCore.validateLumpSums(JSON.parse(p.lumpSums||'[]')); }
   catch(e){ throw new RangeError('Calendario de pagos: '+translateValidation(e)); }
@@ -1367,7 +1497,6 @@ function paintLabels(p){
   set('vidaG',p.vidaG.toFixed(1)+' %');
   set('hip',eur(p.hip)+'/mes');
   set('hipEnd',String(p.hipEnd));
-  set('nur',eur(p.nur)+'/año');
   set('burr',eur(p.burr));
   set('brNet',eur(p.brNet));
   set('brStart',String(p.brStart));
@@ -1384,7 +1513,6 @@ function paintLabels(p){
   set('basicFO','AED '+p.basicFO.toLocaleString('es-ES')+' · '+eur(p.basicFO*12*p.fx)+'/año');
   set('basicCA','AED '+p.basicCA.toLocaleString('es-ES')+' · '+eur(p.basicCA*12*p.fx)+'/año');
   set('provCo',p.provCo.toFixed(1)+' % (15 % desde 10 años)');
-  set('gratuityYears',p.gratuityYears===0?'0 años · sin efecto':p.gratuityYears.toFixed(1)+' años');
 
   // ---- Modo PRO ----
   set('taxRate',p.taxRate.toFixed(1)+' %');
@@ -1444,6 +1572,18 @@ function gauss(){
   const f=Math.sqrt(-2*Math.log(q)/q); spare=v*f; return u*f;
 }
 function normal(mu,sd){ return mu+sd*gauss(); }
+// Emirates contract (clause 10.2): permanent loss of licence pays a number of months of
+// basic salary that depends on the crew member's age when it happens.
+function lolEmiratesMonths(age){ return age<62 ? 36 : age<63 ? 24 : age<64 ? 12 : 0; }
+// Age profile for the annual LOL probability (%), anchored on published grounding data: FAA
+// airline-pilot denial rates rise from ~0.1 %/year at 25-29 to ~1.6 %/year at 55-59, and EASA
+// reports a slight decline after 60 (healthy-worker effect), so the curve is flat after 55.
+function lolAnnualPctAtAge(age){
+  if(age<40) return 0.1;
+  if(age<50) return 0.3;
+  if(age<55) return 0.3+(age-50)/5*1.3;
+  return 1.6;
+}
 function logParams(mean,vol){
   const m=1+mean;
   const s2=Math.log(1+(vol*vol)/(m*m));
@@ -1505,6 +1645,10 @@ function simulate(p, paths){
   const inflActive=p.proMode && p.inflOn;
   const lolFeatureActive=p.proMode && p.lolOn;
   const lolMonthlyProb=lolFeatureActive ? 1-Math.pow(1-p.lolAnnualProb/100, 1/12) : 0;
+  // With the age curve on, each month uses the probability for the age reached that month
+  // (precomputed once, path-independent); otherwise every month uses the flat slider value.
+  const lolMonthlyProbByMonth=lolFeatureActive && p.lolAgeCurveOn
+    ? Float64Array.from({length:MONTHS}, (_,i)=>1-Math.pow(1-lolAnnualPctAtAge(p.ageNow+i/12)/100, 1/12)) : null;
   // Sequence-of-returns stress test: a one-off runtime flag (like calibrate:true),
   // never a persistent slider — absent/false on every normal run. Shocks only the
   // equity leg (BTC/gold keep independent draws) for N months right after each
@@ -1514,9 +1658,9 @@ function simulate(p, paths){
   const trackBuckets=!!p.debugTrackBuckets; let minBucket=Infinity;
   const earlyWealth=trackBuckets ? new Float64Array(paths) : null; // wealth after the first year, per path
   const srrShockActive=!!p.srrShockOn;
-  const srrShockMonths=p.srrShockMonths||12;
-  const srrShockMonthlyMult=Math.pow(1+(p.srrShockPct||-30)/100, 1/srrShockMonths);
-  // Not PRO-gated, like profitShareWeeks/gratuityYears: off by default, lives
+  const srrShockMonths=Number.isFinite(p.srrShockMonths)&&p.srrShockMonths>0?p.srrShockMonths:12;
+  const srrShockMonthlyMult=Math.pow(1+(Number.isFinite(p.srrShockPct)?p.srrShockPct:-30)/100, 1/srrShockMonths);
+  // Not PRO-gated, like profitShareWeeks: off by default, lives
   // in the base "Mercado" group next to the theoretical return/vol sliders it
   // replaces for the equity leg.
   const histActive=p.histMarketOn;
@@ -1528,7 +1672,7 @@ function simulate(p, paths){
   // age is reached is just (age-ageNow)*12 — no need to walk MONTH_DATES for this.
   const lifeMonth=lifeActive ? Math.round((p.lifeExp-p.ageNow)*12) : Infinity;
   // Mandatory retirement age: a core career assumption (like profitShareWeeks/
-  // gratuityYears), not a Modo PRO toggle. Off by default — no single "correct" age
+  // profitShareWeeks), not a Modo PRO toggle. Off by default — no single "correct" age
   // is asserted (ICAO Annex 1 caps multi-crew ops at 65, but a carrier's own
   // contractual age can differ and be extendable).
   const mandatoryRetireActive=p.mandatoryRetireOn;
@@ -1537,12 +1681,9 @@ function simulate(p, paths){
   // Profit sharing is a core career assumption (like the salary sliders it sits
   // next to), not a Modo PRO toggle: with the default of 0 weeks it's simply off.
   const profitShareActive=p.profitShareWeeks>0;
-  // End-of-service gratuity (UAE labour law) for pre-DEWS years: 21 days of basic
-  // pay/year for the first 5 years, 30 days/year beyond that, capped at 2 years
-  // (730 days). Deterministic given p, so precomputed once — same "0 = off" pattern
-  // as profit sharing above.
-  const gratuityActive=p.gratuityYears>0;
-  const gratuityCappedDays=Math.min(Math.min(p.gratuityYears,5)*21+Math.max(0,p.gratuityYears-5)*30, 730);
+  // End-of-service gratuity (UAE labour law) vs Provident: Emirates pays whichever is higher,
+  // so on leaving only the shortfall of the gratuity over the Provident balance is added.
+  const endOfServiceEUR=(i,careerStart,captMonth,vProv,fx)=>NavlogCore.endOfServiceTopUp({years:(i-careerStart)/12, basicAED:i>=captMonth?p.basicCA:p.basicFO, fx, provBalance:vProv, provOn:p.provOn});
 
   // Tax-aware withdrawal helpers (used by the retirement drawdown cascade below).
   // Plain functions with no closure over path/month state, so they stay cheap to
@@ -1709,7 +1850,7 @@ function simulate(p, paths){
       const lolDraw=lolFeatureActive ? eventRandom() : 1;
       const profitShareDraw=profitShareActive && d.m===12 ? eventRandom() : 0;
       if(lolFeatureActive && !retired && !lolTriggered && i>=careerStart && i<mandatoryRetireMonth
-         && lolDraw<lolMonthlyProb){
+         && lolDraw<(lolMonthlyProbByMonth ? lolMonthlyProbByMonth[i] : lolMonthlyProb)){
         lolTriggered=true; lolMonthIdx=i;
       }
       const isWorking=!retired && i>=careerStart && i<mandatoryRetireMonth && !lolTriggered;
@@ -1749,9 +1890,11 @@ function simulate(p, paths){
       // is paid same as any other departure (LOL means genuinely leaving the company,
       // even though `retired` itself stays false until FIRE/mandatory age).
       if(lolTriggered && lolMonthIdx===i){
-        if(gratuityActive){
-          const lolGratuityEUR=gratuityCappedDays*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff;
-          vEq+=lolGratuityEUR; basisEq+=lolGratuityEUR;
+        const lolGratuityEUR=endOfServiceEUR(i,careerStart,captMonth,vProv,fxEff);
+        if(lolGratuityEUR>0){ vEq+=lolGratuityEUR; basisEq+=lolGratuityEUR; }
+        if(p.lolEmiratesOn){
+          const lolContractEUR=lolEmiratesMonths(p.ageNow+i/12)*(i>=captMonth?p.basicCA:p.basicFO)*fxEff;
+          vEq+=lolContractEUR; basisEq+=lolContractEUR;
         }
         if(p.lolPayoutMode===0){ vEq+=p.lolPayout; basisEq+=p.lolPayout; }
         else {
@@ -1780,10 +1923,8 @@ function simulate(p, paths){
         const hipReal=inflActive ? p.hip*Math.exp(-cumInfl) : p.hip;
         if(d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12)) net-=hipReal;
 
-        // Legacy childcare assumptions retained but explicitly not treated as exact birthdays.
-        if(d.y===2027 || d.y===2028) net-=p.nur/12;
+        // FS1 gap: a fixed, non-configurable cost, unrelated to the child-cost sliders below.
         if(d.y===2029) net-=FS1_GAP/12;
-        if(d.y===2029 || d.y===2030) net-=p.nur/12;
         if(d.y===2031) net-=FS1_GAP/12;
       }
 
@@ -1806,7 +1947,12 @@ function simulate(p, paths){
       // the Ley Beckham window is still open.
         let inBeckham=NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,i,p.beckhamYears);
 
-      if(!retired){ net+=childNet+lumpNet; }
+      // Pension income and healthcare cost apply once the person's age passes the
+      // configured start age, whether still working or already retired (real euros,
+      // monthly) — consistent with the same computation in the retired branch below.
+      const preRetireRetirementIncome=ageNow>=p.pensionStartAge?p.pensionAnnual/12:0;
+      const preRetireHealthCost=ageNow>=p.healthcareStartAge?p.healthcareAnnual/12:0;
+      if(!retired){ net+=childNet+lumpNet+preRetireRetirementIncome-preRetireHealthCost; }
 
       if(!retired){
         if(net>=0){
@@ -1849,11 +1995,17 @@ function simulate(p, paths){
         // Gratuity is realized right when you leave the company, so it can count
         // toward crossing the target that same month — a real departure lump sum,
         // not money you already had.
-        const gratuityEUR=gratuityActive ? gratuityCappedDays*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
+        // The gratuity can never exceed 730 days of basic pay, so it is only worked out in the
+        // months where it could change the outcome: the target is within reach or this is the
+        // mandatory exit. With the Provident already above that ceiling the top-up is always 0.
+        const gratuityCeilingEUR=i>=careerStart ? 730*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
+        const gratuityMatters=gratuityCeilingEUR>0 && !(p.provOn && vProv>=gratuityCeilingEUR)
+          && (total+gratuityCeilingEUR>=target || (mandatoryRetireActive && i>=mandatoryRetireMonth));
+        const gratuityEUR=gratuityMatters ? endOfServiceEUR(i,careerStart,captMonth,vProv,fxEff) : 0;
         if(!licenseLossPath && total+gratuityEUR>=target && !ruinedPath){
           retired=true;
           fireMonth[k]=i;
-          if(gratuityActive) vEq+=gratuityEUR;
+          if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           curSpendAnnual=p.gasto;
           // Only a voluntary FIRE arms the shock — the test is specifically "what if
           // markets crash right when I choose to retire", not a forced exit.
@@ -1866,7 +2018,7 @@ function simulate(p, paths){
           retired=true;
           forcedOutPath=true;
           fireMonth[k]=i;
-          if(gratuityActive) vEq+=gratuityEUR;
+          if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           curSpendAnnual=p.gasto;
         }
       } else if(!ruinedPath && (!lifeActive || i<=lifeMonth)){
@@ -2013,7 +2165,7 @@ function simulate(p, paths){
             const move=Math.min(vCons,-diff);
             const basisMoved=basisCons*(move/vCons);
             const riskySum=(vEq+vBtc+(goldActive?vGold:0))||1;
-            const shareEq=vEq/riskySum||1, shareBtc=vBtc/riskySum, shareGold=goldActive?vGold/riskySum:0;
+            const shareEq=(vEq+vBtc+(goldActive?vGold:0))>0?vEq/riskySum:1, shareBtc=vBtc/riskySum, shareGold=goldActive?vGold/riskySum:0;
             vCons-=move; basisCons-=basisMoved;
             vEq+=move*shareEq; vBtc+=move*shareBtc; if(goldActive) vGold+=move*shareGold;
             basisEq+=basisMoved*shareEq; basisBtc+=basisMoved*shareBtc; if(goldActive) basisGold+=basisMoved*shareGold;
@@ -2543,6 +2695,40 @@ function makeChartController(canvas, tipEl, resetLinkEl, renderFn, tipHtml){
   }
   window.addEventListener('resize', ()=>redraw());
 
+  // Keyboard access for the focusable canvas: ArrowLeft/ArrowRight move a tooltip
+  // cursor across data points (reusing the same tooltip rendering as pointer hover),
+  // +/-/= zoom in/out around the cursor (or the view centre with none set), and
+  // 0/Escape reset the zoom and hide the tooltip.
+  function showTipAtIndex(idx){
+    if(!state.geom || !state.series || !state.series[idx]) return;
+    const rect=canvas.getBoundingClientRect();
+    const {L,w,lo,hi}=state.geom;
+    const t = hi>lo ? (idx-lo)/(hi-lo) : 0.5;
+    showTip(rect.left+L+t*w, rect.top+rect.height/2, idx);
+  }
+  canvas.addEventListener('keydown', e=>{
+    if(!state.series || !state.view) return;
+    const {lo,hi}=state.view;
+    if(e.key==='ArrowLeft' || e.key==='ArrowRight'){
+      e.preventDefault();
+      const cur = state.hoverIdx==null ? lo : state.hoverIdx;
+      const next = Math.max(lo, Math.min(hi, cur + (e.key==='ArrowLeft' ? -1 : 1)));
+      state.hoverIdx=next; redraw(); showTipAtIndex(next);
+    } else if(e.key==='+' || e.key==='=' || e.key==='-'){
+      e.preventDefault();
+      const center = state.hoverIdx!=null ? state.hoverIdx : Math.round((lo+hi)/2);
+      zoomAt(center, e.key==='-' ? 1/0.85 : 0.85);
+      redraw();
+    } else if(e.key==='0' || e.key==='Escape'){
+      e.preventDefault();
+      state.view=fullView();
+      state.hoverIdx=null;
+      redraw();
+      hideTip();
+    }
+  });
+  canvas.addEventListener('blur', ()=>hideTip());
+
   return {update, setView, getView, setExtra};
 }
 
@@ -2567,13 +2753,17 @@ function buildWorkerSource(){
     'const IRPF_SAVINGS_BRACKETS='+literal(IRPF_SAVINGS_BRACKETS)+';',
     'const MONTHS=MONTH_DATES.length;',
     'const NUMERIC_PARAM_KEYS='+JSON.stringify(NUMERIC_PARAM_KEYS)+';',
+    'const PARAM_BOUNDS='+literal(PARAM_BOUNDS)+';',
     'let spare=null, activeRandom=Math.random;',
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+'};',
+    'const gratuityDays=NavlogCore.gratuityDays;',
     'const progressiveSavingsTax=NavlogCore.progressiveSavingsTax, netAfterSavingsTax=NavlogCore.netAfterSavingsTax;',
     'const monthIndex='+monthIndex.toString()+';',
         'const gauss='+gauss.toString()+';',
     'const normal='+normal.toString()+';',
+    'const lolEmiratesMonths='+lolEmiratesMonths.toString()+';',
+    'const lolAnnualPctAtAge='+lolAnnualPctAtAge.toString()+';',
     'const logParams='+logParams.toString()+';',
     'const translateValidation='+translateValidation.toString()+';',
     'const validateSimulationParams='+validateSimulationParams.toString()+';',
@@ -2646,11 +2836,31 @@ function createSimulationJobs({makeWorker, runSync, now, minTerminatePaths=1000}
       else { const entries=Array.from(pending.values()); pending.clear(); entries.forEach(syncRun); }
     }
   }
+  // Unconditionally supersedes every pending job on this instance (calibration jobs
+  // included), restarting the worker if one of them was long-running. Used by a
+  // dedicated job manager to cancel an old batch when a genuinely new one starts,
+  // since ordinary supersedeOlderJobs() above deliberately exempts calibrate:true
+  // jobs (they normally need to all resolve, e.g. sensitivity's 16 paired runs).
+  function cancelPending(){
+    let restartNeeded=false;
+    for(const [id,entry] of Array.from(pending)){
+      pending.delete(id);
+      entry.resolve({stale:true});
+      if(entry.paths>=minTerminatePaths) restartNeeded=true;
+    }
+    if(restartNeeded && worker){
+      const old=worker; worker=null;
+      try{ old.terminate(); }catch(e){}
+      restarts++;
+      spawn();
+    }
+  }
   spawn();
   return {
     hasWorker:()=>!!worker,
     restarts:()=>restarts,
     pendingCount:()=>pending.size,
+    cancelPending,
     request(p, paths, opts){
       const calibrate=!!(opts && opts.calibrate);
       const reqId=++reqCounter;
@@ -2672,6 +2882,20 @@ const jobs=createSimulationJobs({
 });
 function requestSimulation(p, paths, opts){ return jobs.request(p, paths, opts); }
 
+// Sensitivity/stress analysis jobs run on their own dedicated Worker, separate from the
+// interactive slider worker above: a slider-triggered run that supersedes/terminates
+// `jobs`' worker must never kill a long-running analysis job (continuous dragging would
+// otherwise starve it, re-posting the whole batch from scratch). A NEW sensitivity/stress
+// request still cancels an OLD one on THIS worker via cancelPending() (see runSensitivity
+// and runSrrStress below), which is the equivalent of `jobs`' own supersedeOlderJobs() for
+// the calibrate:true jobs this dedicated worker exclusively carries.
+const analysisJobs=createSimulationJobs({
+  makeWorker:()=>new Worker(URL.createObjectURL(new Blob([buildWorkerSource()], {type:'application/javascript'}))),
+  runSync:(p,paths)=>simulate(p,paths),
+  now:()=>performance.now()
+});
+function requestAnalysisSimulation(p, paths, opts){ return analysisJobs.request(p, paths, opts); }
+
 // "Máximo número de rutas posible": en vez de un PATHS fijo, se calibra con dos
 // tandas pequeñas (CALIB_N1/CALIB_N2) para medir el coste MARGINAL por ruta con
 // los parámetros actuales (el coste varía mucho según qué funciones PRO estén
@@ -2692,21 +2916,27 @@ const SEEDED_PATHS_FULL = 5000;
 const SEEDED_PATHS_SENSITIVITY = 2000;
 async function calibratePathsFull(p, purpose){
   if(p.seed!=null) return purpose==='sensitivity' ? SEEDED_PATHS_SENSITIVITY : SEEDED_PATHS_FULL;
+  // Sensitivity/stress keep the original fixed budget/ceiling (#calcPrecision only affects the
+  // main "Calcular" full run): they already run 16/2 full-precision simulations back to back,
+  // so letting them inherit a higher precision preset would multiply an already-long wait.
+  const timeBudgetMs = purpose==='sensitivity' ? FULL_TIME_BUDGET_MS : selectedTimeBudgetMs();
   const [c1,c2]=await Promise.all([
     requestSimulation(p, CALIB_N1, {calibrate:true}),
     requestSimulation(p, CALIB_N2, {calibrate:true})
   ]);
   const msPerPath=Math.max(0.0005, (c2.ms-c1.ms)/(CALIB_N2-CALIB_N1));
-  let pathsFull=Math.round(FULL_TIME_BUDGET_MS/msPerPath);
+  let pathsFull=Math.round(timeBudgetMs/msPerPath);
   // Without a Worker, requestSimulation() runs simulate() synchronously on the
-  // main thread — calibrating toward the same PATHS_FULL_MAX there would block
+  // main thread — calibrating toward the same pathsMax there would block
   // the UI (unresponsive sliders/scroll) for the full multi-second budget.
-  const pathsCeiling = jobs.hasWorker() ? PATHS_FULL_MAX : 5000;
+  const pathsMax = purpose==='sensitivity' ? PATHS_FULL_MAX : pathsFullMaxFor(timeBudgetMs);
+  const pathsCeiling = jobs.hasWorker() ? pathsMax : 5000;
   return Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
 }
 
-async function runFullPrecision(p){
+async function runFullPrecision(p, onPathsKnown){
   const pathsFull=await calibratePathsFull(p);
+  if(onPathsKnown) onPathsKnown(pathsFull);
   return requestSimulation(p, pathsFull);
 }
 
@@ -2718,7 +2948,7 @@ async function runFullPrecision(p){
 const SENSITIVITY_PARAMS = [
   {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, min:2, max:9, fmt:v=>v.toFixed(1)+' %'},
   {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, min:0, max:26, fmt:v=>v.toFixed(1)+' %'},
-  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-10, max:20, fmt:v=>v.toFixed(1)+' %'},
+  {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-10, max:30, fmt:v=>v.toFixed(1)+' %'},
   {key:'vida', label:'Vida en Dubái (gasto mensual)', delta:p=>p.vida*0.1, min:1800, max:7000, fmt:v=>eur(v)+'/mes'},
   {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, min:2.4, max:4.6, fmt:v=>v.toFixed(2)+' %'},
   {key:'salG', label:'Crecimiento salarial anual', delta:0.5, min:-1, max:2.5, fmt:v=>v.toFixed(1)+' %'},
@@ -2743,15 +2973,21 @@ const SENSITIVITY_PARAMS = [
 // effect on the computation itself, only on how the response is dispatched.
 async function runSensitivity(baseParams){
   const pathsFull=await calibratePathsFull(baseParams,'sensitivity');
+  // A new sensitivity run supersedes whatever this dedicated worker was still doing.
+  analysisJobs.cancelPending();
   const jobs=SENSITIVITY_PARAMS.map(async def=>{
     const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
     const base=baseParams[def.key];
     const pair=NavlogCore.boundedPair(base, delta, def.min, def.max);
     const pairSeed=NavlogCore.deriveSeed(baseParams.seed, SENSITIVITY_PARAMS.indexOf(def));
     const [lowR,highR]=await Promise.all([
-      requestSimulation({...baseParams,[def.key]:pair.low,seed:pairSeed}, pathsFull, {calibrate:true}),
-      requestSimulation({...baseParams,[def.key]:pair.high,seed:pairSeed}, pathsFull, {calibrate:true}),
+      requestAnalysisSimulation({...baseParams,[def.key]:pair.low,seed:pairSeed}, pathsFull, {calibrate:true}),
+      requestAnalysisSimulation({...baseParams,[def.key]:pair.high,seed:pairSeed}, pathsFull, {calibrate:true}),
     ]);
+    // A newer sensitivity/stress click can supersede this one on the shared analysisJobs worker
+    // (cancelPending()/supersedeOlderJobs() resolve dropped requests as {stale:true}, no .result):
+    // signal that upward instead of dereferencing an absent .result.
+    if(!lowR || !lowR.result || !highR || !highR.result) return null;
     const ageOf=r=>{ const fm=fireQuantileMonth(r.result.fireMonths,.50); return fm===null?null:baseParams.ageNow+yearFrac(fm); };
     const ageLow=ageOf(lowR), ageHigh=ageOf(highR);
     return {
@@ -2761,6 +2997,7 @@ async function runSensitivity(baseParams){
     };
   });
   const results=await Promise.all(jobs);
+  if(results.some(r=>r===null)) return null; // superseded mid-flight: let the caller silently ignore this run
   results.sort((a,b)=>b.impact-a.impact);
   return results;
 }
@@ -2787,11 +3024,15 @@ function renderSensitivity(results){
 // ruin-rate-among-successful-FIRErs, the same metric run() already reports.
 async function runSrrStress(baseParams, shockPct, shockMonths){
   const pathsFull=await calibratePathsFull(baseParams,'sensitivity');
+  // A new stress run supersedes whatever this dedicated worker was still doing.
+  analysisJobs.cancelPending();
   const stressSeed=NavlogCore.deriveSeed(baseParams.seed,0);
   const [baseR,shockR]=await Promise.all([
-    requestSimulation({...baseParams,seed:stressSeed}, pathsFull, {calibrate:true}),
-    requestSimulation({...baseParams,seed:stressSeed, srrShockOn:true, srrShockPct:shockPct, srrShockMonths:shockMonths}, pathsFull, {calibrate:true}),
+    requestAnalysisSimulation({...baseParams,seed:stressSeed}, pathsFull, {calibrate:true}),
+    requestAnalysisSimulation({...baseParams,seed:stressSeed, srrShockOn:true, srrShockPct:shockPct, srrShockMonths:shockMonths}, pathsFull, {calibrate:true}),
   ]);
+  // Same supersede guard as runSensitivity() above.
+  if(!baseR || !baseR.result || !shockR || !shockR.result) return null;
   const ruinRateOf=r=>{
     const n=r.result.fireMonthAll.length;
     let fired=0, ruined=0;
@@ -2846,7 +3087,7 @@ const MODEL_LIMITS=[
   'Los impuestos sobre plusvalías solo se aplican a las retiradas y el de patrimonio al saldo anual, y ambos solo desde que repatrías el capital a España (tras los años de retraso desde el FIRE que configures); la venta de Burriana tributa aparte con su propio tipo. Las plusvalías mientras acumulas y los dividendos, intereses y alquileres del inmueble no tributan.',
   'El sueldo, las aportaciones al Provident y el ingreso barista se tratan como libres de impuestos y cotizaciones; el Provident solo tributa al retirarlo.',
   'Los tramos del ahorro (cifras nominales 2024/2025, que no se actualizan solas) se aplican a plusvalías calculadas en euros reales, sin ajustar por inflación.',
-  'El coste de guardería (control nur, en €/año) se carga cada año natural de 2027 a 2030 y un hueco FS1 fijo de 10.400 € al año en 2029 y 2031; ambos solo mientras trabajas (desde el inicio de carrera hasta que dejas de trabajar), sin relación con tu edad ni con el gasto por hijo que configures.',
+  'El hueco FS1 (10.400 €/año en 2029 y 2031) es un coste fijo del modelo, no configurable, y solo se carga mientras trabajas (desde el inicio de carrera hasta que dejas de trabajar). El gasto por hijo que configures (importe, edad inicial y edad final) se aplica en cambio según tu edad, sin relación con tu situación laboral.',
   'La pensión o ingreso recurrente, los pagos únicos y cualquier excedente de ingresos sobre el gasto se invierten sin IRPF ni cotizaciones.',
   'Con semilla, las ejecuciones completas usan '+SEEDED_PATHS_FULL+' rutas fijas ('+SEEDED_PATHS_SENSITIVITY+' rutas en sensibilidad y riesgo de secuencia) y son reproducibles en el mismo navegador y dispositivo; entre navegadores puede haber diferencias mínimas por el redondeo de las funciones matemáticas. Sin semilla, el número de rutas depende de la velocidad del dispositivo.',
   'No se modelan cambios legislativos, gastos sanitarios no declarados, longevidad superior al horizonte ni riesgo de contraparte.'
@@ -2905,6 +3146,46 @@ function renderOutcomeDashboard(counts, pathsUsed){
   host.replaceChildren(list);
 }
 
+// Single source of truth for "is the current on-screen result still valid for the current slider
+// values": both the stale notice/CSS class and saveScenario's enabled state read it, so they can
+// never disagree (saveCurrentScenario() below re-checks the same NavlogCore.sameParameterSnapshot
+// at click time, since these two can only ever be re-synced on the next param change or run()).
+function currentParamsOrNull(){
+  try { return readParams(); } catch(e){ return null; }
+}
+function toggleBodyClass(name, on){
+  const classes=(document.body.className||'').split(/\s+/).filter(c=>c && c!==name);
+  if(on) classes.push(name);
+  document.body.className=classes.join(' ');
+}
+function updateStaleUI(){
+  const current=currentParamsOrNull();
+  const stale = !(current && lastFullParams && NavlogCore.sameParameterSnapshot(current,lastFullParams));
+  toggleBodyClass('stale', stale);
+  const notice=document.getElementById('staleNotice');
+  if(notice){ notice.textContent='Parámetros cambiados — pulsa Calcular para actualizar.'; notice.style.display = stale ? 'block' : 'none'; }
+}
+function updateSaveButtonState(){
+  const saveButton=document.getElementById('saveScenario');
+  if(!saveButton) return;
+  if(activeRunsPending>0 || fullRunsPending>0){ saveButton.disabled=true; return; }
+  const current=currentParamsOrNull();
+  saveButton.disabled = !(current && lastSeries && lastFullParams && NavlogCore.sameParameterSnapshot(current,lastFullParams));
+}
+// Every slider/checkbox/text/seed control change: repaint its label and any dynamic constraint
+// (syncHorizonControl/syncAllocation/syncChildAges are wired separately, above, and run first),
+// surface validation errors immediately (cheap: no simulation runs), and mark the result stale.
+// No preview or full run is scheduled here any more — pressing "Calcular" (#runCalc) is the only
+// way to recompute; see run()/runFullPrecision() and the #runCalc listener below.
+function onParamInput(){
+  try { paintLabels(collectRawParams()); } catch(e) {}
+  const error=document.getElementById('assumptionError');
+  try { readParams(); if(error) error.textContent=''; }
+  catch(e){ if(error) error.textContent = e && e.message ? e.message : 'No se pudo calcular este escenario.'; }
+  updateStaleUI();
+  updateSaveButtonState();
+}
+
 async function run(mode){
   const t0=performance.now(), raw=collectRawParams();
   // Paint slider values before validation/calculation so the UI never freezes a
@@ -2914,19 +3195,34 @@ async function run(mode){
   paintLabels(raw);
   const p=validateSimulationParams(raw);
   const isPreview = mode==='preview';
+  const runCalcBtn=document.getElementById('runCalc'), runCalcProgressEl=document.getElementById('runCalcProgress');
   let loadingTimer=null;
   if(!isPreview) loadingTimer=setTimeout(()=>{ if(calcLoadingEl) calcLoadingEl.style.display='inline'; },350);
   activeRunsPending++;
-  if(!isPreview){ fullRunsPending++; const saveButton=document.getElementById('saveScenario'); if(saveButton) saveButton.disabled=true; }
+  if(!isPreview){
+    fullRunsPending++;
+    if(runCalcBtn) runCalcBtn.disabled=true;
+    if(runCalcProgressEl){ runCalcProgressEl.style.display='inline'; runCalcProgressEl.textContent='Calculando…'; }
+  }
+  updateSaveButtonState();
   let response;
-  try { response = isPreview ? await requestSimulation(p, PATHS_PREVIEW) : await runFullPrecision(p); }
-  finally {
+  try {
+    response = isPreview ? await requestSimulation(p, PATHS_PREVIEW)
+      : await runFullPrecision(p, pathsFull=>{ if(runCalcProgressEl) runCalcProgressEl.textContent='Calculando… '+pathsFull.toLocaleString('es-ES')+' rutas'; });
+  } finally {
     activeRunsPending=Math.max(0,activeRunsPending-1);
-    if(!isPreview){ fullRunsPending=Math.max(0,fullRunsPending-1); }
-    const saveButton=document.getElementById('saveScenario'); if(saveButton) saveButton.disabled=activeRunsPending>0;
+    if(!isPreview){
+      fullRunsPending=Math.max(0,fullRunsPending-1);
+      if(runCalcBtn) runCalcBtn.disabled=fullRunsPending>0;
+      if(runCalcProgressEl && fullRunsPending===0) runCalcProgressEl.style.display='none';
+    }
+    updateSaveButtonState();
   }
   clearTimeout(loadingTimer);
-  if(response.stale) return;
+  // A superseded run (see createSimulationJobs' supersedeOlderJobs()/cancelPending()) resolves
+  // with {stale:true} and no .result: bail out quietly instead of overwriting a newer result
+  // or dereferencing a missing .result.
+  if(!response || response.stale || !response.result) return;
   const r=response.result;
   if(calcLoadingEl) calcLoadingEl.style.display='none';
   const s=r.series, target=r.target;
@@ -2938,8 +3234,7 @@ async function run(mode){
   const pathsUsed=r.fireMonthAll.length;
   const successRate=r.fireMonths.length/pathsUsed;
 
-  lastAgeMedText=fm50===null?'—':String(Math.floor(p.ageNow+yearFrac(fm50)));
-  lastSuccessRate=successRate;
+  if(!isPreview){ lastAgeMedText=fm50===null?'—':String(Math.floor(p.ageNow+yearFrac(fm50))); lastSuccessRate=successRate; }
   document.getElementById('ageMed').textContent=fm50===null?'—':Math.floor(p.ageNow+yearFrac(fm50));
   document.getElementById('yearMed').textContent=fm50===null?'no FIRE exitoso':ymdLabel(fm50)+' · P50 · éxito '+Math.round(successRate*100)+'%';
   document.getElementById('ageP10').textContent=fmConservative===null?'—':Math.floor(p.ageNow+yearFrac(fmConservative));
@@ -2971,7 +3266,7 @@ async function run(mode){
   const licenseLossRate=pathsUsed?licenseLossCount/pathsUsed:0;
   renderOutcomeDashboard(cohortCounts,pathsUsed);
 
-  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1)));
+  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1), p.proMode&&p.lifeExpOn ? Math.round((p.lifeExp-p.ageNow)*12)+1 : Infinity));
   renderRuinTable(ruinCurve);
   ruinChart.update(ruinCurve, null);
 
@@ -2979,7 +3274,6 @@ async function run(mode){
     Math.round(successRate*100)+' % rutas FIRE voluntario exitosas · ruina en esa cohorte '+Math.round(ruinRate*100)+' % (n='+voluntaryCount.toLocaleString('es-ES')+') · salidas forzosas '+Math.round(forcedOutRate*100)+' % · LOL '+Math.round(licenseLossRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
   if(p.profitShareWeeks>0) calcTxt+=' · profit sharing hasta '+p.profitShareWeeks.toFixed(1)+' semanas/año (sorteado)';
-  if(p.gratuityYears>0) calcTxt+=' · gratuity de '+p.gratuityYears.toFixed(1)+' años pre-DEWS al jubilarse';
   if(p.histMarketOn) calcTxt+=' · bolsa: bootstrap histórico real 1928-2025 (no teórico)';
   if(p.mandatoryRetireOn) calcTxt+=' · jubilación forzosa a los '+p.mandatoryRetireAge+' sin objetivo: '+Math.round(forcedOutRate*100)+' %';
   if(p.proMode){
@@ -2992,7 +3286,7 @@ async function run(mode){
     else if(p.taxOn && p.taxRateProv!==p.taxRate) calcTxt+=' · retirada optimizada: '+(p.taxRateProv<p.taxRate?'Provident antes que la cartera':'cartera antes que el Provident')+' ('+p.taxRateProv.toFixed(1)+'% vs '+p.taxRate.toFixed(1)+'%)';
     if(p.beckhamOn) calcTxt+=' · Ley Beckham activa ('+p.beckhamYears+'a, IRPF y patrimonio en pausa)';
     if(p.wealthTaxOn) calcTxt+=' · patrimonio neto > '+eurK(p.wealthExempt)+' al '+p.wealthRate.toFixed(2)+'%/año'+(p.wealthBonusPct>0?' (bonif. '+p.wealthBonusPct.toFixed(0)+'%)':'')+(p.mortgageBalance>0?' (deuda deducida)':'');
-    if(p.lolOn) calcTxt+=' · riesgo LOL '+p.lolAnnualProb.toFixed(1)+'%/año';
+    if(p.lolOn) calcTxt+=' · riesgo LOL '+(p.lolAgeCurveOn?'según la edad':p.lolAnnualProb.toFixed(1)+'%/año')+(p.lolEmiratesOn?' · cobertura Emirates':'');
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
     if(p.inflOn) calcTxt+=' · inflación estocástica';
     if(p.glideOn) calcTxt+=' · glide path activo';
@@ -3004,7 +3298,7 @@ async function run(mode){
   document.getElementById('simulationContext').textContent=describeSimulationContext(p.seed, pathsUsed, se);
   document.getElementById('contribSummary').textContent=summarizeContribution(s);
   renderPrintAssumptions(p, pathsUsed);
-  if(!isPreview) announceResult(announcementText(p, fm50, successRate, ruinRate, pathsUsed));
+  if(!isPreview){ announceResult(announcementText(p, fm50, successRate, ruinRate, pathsUsed)); updateStaleUI(); updateSaveButtonState(); }
 }
 
 // The number of paths in a full run is calibrated to the device speed, so the
@@ -3041,28 +3335,46 @@ function safeRun(mode){
   return run(mode).catch(reportError);
 }
 
-// Dragging a range slider fires 'input' continuously: run a cheap preview
-// (PATHS_PREVIEW) with a short debounce so it feels instant. Releasing it fires
-// 'change' once: run the full-precision simulation. Checkboxes only have 'input'
-// (no drag phase) and always go straight to full precision.
-let tPreview=null, tFull=null;
-function scheduleInput(){ clearTimeout(tFull); clearTimeout(tPreview); tPreview=setTimeout(()=>safeRun('preview'),50); }
-function scheduleFull(){ clearTimeout(tPreview); clearTimeout(tFull); tFull=setTimeout(()=>safeRun('full'),40); }
-
-ids.forEach(k=>{
-  const n=el[k]; if(!n) return;
-  if(n.type==='range'){ n.addEventListener('input',scheduleInput); n.addEventListener('change',scheduleFull); }
-  // The seed is free text: a full run costs seconds, so wait for the user to commit it.
-  else if(k==='seed'){ n.addEventListener('change',scheduleFull); }
-  else { n.addEventListener('input',scheduleFull); }
-});
-el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+// Dragging a slider or flipping a checkbox never runs a preview or a full simulation any more:
+// it only repaints its own label/output and any dynamic constraint (the syncHorizonControl/
+// syncAllocation/syncChildAges listeners just below run first, so onParamInput reads already
+// -adjusted values), surfaces validation errors, and marks the result stale. The actual
+// calculation only happens by pressing "Calcular" (#runCalc below) or via reset/loadScenario/
+// the initial page load, all of which call safeRun('full') directly.
 if(el.ageNow) el.ageNow.addEventListener('input',syncHorizonControl);
 if(el.horizonAge) el.horizonAge.addEventListener('input',syncHorizonControl);
 if(el.allocCash) el.allocCash.addEventListener('input',syncAllocation);
 if(el.allocBonds) el.allocBonds.addEventListener('input',syncAllocation);
 if(el.childStartAge) el.childStartAge.addEventListener('input',syncChildAges);
 if(el.childEndAge) el.childEndAge.addEventListener('input',syncChildAges);
+
+ids.forEach(k=>{
+  const n=el[k]; if(!n) return;
+  if(n.type==='range'){ n.addEventListener('input',onParamInput); n.addEventListener('change',onParamInput); }
+  else if(k==='seed'){ n.addEventListener('change',onParamInput); }
+  else { n.addEventListener('input',onParamInput); }
+});
+el.proMode.addEventListener('change',()=>{document.body.classList.toggle('pro',el.proMode.checked);});
+const runCalcBtnEl=document.getElementById('runCalc');
+if(runCalcBtnEl) runCalcBtnEl.addEventListener('click',()=>safeRun('full'));
+// Enter in the seed field is a natural "commit and calculate" gesture (it is free text, so it has
+// no drag phase to release); other controls are sliders/checkboxes/selects with no meaningful Enter.
+if(el.seed) el.seed.addEventListener('keydown',e=>{ if(e.key==='Enter'){ if(e.preventDefault) e.preventDefault(); safeRun('full'); } });
+const calcPrecisionEl=document.getElementById('calcPrecision'), calcSecondsEl=document.getElementById('calcSeconds'),
+  calcSecondsOutEl=document.getElementById('calcSeconds_o'), calcSecondsWrapEl=document.getElementById('calcSecondsWrap');
+// "Rápida" is the first <option> and thus the browser's own default, but set it explicitly so the
+// value is never environment-dependent (e.g. a DOM shim with no default-selection algorithm).
+if(calcPrecisionEl && !calcPrecisionEl.value) calcPrecisionEl.value='fast';
+function syncPrecisionControl(){
+  if(calcSecondsWrapEl) calcSecondsWrapEl.style.display = (calcPrecisionEl && calcPrecisionEl.value==='custom') ? 'block' : 'none';
+}
+function paintCalcSecondsLabel(){
+  if(calcSecondsEl && calcSecondsOutEl) calcSecondsOutEl.textContent=calcSecondsEl.value+' s';
+}
+if(calcPrecisionEl) calcPrecisionEl.addEventListener('change',syncPrecisionControl);
+if(calcSecondsEl) calcSecondsEl.addEventListener('input',paintCalcSecondsLabel);
+syncPrecisionControl();
+paintCalcSecondsLabel();
 // ccaaPreset is a UI shortcut, not a simulate() input: it just pre-fills the two
 // sliders that actually drive the calculation, which stay editable afterward.
 const CCAA_PRESETS=[
@@ -3189,7 +3501,17 @@ function importScenariosFile(file){
   if(file.size>2_000_000) return showScenarioMsg('El archivo supera el límite de 2 MB.');
   const reader=new FileReader();
   reader.onload=()=>{
-    const imported=NavlogCore.importScenarioJson(String(reader.result||''),PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
+    // Mirrors NavlogCore.importScenarioJson's own parsing (size cap, version envelope) so the
+    // legacy `nur` migration above can run on the raw list before validation/normalization.
+    let imported=[];
+    try{
+      const text=String(reader.result||'');
+      if(text.length<=2_000_000){
+        const parsed=JSON.parse(text);
+        const list=Array.isArray(parsed) ? parsed : (parsed && parsed.version===1 ? parsed.scenarios : null);
+        imported=NavlogCore.normalizeScenarios(list,PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
+      }
+    }catch(_){ imported=[]; }
     if(!imported.length) return showScenarioMsg('No se encontraron escenarios válidos en el JSON.');
     const available=SCENARIO_MAX-savedScenarios.length;
     if(available<=0) return showScenarioMsg('Elimina un escenario antes de importar otro.');
@@ -3215,7 +3537,8 @@ function serializeScenarioParams(params){
 }
 
 function saveCurrentScenario(){
-  const currentParams=readParams();
+  let currentParams;
+  try { currentParams=readParams(); } catch(err){ reportError(err); return; }
   if(activeRunsPending || fullRunsPending || !lastSeries || !lastFullParams || !NavlogCore.sameParameterSnapshot(currentParams,lastFullParams)){
     showScenarioMsg('Espera a que termine el cálculo completo de los parámetros actuales antes de guardar.'); return;
   }
@@ -3249,8 +3572,8 @@ function loadScenario(id){
   if(el.childEndAge) el.childEndAge.min='19';
   const intended={};
   ids.forEach(k=>{
-    const n=el[k]; if(!n || !Object.prototype.hasOwnProperty.call(sc.params,k)) return;
-    const value=sc.params[k];
+    const n=el[k]; if(!n) return;
+    const value=Object.prototype.hasOwnProperty.call(sc.params,k) ? sc.params[k] : DEFAULTS[k];
     if(n.type==='checkbox'){ if(typeof value==='boolean') n.checked=value; }
     else if(k==='seed'){ if(value===null || typeof value==='number') n.value=value===null ? '' : String(value); }
     else if(k==='lumpSums'){ if(typeof value==='string') n.value=value; else if(Array.isArray(value)) n.value=JSON.stringify(value); }
@@ -3295,29 +3618,35 @@ document.getElementById('importScenariosFile').addEventListener('change',event=>
 document.getElementById('exportCsv').addEventListener('click',exportCurrentReport);
 document.getElementById('printReport').addEventListener('click',()=>window.print());
 
+// Generation counters: a click's own finally must only touch the button/loading indicator if no
+// later click has superseded it in the meantime (otherwise a slow, superseded response would
+// re-enable the button / hide the loading text that the newer, still-running click owns).
+let sensGeneration=0, srrGeneration=0;
 document.getElementById('runSensitivity').addEventListener('click', async () => {
+  const myGen=++sensGeneration;
   const btn=document.getElementById('runSensitivity'), loadingEl=document.getElementById('sensLoading');
   btn.disabled=true; loadingEl.style.display='inline';
   try{
     const error=document.getElementById('assumptionError'); if(error) error.textContent='';
     const results=await runSensitivity(readParams());
-    renderSensitivity(results);
-  } catch(err){ reportError(err);
+    if(results && myGen===sensGeneration) renderSensitivity(results); // null => superseded: leave the previous render alone
+  } catch(err){ if(myGen===sensGeneration) reportError(err);
   } finally {
-    btn.disabled=false; loadingEl.style.display='none';
+    if(myGen===sensGeneration){ btn.disabled=false; loadingEl.style.display='none'; }
   }
 });
 document.getElementById('runSrrStress').addEventListener('click', async () => {
+  const myGen=++srrGeneration;
   const btn=document.getElementById('runSrrStress'), loadingEl=document.getElementById('srrLoading');
   btn.disabled=true; loadingEl.style.display='inline';
   try{
     const error=document.getElementById('assumptionError'); if(error) error.textContent='';
     const p=readParams();
     const res=await runSrrStress(p, p.srrShockPct, p.srrShockMonths);
-    renderSrrStress(res, p.srrShockPct, p.srrShockMonths);
-  } catch(err){ reportError(err);
+    if(res && myGen===srrGeneration) renderSrrStress(res, p.srrShockPct, p.srrShockMonths);
+  } catch(err){ if(myGen===srrGeneration) reportError(err);
   } finally {
-    btn.disabled=false; loadingEl.style.display='none';
+    if(myGen===srrGeneration){ btn.disabled=false; loadingEl.style.display='none'; }
   }
 });
 document.getElementById('scenarioList').addEventListener('click', e=>{

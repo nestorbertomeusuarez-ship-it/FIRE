@@ -15,16 +15,17 @@ const { loadApp } = require('./helpers/fake-app.js');
 
   await quiesce(); // the page's own start-up run leaves a pending announcement
 
-  // ---- seed: heavy recompute only on `change`, never per keystroke ----
-  assert.deepEqual(Object.keys(el('seed').listeners), ['change'], 'the seed control listens to change only');
+  // ---- manual calculation mode: no control schedules a run by itself any more; only "Calcular" does ----
+  assert.deepEqual(Object.keys(el('seed').listeners).sort(), ['change', 'keydown'], 'the seed control listens to change (and Enter), never input');
   assert.equal(env.pendingTimers(), 0);
   setValue('seed', '4');
   el('seed').fire('input');
-  assert.equal(env.pendingTimers(), 0, 'typing (input) in the seed field schedules no calculation');
+  assert.equal(env.pendingTimers(), 0, 'the seed field has no "input" listener at all');
   el('seed').fire('change');
-  assert.equal(env.pendingTimers(), 1, 'committing (change) the seed schedules exactly one full run');
+  assert.equal(env.pendingTimers(), 0, 'committing (change) the seed no longer schedules any calculation by itself');
+  assert.match(el('staleNotice').style.display, /block/, 'committing a new seed marks the result stale');
   const announcedAtStart = el('calcAnnounce').textHistory.length;
-  env.flushTimers(); await app.settle();          // the full run itself
+  await call("safeRun('full')");                  // pressing "Calcular"
   assert.equal(env.pendingTimers(), 1, 'a finished full run leaves one debounced announcement pending');
   assert.equal(el('calcAnnounce').textHistory.length, announcedAtStart, 'the announcement is not immediate');
   env.flushTimers();
@@ -33,12 +34,13 @@ const { loadApp } = require('./helpers/fake-app.js');
   const seededSeries = JSON.stringify(call('lastSeries'));
   assert.match(el('simulationContext').textContent, /Semilla 4 \(reproducible/, 'a committed seed is shown');
   assert.match(el('calc').textContent, /5000 rutas/, 'a seeded full run always uses the fixed path count');
-  // controls that should keep their behaviour
-  assert.deepEqual(Object.keys(el('gasto').listeners).sort(), ['change', 'input'], 'range sliders: preview on input, full run on change');
+  // controls that used to auto-run now only repaint/mark stale, never schedule anything themselves
+  assert.deepEqual(Object.keys(el('gasto').listeners).sort(), ['change', 'input'], 'range sliders still listen on input+change (for label/constraint repaint), just not to run anything');
   el('gasto').fire('input');
-  assert.equal(env.pendingTimers(), 1, 'a slider drag schedules a (debounced) preview'); env.clearAllTimers();
+  assert.equal(env.pendingTimers(), 0, 'a slider drag no longer schedules any run'); env.clearAllTimers();
   el('taxOn').fire('input');
-  assert.equal(env.pendingTimers(), 1, 'checkboxes still trigger a run'); env.clearAllTimers();
+  assert.equal(env.pendingTimers(), 0, 'checkboxes no longer trigger a run either'); env.clearAllTimers();
+  await call("safeRun('full')"); await quiesce(); // restore a fresh, non-stale result for the assertions below
 
   // ---- an invalid seed is refused visibly, never silently randomised ----
   for (const text of ['-3', '7.9', '99999999999']) {
@@ -147,9 +149,9 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.ok(el('assumptionsLimits').classList.contains('screenOnly'), 'the on-screen copy is hidden when printing (the print copy replaces it)');
   const limitsText = screenLimits.join(' | ');
   for (const phrase of [/no asesoramiento/, /simulación/, /solo se aplican a las retiradas/, /dividendos, intereses y alquileres/, /libres de impuestos y cotizaciones/,
-    /nominales 2024\/2025/, /control nur/, /2027 a 2030/, /FS1/, /10\.400/, /solo mientras trabajas/, /sin IRPF ni cotizaciones/, /5000 rutas fijas/, /2000 rutas/, /mismo navegador y dispositivo/, /diferencias mínimas/])
+    /nominales 2024\/2025/, /FS1/, /10\.400/, /solo se carga mientras trabajas/, /sin IRPF ni cotizaciones/, /5000 rutas fijas/, /2000 rutas/, /mismo navegador y dispositivo/, /diferencias mínimas/])
     assert.match(limitsText, phrase, 'limits mention ' + phrase);
-  assert.doesNotMatch(limitsText, /nur\)? (y|están|está) .*fijad|fijados en el modelo|no cambian con el gasto por hijo/, 'nur is a slider: it must not be described as hard-coded');
+  assert.doesNotMatch(limitsText, /nur\)? (y|están|está) .*fijad|fijados en el modelo|no cambian con el gasto por hijo/, 'the child-cost sliders must not be described as hard-coded');
   assert.doesNotMatch(app.html, /exactamente reproducibles|idénticos en cualquier dispositivo/, 'no over-claim anywhere in the page text');
 
   // ---- simulation context text ----

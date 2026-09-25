@@ -200,7 +200,10 @@
   function normalizeScenarios(raw, allowedKeys, colors, max = 4) {
     if (!Array.isArray(raw)) return [];
     const ids = new Set();
-    return raw.slice(0, 1000).filter(item => validScenario(item, allowedKeys, colors) && !ids.has(item.id) && ids.add(item.id)).slice(0, max).map(sanitizeScenario);
+    // Legacy keys are migrated here so every caller (localStorage, file import, future paths) gets it.
+    const migrated = raw.slice(0, 1000).map(item => item && typeof item === 'object' && !Array.isArray(item) && item.params && typeof item.params === 'object'
+      ? { ...item, params: migrateLegacyParams(item.params) } : item);
+    return migrated.filter(item => validScenario(item, allowedKeys, colors) && !ids.has(item.id) && ids.add(item.id)).slice(0, max).map(sanitizeScenario);
   }
   function sameParameterSnapshot(a, b) {
     if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
@@ -278,5 +281,38 @@
   function beckhamApplies(active, residentMonth, currentMonth, years) {
     return Boolean(active && residentMonth >= 0 && currentMonth >= residentMonth && currentMonth - residentMonth < years * 12);
   }
-  return { SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson };
+  // Backward compatibility for scenarios saved before the standalone `nur` (nursery-per-child,
+  // €/año, fixed calendar years) control was folded into the generic age-based child cost
+  // (childAnnual/childStartAge/childEndAge). Drops the legacy key either way, so an unknown
+  // `nur` never fails validScenario/import; when the scenario has no childAnnual of its own,
+  // its value and the equivalent default ages are carried over instead of being silently lost.
+  // UAE end-of-service gratuity (Federal Decree-Law 33/2021): 21 days of basic pay per year for
+  // the first 5 years, 30 days per year after that, nothing under 1 year, capped at 2 years' pay.
+  function gratuityDays(years) {
+    if (!(years >= 1)) return 0;
+    return Math.min(Math.min(years, 5) * 21 + Math.max(0, years - 5) * 30, 730);
+  }
+  // Emirates pays the end-of-service gratuity OR the Provident Scheme balance, whichever is
+  // higher. The Provident balance is already in the portfolio, so only the shortfall is added.
+  function endOfServiceTopUp({ years, basicAED, fx, provBalance, provOn }) {
+    const gratuityEUR = gratuityDays(years) * (basicAED / 30) * fx;
+    return provOn ? Math.max(0, gratuityEUR - provBalance) : gratuityEUR;
+  }
+  // Scenarios saved before `gratuityYears` was replaced by the automatic gratuity-vs-Provident
+  // comparison: the key is dropped so it neither fails validation nor double-counts.
+  function migrateLegacyParams(params) {
+    const child = migrateLegacyChildParams(params);
+    if (!child || typeof child !== 'object' || Array.isArray(child) || !('gratuityYears' in child)) return child;
+    const migrated = {};
+    for (const [key, value] of Object.entries(child)) if (key !== 'gratuityYears') migrated[key] = value;
+    return migrated;
+  }
+  function migrateLegacyChildParams(params) {
+    if (!params || typeof params !== 'object' || Array.isArray(params) || !('nur' in params)) return params;
+    const migrated = {};
+    for (const [key, value] of Object.entries(params)) if (key !== 'nur') migrated[key] = value;
+    if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
+    return migrated;
+  }
+  return { gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams };
 });

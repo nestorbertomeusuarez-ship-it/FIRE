@@ -58,7 +58,7 @@ scenarioContext.loadScenarioForTest('seeded');
 assert.equal(scenarioControls.seed.value,'0','seed zero is restored');
 scenarioContext.loadScenarioForTest('unseeded');
 assert.equal(scenarioControls.seed.value,'','a random-seed scenario clears the seed control');
-const p = { ...DEFAULTS, seed: 7, proMode: true, lolOn: true, lolAnnualProb: 100, lolPayoutMode: 1,
+const p = { ...DEFAULTS, seed: 7, proMode: true, lolOn: true, lolAgeCurveOn: false, lolAnnualProb: 100, lolPayoutMode: 1,
   lolReplacePct: 60, lolReplaceYears: 3, startEq: 0, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0,
   vida: 0, hip: 0, nur: 0, gasto: 1, brOn: false, provOn: false, mandatoryRetireOn: false };
 const loss = simulate(p, 8);
