@@ -1995,7 +1995,13 @@ function simulate(p, paths){
         // Gratuity is realized right when you leave the company, so it can count
         // toward crossing the target that same month — a real departure lump sum,
         // not money you already had.
-        const gratuityEUR=i>=careerStart ? endOfServiceEUR(i,careerStart,captMonth,vProv,fxEff) : 0;
+        // The gratuity can never exceed 730 days of basic pay, so it is only worked out in the
+        // months where it could change the outcome: the target is within reach or this is the
+        // mandatory exit. With the Provident already above that ceiling the top-up is always 0.
+        const gratuityCeilingEUR=i>=careerStart ? 730*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
+        const gratuityMatters=gratuityCeilingEUR>0 && !(p.provOn && vProv>=gratuityCeilingEUR)
+          && (total+gratuityCeilingEUR>=target || (mandatoryRetireActive && i>=mandatoryRetireMonth));
+        const gratuityEUR=gratuityMatters ? endOfServiceEUR(i,careerStart,captMonth,vProv,fxEff) : 0;
         if(!licenseLossPath && total+gratuityEUR>=target && !ruinedPath){
           retired=true;
           fireMonth[k]=i;
@@ -3407,17 +3413,10 @@ const SCENARIO_COLORS=['#1F7A4D','#2E6F9E','#0E7C86','#6B4FA0'];
 const SCENARIO_STORAGE_KEY='fireSimScenarios';
 // Strict per-parameter typing for stored/imported scenarios (booleans only for boolean controls, etc.).
 const PARAM_TYPES=Object.fromEntries(ids.map(k=>[k, k==='seed' ? 'seed' : k==='lumpSums' ? 'lumpSums' : typeof DEFAULTS[k]==='boolean' ? 'boolean' : 'number']));
-// Scenarios saved before the standalone `nur` control was folded into childAnnual/childStartAge/
-// childEndAge: migrate (or just drop) that legacy key before validation, so an old scenario with
-// `nur` is neither silently rejected (unknown key) nor loses its nursery cost outright.
-function migrateLegacyScenarioList(list){
-  return Array.isArray(list) ? list.map(item => item && typeof item==='object' && !Array.isArray(item) && item.params && typeof item.params==='object'
-    ? {...item, params:NavlogCore.migrateLegacyParams(item.params)} : item) : list;
-}
 let savedScenarios=[];
 try{
   const raw=localStorage.getItem(SCENARIO_STORAGE_KEY);
-  if(raw) savedScenarios=NavlogCore.normalizeScenarios(migrateLegacyScenarioList(JSON.parse(raw)),PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
+  if(raw) savedScenarios=NavlogCore.normalizeScenarios(JSON.parse(raw),PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
 }catch(e){ savedScenarios=[]; }
 
 // Returns false (and tells the user) when the browser refuses the write: a full or
@@ -3510,7 +3509,7 @@ function importScenariosFile(file){
       if(text.length<=2_000_000){
         const parsed=JSON.parse(text);
         const list=Array.isArray(parsed) ? parsed : (parsed && parsed.version===1 ? parsed.scenarios : null);
-        imported=NavlogCore.normalizeScenarios(migrateLegacyScenarioList(list),PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
+        imported=NavlogCore.normalizeScenarios(list,PARAM_TYPES,SCENARIO_COLORS,SCENARIO_MAX);
       }
     }catch(_){ imported=[]; }
     if(!imported.length) return showScenarioMsg('No se encontraron escenarios válidos en el JSON.');

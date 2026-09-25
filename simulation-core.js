@@ -200,7 +200,10 @@
   function normalizeScenarios(raw, allowedKeys, colors, max = 4) {
     if (!Array.isArray(raw)) return [];
     const ids = new Set();
-    return raw.slice(0, 1000).filter(item => validScenario(item, allowedKeys, colors) && !ids.has(item.id) && ids.add(item.id)).slice(0, max).map(sanitizeScenario);
+    // Legacy keys are migrated here so every caller (localStorage, file import, future paths) gets it.
+    const migrated = raw.slice(0, 1000).map(item => item && typeof item === 'object' && !Array.isArray(item) && item.params && typeof item.params === 'object'
+      ? { ...item, params: migrateLegacyParams(item.params) } : item);
+    return migrated.filter(item => validScenario(item, allowedKeys, colors) && !ids.has(item.id) && ids.add(item.id)).slice(0, max).map(sanitizeScenario);
   }
   function sameParameterSnapshot(a, b) {
     if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
