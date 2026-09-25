@@ -774,6 +774,15 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">El Provident Scheme no es una plusvalía: al retirarlo, Hacienda lo trata como rendimiento del trabajo (tramos generales de IRPF), normalmente con un tipo más alto que el tipo medio sobre plusvalías. Como cada cubo puede tener su propio tipo, el simulador retira automáticamente primero del que salga más barato — con los valores por defecto (mismo tipo en los dos) esto no cambia nada, es exactamente el orden de siempre.</p>
         <input type="range" id="taxRateProv" min="0" max="47" step="0.5">
       </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="useRegionalGeneralIrpf">
+        <label for="useRegionalGeneralIrpf">Calcular IRPF general 2025 del Provident por comunidad</label>
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="taxRegion">Residencia fiscal</label><output id="taxRegion_o" for="taxRegion"></output></div>
+        <p class="hint">Estimación individual sin mínimos ni deducciones; usa las escalas estatal y autonómica 2025. Al activarla sustituye el tipo manual del Provident.</p>
+        <input type="range" id="taxRegion" min="0" max="1" step="1">
+      </div>
       <div class="ctrl">
         <div class="row"><label for="burrTaxRate">Tipo sobre la venta de Burriana</label><output id="burrTaxRate_o" for="burrTaxRate"></output></div>
         <p class="hint">Burriana es un inmueble en España: Hacienda grava su venta aunque todavía no residas allí ni hayas activado la Ley Beckham — la exclusión de Beckham solo cubre renta y patrimonio de fuera de España, nunca un inmueble español. Por defecto 19 %, el tipo fijo para no residentes UE/EEE sobre plusvalías inmobiliarias (24 % fuera de la UE/EEE). Brasil no lleva este tratamiento: su cifra ya viene neta de impuestos.</p>
@@ -1210,7 +1219,7 @@ const DEFAULTS = {
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
-  taxOn:false, useIrpfBrackets:false, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
+  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
   lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
@@ -1507,6 +1516,7 @@ function paintLabels(p){
   // ---- Modo PRO ----
   set('taxRate',p.taxRate.toFixed(1)+' %');
   set('taxRateProv',p.taxRateProv.toFixed(1)+' %');
+  set('taxRegion',['Cataluña','Comunitat Valenciana'][Math.round(p.taxRegion)]);
   set('burrTaxRate',p.burrTaxRate.toFixed(1)+' %');
   set('lolAnnualProb',p.lolAnnualProb.toFixed(1)+' %/año');
   set('lolPremiumMonthly',eur(p.lolPremiumMonthly)+'/mes');
@@ -1627,6 +1637,8 @@ function simulate(p, paths){
   const reActive=p.proMode && p.reOn;
   const glideActive=p.proMode && p.glideOn;
   const taxActive=p.proMode && p.taxOn;
+  const regionalGeneralActive=taxActive && p.useRegionalGeneralIrpf;
+  const taxRegion=Math.round(p.taxRegion)===1 ? 'valencian-community' : 'catalonia';
   const wealthTaxActive=p.proMode && p.wealthTaxOn;
   const beckhamActive=p.proMode && p.beckhamOn;
   const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
@@ -1683,6 +1695,12 @@ function simulate(p, paths){
   function netTaken(oldBal, newBal, ratePct){
     const gross=oldBal-newBal;
     return ratePct>0 ? gross*(1-ratePct/100) : gross;
+  }
+  function takeProvident(bal, needNet, ratePct, ytdIncome){
+    if(needNet<=0 || bal<=0) return {bal,net:0,gross:0};
+    const grossWanted=regionalGeneralActive ? NavlogCore.grossForNetGeneralIncome(needNet,ytdIncome,taxRegion,bal) : (ratePct>0 ? needNet/(1-ratePct/100) : needNet);
+    const gross=Math.min(bal,grossWanted);
+    return {bal:bal-gross, gross, net:regionalGeneralActive ? NavlogCore.netAfterGeneralIncomeTax(gross,ytdIncome,taxRegion) : (ratePct>0 ? gross*(1-ratePct/100) : gross)};
   }
   // Average-cost basis tracking for the capital-gains-taxed buckets (vEq/vBtc/
   // vGold/vCons/vRE): a withdrawal should only be taxed on its gain fraction, not
@@ -1769,7 +1787,7 @@ function simulate(p, paths){
     let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1;
     // Running year-to-date realized gain on the capital-gains-taxed buckets, reset
     // every January — feeds irpfBracketRate() when useIrpfBrackets is on.
-    let ytdGainCartera=0;
+    let ytdGainCartera=0, ytdProvidentIncome=0;
     // Tracks pure market-driven growth (returns compounding on whatever balance
     // already existed), independent of contributions/withdrawals — so "aportado"
     // (net cash you put in) can be recovered as totalWealth-cumGrowth without
@@ -1792,7 +1810,7 @@ function simulate(p, paths){
     let snap=0;
     for(let i=0;i<months;i++){
       const d=MONTH_DATES[i];
-      if(d.m===1) ytdGainCartera=0;
+      if(d.m===1){ ytdGainCartera=0; ytdProvidentIncome=0; }
       const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
       if(histActive && i>0 && d.m===1){
         histPos=(histPos+1)%HIST_EQ_REAL_RETURNS.length;
@@ -2076,19 +2094,20 @@ function simulate(p, paths){
         const bracketsActive=taxNow && p.useIrpfBrackets;
         const gravRate=taxNow ? (bracketsActive ? 0 : p.taxRate) : 0;
         const provRate=taxNow ? p.taxRateProv : 0;
+        const provMarginal=regionalGeneralActive ? (NavlogCore.generalIncomeTax(ytdProvidentIncome+1,taxRegion)-NavlogCore.generalIncomeTax(ytdProvidentIncome,taxRegion))*100 : provRate;
         const provFirst=taxNow && (bracketsActive
-          ? NavlogCore.providentFirst(provRate,[{balance:vCash,basis:basisCash},{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
-          : provRate<gravRate);
+          ? NavlogCore.providentFirst(provMarginal,[{balance:vCash,basis:basisCash},{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
+          : provMarginal<gravRate);
 
         let deficit=wd, nb, r;
-        if(provFirst){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        if(provFirst){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
         if(deficit>0){ const ob=vCash, obs=basisCash; r=takeFromBucket(vCash,basisCash,deficit,gravRate,ytdGainCartera,bracketsActive); vCash=r.bal; basisCash=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vCons, obs=basisCons; r=takeFromBucket(vCons,basisCons,deficit,gravRate,ytdGainCartera,bracketsActive); vCons=r.bal; basisCons=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vEq, obs=basisEq; r=takeFromBucket(vEq,basisEq,deficit,gravRate,ytdGainCartera,bracketsActive); vEq=r.bal; basisEq=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0 && goldActive){ const ob=vGold, obs=basisGold; r=takeFromBucket(vGold,basisGold,deficit,gravRate,ytdGainCartera,bracketsActive); vGold=r.bal; basisGold=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vBtc, obs=basisBtc; r=takeFromBucket(vBtc,basisBtc,deficit,gravRate,ytdGainCartera,bracketsActive); vBtc=r.bal; basisBtc=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0 && reActive && p.reCountsFire){ const ob=vRE, obs=basisRE; r=takeFromBucket(vRE,basisRE,deficit,gravRate,ytdGainCartera,bracketsActive); vRE=r.bal; basisRE=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(!provFirst && deficit>0){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        if(!provFirst && deficit>0){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
         // ytdGainCartera is incremented per bucket above, so progressive brackets apply exactly across a cascade.
         // Each cascade step round-trips through a gross-up/net-back division and
         // multiplication, so a fully-covered deficit can land on a tiny positive
@@ -2740,7 +2759,8 @@ function buildWorkerSource(){
     'const PARAM_BOUNDS='+literal(PARAM_BOUNDS)+';',
     'let spare=null, activeRandom=Math.random;',
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+'};',
+    'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     'const progressiveSavingsTax=NavlogCore.progressiveSavingsTax, netAfterSavingsTax=NavlogCore.netAfterSavingsTax;',
     'const monthIndex='+monthIndex.toString()+';',

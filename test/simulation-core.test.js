@@ -3,6 +3,12 @@ const core = require('../simulation-core.js');
 const a = core.seededRandom(42), b = core.seededRandom(42);
 assert.deepEqual([a(),a(),a()], [b(),b(),b()], 'seeded PRNG must reproduce paths');
 assert.equal(core.progressiveSavingsTax(6000), 1140);
+assert.equal(core.generalIncomeTax(50000, 'catalonia'), 14465.75, '2025 individual general IRPF combines state and Catalan scales without deductions');
+assert.equal(core.generalIncomeTax(50000, 'valencian-community'), 14230.75, '2025 individual general IRPF combines state and Valencian scales without deductions');
+for (const [region, ytd, net] of [['catalonia', 0, 10000], ['valencian-community', 49000, 3000]]) {
+  const gross = core.grossForNetGeneralIncome(net, ytd, region, 1e6);
+  assert.ok(Math.abs(core.netAfterGeneralIncomeTax(gross, ytd, region) - net) < 1e-3, 'regional IRPF gross-up round-trips');
+}
 assert.equal(core.progressiveSavingsTax(7000), 1350, 'second bracket applies only above €6k');
 assert.equal(core.netAfterSavingsTax(1000, 0, 0), 1000, 'principal is never gains-taxed');
 assert.ok(core.netAfterSavingsTax(1000, .5, 0) > 900, 'only gain fraction is taxed');
