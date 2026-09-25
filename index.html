@@ -3069,18 +3069,18 @@ function renderSrrStress(res, shockPct, shockMonths){
 }
 
 function renderHistoricalBacktest(){
-  const capital=Number(document.getElementById('btCapital').value), spend=Number(document.getElementById('btSpend').value), years=Number(document.getElementById('btYears').value);
+  const capital=Number(document.getElementById('btCapital').value), spend=Number(document.getElementById('btSpend').value), years=Number(document.getElementById('btYears').value), feeEq=Number(document.getElementById('feeEq').value)||0;
   document.getElementById('btCapitalValue').textContent=eur(capital);
   document.getElementById('btSpendValue').textContent=eur(spend)+'/año';
   document.getElementById('btYearsValue').textContent=years+' años';
-  const outcomes=NavlogCore.historicalWithdrawalBacktest(HIST_EQ_REAL_RETURNS,capital,spend,years);
+  const outcomes=NavlogCore.historicalWithdrawalBacktest(HIST_EQ_REAL_RETURNS,capital,spend,years,feeEq);
   const survivors=outcomes.filter(x=>!x.ruined).length;
   const finals=outcomes.map(x=>x.finalBalance).sort((a,b)=>a-b);
   const quantile=q=>finals.length?finals[Math.floor((finals.length-1)*q)]:0;
   const failures=outcomes.filter(x=>x.ruined).map(x=>1928+x.startIndex);
   document.getElementById('btResults').innerHTML='<p class="calc">Sobrevivieron '+survivors+' de '+outcomes.length+' periodos ('+(outcomes.length?Math.round(100*survivors/outcomes.length):0)+' %). '+(failures.length?'Años de inicio con ruina: '+failures.join(', ')+'.':'No hubo ruina en los periodos probados.')+'</p><table><thead><tr><th>Capital final real</th><th>P10</th><th>Mediana</th><th>P90</th></tr></thead><tbody><tr><td>Tras '+years+' años</td><td>'+eurK(quantile(.1))+'</td><td>'+eurK(quantile(.5))+'</td><td>'+eurK(quantile(.9))+'</td></tr></tbody></table>';
 }
-['btCapital','btSpend','btYears'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistoricalBacktest));
+['btCapital','btSpend','btYears','feeEq'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistoricalBacktest));
 renderHistoricalBacktest();
 
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));

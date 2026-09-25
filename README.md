@@ -52,7 +52,8 @@ file is retained as a historical comparison and is not the canonical app.
   Spanish tax law, regional rules, deductions, or personalized advice. Verify
   current rules with a qualified professional before making decisions.
 - Historical returns are backward-looking, US-based, and do not predict future
-  returns. The sequential backtest excludes taxes, fees, and trading frictions.
+  returns. The sequential backtest applies the configured equity cost, but excludes
+  taxes and trading frictions.
 - Monte Carlo results are sensitive to the user's assumptions, model structure,
   path count, and random seed. They are estimates, not guarantees.
 

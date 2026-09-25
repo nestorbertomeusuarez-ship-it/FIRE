@@ -125,15 +125,16 @@
     const bracket = SAVINGS_BRACKETS.find(item => base < item.upTo) || SAVINGS_BRACKETS[SAVINGS_BRACKETS.length - 1];
     return bracket.rate * fraction * 100;
   }
-  function historicalWithdrawalBacktest(realAnnualReturns, capital, annualSpend, years) {
+  function historicalWithdrawalBacktest(realAnnualReturns, capital, annualSpend, years, annualFeePct = 0) {
     if (!Array.isArray(realAnnualReturns) || !Number.isFinite(capital) || !Number.isFinite(annualSpend) || !Number.isInteger(years) || years < 1) return [];
+    const annualFee = Math.max(0, Number(annualFeePct) || 0) / 100;
     const result = [];
     for (let start = 0; start + years <= realAnnualReturns.length; start++) {
       let balance = capital;
       for (let year = 0; year < years && balance > 0; year++) {
         const annualReturn = realAnnualReturns[start + year];
         if (!Number.isFinite(annualReturn) || annualReturn <= -1) { balance = 0; break; }
-        const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
+        const monthlyReturn = Math.pow((1 + annualReturn) * (1 - annualFee), 1 / 12) - 1;
         for (let month = 0; month < 12; month++) {
           balance = balance * (1 + monthlyReturn) - annualSpend / 12;
           if (balance <= 0) { balance = 0; break; }
