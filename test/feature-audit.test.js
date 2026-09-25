@@ -14,7 +14,7 @@ const { simulate, DEFAULTS, buildRuinCurve, readParams, controls, MONTHS } = con
 
 // Deterministic retired profile: no returns, no volatility, retires in month 0 with far more than the target.
 const flat = { ...DEFAULTS, seed: 3, proMode: false, startEq: 10000000, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
-  gasto: 100000, swr: 4, vida: 0, hip: 0, nur: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, horizonAge: 60,
+  gasto: 100000, swr: 4, vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, horizonAge: 60,
   allocCash: 0, allocBonds: 0, allocEquities: 100 };
 const lastDecember = (params) => { const s = simulate(params, 3).series; return s[s.length - 1]; };
 const model = ({ start, spend, pension = 0, pensionAge = 999, health = 0, healthAge = 999, lumps = [], childAnnual = 0, childStart = 0, childEnd = 0, barista = 0, baristaYears = 0 }, params) => {

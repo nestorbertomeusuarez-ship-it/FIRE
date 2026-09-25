@@ -278,5 +278,17 @@
   function beckhamApplies(active, residentMonth, currentMonth, years) {
     return Boolean(active && residentMonth >= 0 && currentMonth >= residentMonth && currentMonth - residentMonth < years * 12);
   }
-  return { SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson };
+  // Backward compatibility for scenarios saved before the standalone `nur` (nursery-per-child,
+  // €/año, fixed calendar years) control was folded into the generic age-based child cost
+  // (childAnnual/childStartAge/childEndAge). Drops the legacy key either way, so an unknown
+  // `nur` never fails validScenario/import; when the scenario has no childAnnual of its own,
+  // its value and the equivalent default ages are carried over instead of being silently lost.
+  function migrateLegacyChildParams(params) {
+    if (!params || typeof params !== 'object' || Array.isArray(params) || !('nur' in params)) return params;
+    const migrated = {};
+    for (const [key, value] of Object.entries(params)) if (key !== 'nur') migrated[key] = value;
+    if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
+    return migrated;
+  }
+  return { SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams };
 });

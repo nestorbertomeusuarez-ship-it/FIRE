@@ -35,7 +35,7 @@ const EXPECTED_IDS = [
   'captY_o', 'captY', 'captDelay_o', 'captDelay', 'startDelay_o', 'startDelay', 'salG_o', 'salG',
   'profitShareWeeks_o', 'profitShareWeeks', 'mandatoryRetireOn', 'mandatoryRetireAge_o', 'mandatoryRetireAge', 'ret_o', 'ret', 'vol_o',
   'vol', 'histMarketOn', 'vida_o', 'vida', 'vidaG_o', 'vidaG', 'hip_o', 'hip',
-  'hipEnd_o', 'hipEnd', 'nur_o', 'nur', 'burr_o', 'burr', 'brOn', 'brNet_o',
+  'hipEnd_o', 'hipEnd', 'burr_o', 'burr', 'brOn', 'brNet_o',
   'brNet', 'brStart_o', 'brStart', 'brYears_o', 'brYears', 'startEq_o', 'startEq', 'startBtc_o',
   'startBtc', 'btcRet_o', 'btcRet', 'btcVol_o', 'btcVol', 'btcRho_o', 'btcRho', 'btcAporte_o',
   'btcAporte', 'provOn', 'basicFO_o', 'basicFO', 'basicCA_o', 'basicCA', 'provCo_o', 'provCo',
@@ -158,13 +158,13 @@ test('Parametros is one section with the groups in the agreed order', () => {
   expectGroup('Objetivo', ['gasto', 'swr']);
   expectGroup('Tú y el horizonte', ['ageNow', 'horizonAge', 'careerYear']);
   expectGroup('Carrera', ['fx', 'salFO', 'salCA', 'captY', 'mandatoryRetireAge']);
-  expectGroup('Gastos', ['vida', 'vidaG', 'hip', 'hipEnd', 'nur', 'childAnnual', 'childStartAge', 'childEndAge', 'healthcareAnnual', 'healthcareStartAge']);
+  expectGroup('Gastos', ['vida', 'vidaG', 'hip', 'hipEnd', 'mortgageBalance', 'childAnnual', 'childStartAge', 'childEndAge', 'healthcareAnnual', 'healthcareStartAge']);
   assertAscending([
-    ['nur', section.indexOf('id="nur"')], ['childAnnual', section.indexOf('id="childAnnual"')],
-    ['healthcareAnnual', section.indexOf('id="healthcareAnnual"')],
-  ], 'family controls follow the existing Gastos controls');
+    ['hipEnd', section.indexOf('id="hipEnd"')], ['mortgageBalance', section.indexOf('id="mortgageBalance"')],
+    ['childAnnual', section.indexOf('id="childAnnual"')], ['healthcareAnnual', section.indexOf('id="healthcareAnnual"')],
+  ], 'mortgage and family controls follow the existing Gastos controls');
   expectGroup('Ingresos en jubilación', ['pensionAnnual', 'pensionStartAge', 'lumpSums', 'lumpSumHelp']);
-  expectGroup('Reparto de la cartera básica', ['allocCash', 'allocBonds', 'allocEquities', 'cashRet', 'cashVol']);
+  expectGroup('Reparto de la cartera básica', ['allocCash', 'allocBonds', 'consRet', 'consVol', 'allocEquities', 'cashRet', 'cashVol']);
 
   const proRow = section.indexOf('class="proRow"');
   assert.ok(proRow > groupStart('Mercado') && proRow < groupStart('PRO · Fiscalidad España'), 'PRO switch sits right before the PRO groups');

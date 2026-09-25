@@ -30,7 +30,7 @@ const { loadApp } = require('./helpers/fake-app.js');
     ageNow: 28, horizonAge: 90, careerYear: 2027,
     allocCash: 10, allocBonds: 20, allocEquities: 70, cashRet: 1, cashVol: 1.5,
     pensionAnnual: 0, pensionStartAge: 67, healthcareAnnual: 0, healthcareStartAge: 65,
-    childAnnual: 0, childStartAge: 30, childEndAge: 40,
+    childAnnual: 10000, childStartAge: 29, childEndAge: 32,
   };
   for (const [id, expected] of Object.entries(CONVERTED_DEFAULTS)) {
     const input = el(id);

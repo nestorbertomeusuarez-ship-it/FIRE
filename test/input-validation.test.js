@@ -22,7 +22,7 @@ for (const horizonAge of [40, 60, 66]) {
 }
 // An interval that starts after the horizon simply never applies.
 const beyond = simulate({ ...DEFAULTS, seed: 1, horizonAge: 50, pensionAnnual: 50000, pensionStartAge: 67, healthcareAnnual: 9000, healthcareStartAge: 80, childAnnual: 5000, childStartAge: 60, childEndAge: 70 }, 8);
-const without = simulate({ ...DEFAULTS, seed: 1, horizonAge: 50 }, 8);
+const without = simulate({ ...DEFAULTS, seed: 1, horizonAge: 50, childAnnual: 0 }, 8);
 assert.deepEqual(beyond.series.map(x => x.p50), without.series.map(x => x.p50), 'income/costs that start after the horizon change nothing');
 // Genuinely invalid ages are still rejected.
 assert.throws(() => simulate({ ...DEFAULTS, childStartAge: 50, childEndAge: 40 }, 2), /hijo/, 'child end before start');

@@ -149,9 +149,9 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.ok(el('assumptionsLimits').classList.contains('screenOnly'), 'the on-screen copy is hidden when printing (the print copy replaces it)');
   const limitsText = screenLimits.join(' | ');
   for (const phrase of [/no asesoramiento/, /simulación/, /solo se aplican a las retiradas/, /dividendos, intereses y alquileres/, /libres de impuestos y cotizaciones/,
-    /nominales 2024\/2025/, /control nur/, /2027 a 2030/, /FS1/, /10\.400/, /solo mientras trabajas/, /sin IRPF ni cotizaciones/, /5000 rutas fijas/, /2000 rutas/, /mismo navegador y dispositivo/, /diferencias mínimas/])
+    /nominales 2024\/2025/, /FS1/, /10\.400/, /solo se carga mientras trabajas/, /sin IRPF ni cotizaciones/, /5000 rutas fijas/, /2000 rutas/, /mismo navegador y dispositivo/, /diferencias mínimas/])
     assert.match(limitsText, phrase, 'limits mention ' + phrase);
-  assert.doesNotMatch(limitsText, /nur\)? (y|están|está) .*fijad|fijados en el modelo|no cambian con el gasto por hijo/, 'nur is a slider: it must not be described as hard-coded');
+  assert.doesNotMatch(limitsText, /nur\)? (y|están|está) .*fijad|fijados en el modelo|no cambian con el gasto por hijo/, 'the child-cost sliders must not be described as hard-coded');
   assert.doesNotMatch(app.html, /exactamente reproducibles|idénticos en cualquier dispositivo/, 'no over-claim anywhere in the page text');
 
   // ---- simulation context text ----

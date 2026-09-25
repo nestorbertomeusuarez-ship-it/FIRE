@@ -15,7 +15,7 @@ context.globalThis = context; vm.createContext(context); vm.runInContext(source,
 const { simulate, DEFAULTS } = context.__t;
 
 const params = { ...DEFAULTS, seed: 1, proMode: true, startEq: 400e6, startBtc: 0, ret: 5, vol: 0, btcRet: 0, btcVol: 0, gasto: 12e6, swr: 4,
-  vida: 0, hip: 0, nur: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0,
+  vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0,
   allocCash: 0, allocBonds: 0, allocEquities: 100, horizonAge: 38 };
 
 function model(p, months, resetEveryJanuary = true) {
