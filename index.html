@@ -783,12 +783,12 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Estimación individual sin mínimos ni deducciones; usa las escalas estatal y autonómica 2025. Al activarla sustituye el tipo manual del Provident.</p>
         <input type="range" id="taxRegion" min="0" max="1" step="1">
       </div>
-      <div class="ctrl"><div class="row"><label for="feeCash">TER efectivo</label><output id="feeCash_o" for="feeCash"></output></div><input type="range" id="feeCash" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeCons">TER bonos</label><output id="feeCons_o" for="feeCons"></output></div><input type="range" id="feeCons" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeEq">TER renta variable</label><output id="feeEq_o" for="feeEq"></output></div><input type="range" id="feeEq" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeBtc">Coste BTC</label><output id="feeBtc_o" for="feeBtc"></output></div><input type="range" id="feeBtc" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeGold">Coste oro</label><output id="feeGold_o" for="feeGold"></output></div><input type="range" id="feeGold" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeProv">Coste Provident</label><output id="feeProv_o" for="feeProv"></output></div><input type="range" id="feeProv" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeCash">TER efectivo</label><output id="feeCash_o" for="feeCash"></output></div><p class="hint">Comisión anual de la cuenta o fondo monetario donde tienes el efectivo, en % del saldo. Se descuenta mes a mes de su rentabilidad. Una cuenta remunerada normal cuesta 0 %; un fondo monetario, 0,1–0,3 %.</p><input type="range" id="feeCash" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeCons">TER bonos</label><output id="feeCons_o" for="feeCons"></output></div><p class="hint">Gastos anuales (TER) de tus fondos o ETF de bonos, en % del saldo, descontados mes a mes. Un ETF indexado de bonos suele costar 0,05–0,25 %; un fondo de gestión activa, 0,5–1 %.</p><input type="range" id="feeCons" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeEq">TER renta variable</label><output id="feeEq_o" for="feeEq"></output></div><p class="hint">Gastos anuales (TER) de tus fondos o ETF de acciones, en % del saldo, descontados mes a mes. Por ejemplo, con 500.000 € al 0,2 % pagas unos 1.000 € al año; al 1,5 % de un fondo activo, 7.500 €. Un indexado global suele costar 0,1–0,25 %. También se aplica al backtest histórico.</p><input type="range" id="feeEq" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeBtc">Coste BTC</label><output id="feeBtc_o" for="feeBtc"></output></div><p class="hint">Coste anual de mantener tu BTC, en % del saldo: comisión de un ETF de bitcoin (0,15–0,25 %) o custodia y diferenciales si lo compras directamente.</p><input type="range" id="feeBtc" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeGold">Coste oro</label><output id="feeGold_o" for="feeGold"></output></div><p class="hint">Coste anual de tu oro, en % del saldo: comisión de un ETC de oro (0,1–0,25 %) o almacenaje y seguro si es físico.</p><input type="range" id="feeGold" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeProv">Coste Provident</label><output id="feeProv_o" for="feeProv"></output></div><p class="hint">Gastos anuales de los fondos donde está invertido tu Provident Scheme, en % del saldo, descontados mes a mes. Mira el TER de los fondos que hayas elegido dentro del plan.</p><input type="range" id="feeProv" min="0" max="3" step="0.01"></div>
       <div class="ctrl">
         <div class="row"><label for="burrTaxRate">Tipo sobre la venta de Burriana</label><output id="burrTaxRate_o" for="burrTaxRate"></output></div>
         <p class="hint">Burriana es un inmueble en España: Hacienda grava su venta aunque todavía no residas allí ni hayas activado la Ley Beckham — la exclusión de Beckham solo cubre renta y patrimonio de fuera de España, nunca un inmueble español. Por defecto 19 %, el tipo fijo para no residentes UE/EEE sobre plusvalías inmobiliarias (24 % fuera de la UE/EEE). Brasil no lleva este tratamiento: su cifra ya viene neta de impuestos.</p>
@@ -1645,6 +1645,9 @@ function simulate(p, paths){
   const glideActive=p.proMode && p.glideOn;
   const taxActive=p.proMode && p.taxOn;
   const regionalGeneralActive=taxActive && p.useRegionalGeneralIrpf;
+  // Portfolio costs are PRO controls: like every other PRO feature they only apply in PRO
+  // mode, so values left on hidden sliders never change a simple-mode run.
+  const fee=p.proMode ? {cash:p.feeCash, cons:p.feeCons, eq:p.feeEq, btc:p.feeBtc, gold:p.feeGold, prov:p.feeProv} : {cash:0, cons:0, eq:0, btc:0, gold:0, prov:0};
   const taxRegion=Math.round(p.taxRegion)===1 ? 'valencian-community' : 'catalonia';
   const wealthTaxActive=p.proMode && p.wealthTaxOn;
   const beckhamActive=p.proMode && p.beckhamOn;
@@ -1838,16 +1841,16 @@ function simulate(p, paths){
       const rEqEff=inflActive ? rEq-inflShockM*(1-eqInflBeta) : rEq;
       const rBtcEff=inflActive ? rBtc-inflShockM*(1-eqInflBeta) : rBtc;
 
-      const rEqNet=NavlogCore.netMonthlyReturn(rEqEff,p.feeEq), rBtcNet=NavlogCore.netMonthlyReturn(rBtcEff,p.feeBtc), rProvNet=NavlogCore.netMonthlyReturn(rEqEff,p.feeProv);
+      const rEqNet=NavlogCore.netMonthlyReturn(rEqEff,fee.eq), rBtcNet=NavlogCore.netMonthlyReturn(rBtcEff,fee.btc), rProvNet=NavlogCore.netMonthlyReturn(rEqEff,fee.prov);
       cumFees+=vEq*(rEqEff-rEqNet)+vBtc*(rBtcEff-rBtcNet)+vProv*(rEqEff-rProvNet);
       vEq*=1+rEqNet; vBtc*=1+rBtcNet; vProv*=1+rProvNet;
       if(goldActive){
         const z3=gauss();
         const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
-        const rGoldNet=NavlogCore.netMonthlyReturn(rGold,p.feeGold); cumFees+=vGold*(rGold-rGoldNet); vGold*=1+rGoldNet;
+        const rGoldNet=NavlogCore.netMonthlyReturn(rGold,fee.gold); cumFees+=vGold*(rGold-rGoldNet); vGold*=1+rGoldNet;
       }
       const rCons=consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet, rCash=cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet;
-      const rConsNet=NavlogCore.netMonthlyReturn(rCons,p.feeCons), rCashNet=NavlogCore.netMonthlyReturn(rCash,p.feeCash);
+      const rConsNet=NavlogCore.netMonthlyReturn(rCons,fee.cons), rCashNet=NavlogCore.netMonthlyReturn(rCash,fee.cash);
       cumFees+=vCons*(rCons-rConsNet)+vCash*(rCash-rCashNet); vCons*=1+rConsNet; vCash*=1+rCashNet;
       if(reActive) vRE*=1+reApprM;
       cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
@@ -3075,7 +3078,7 @@ function renderSrrStress(res, shockPct, shockMonths){
 }
 
 function renderHistoricalBacktest(){
-  const capital=Number(document.getElementById('btCapital').value), spend=Number(document.getElementById('btSpend').value), years=Number(document.getElementById('btYears').value), feeEq=Number(document.getElementById('feeEq').value)||0;
+  const capital=Number(document.getElementById('btCapital').value), spend=Number(document.getElementById('btSpend').value), years=Number(document.getElementById('btYears').value), feeEq=el.proMode.checked ? Number(document.getElementById('feeEq').value)||0 : 0;
   document.getElementById('btCapitalValue').textContent=eur(capital);
   document.getElementById('btSpendValue').textContent=eur(spend)+'/año';
   document.getElementById('btYearsValue').textContent=years+' años';
@@ -3084,16 +3087,11 @@ function renderHistoricalBacktest(){
   const finals=outcomes.map(x=>x.finalBalance).sort((a,b)=>a-b);
   const quantile=q=>finals.length?finals[Math.floor((finals.length-1)*q)]:0;
   const failures=outcomes.filter(x=>x.ruined).map(x=>1928+x.startIndex);
-  document.getElementById('btResults').innerHTML='<p class="calc">Sobrevivieron '+survivors+' de '+outcomes.length+' periodos ('+(outcomes.length?Math.round(100*survivors/outcomes.length):0)+' %). '+(failures.length?'Años de inicio con ruina: '+failures.join(', ')+'.':'No hubo ruina en los periodos probados.')+'</p><table><thead><tr><th>Capital final real</th><th>P10</th><th>Mediana</th><th>P90</th></tr></thead><tbody><tr><td>Tras '+years+' años</td><td>'+eurK(quantile(.1))+'</td><td>'+eurK(quantile(.5))+'</td><td>'+eurK(quantile(.9))+'</td></tr></tbody></table>';
+  document.getElementById('btResults').innerHTML='<p class="calc">Sobrevivieron '+survivors+' de '+outcomes.length+' periodos ('+(outcomes.length?Math.round(100*survivors/outcomes.length):0)+' %). '+(failures.length?'Años de inicio con ruina: '+failures.join(', ')+'.':'No hubo ruina en los periodos probados.')+(feeEq?' Coste de renta variable aplicado: '+feeEq.toFixed(2)+' %/año.':'')+'</p><table><thead><tr><th>Capital final real</th><th>P10</th><th>Mediana</th><th>P90</th></tr></thead><tbody><tr><td>Tras '+years+' años</td><td>'+eurK(quantile(.1))+'</td><td>'+eurK(quantile(.5))+'</td><td>'+eurK(quantile(.9))+'</td></tr></tbody></table>';
 }
 ['btCapital','btSpend','btYears','feeEq'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistoricalBacktest));
-function appendHistoricalFeeNote(){
-  const feeEq=Number(document.getElementById('feeEq').value)||0;
-  if(feeEq) document.getElementById('btResults').querySelector('.calc').append(document.createTextNode(' Coste de renta variable aplicado: '+feeEq.toFixed(2)+' %/año.'));
-}
-document.getElementById('feeEq').addEventListener('input',appendHistoricalFeeNote);
+el.proMode.addEventListener('change',renderHistoricalBacktest);
 renderHistoricalBacktest();
-appendHistoricalFeeNote();
 
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));
