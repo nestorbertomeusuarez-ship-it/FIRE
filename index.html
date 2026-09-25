@@ -118,6 +118,7 @@ td.na{color:var(--caution)}
   font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
   color:var(--route);background:none;border:1px solid var(--route);
   padding:4px 9px;cursor:pointer;text-decoration:none;white-space:nowrap;
+  min-height:32px;display:inline-flex;align-items:center;box-sizing:border-box;
 }
 .expandBtn:hover,.closeBtn:hover,.zoomReset:hover{background:var(--route);color:var(--paper)}
 .chartbox{position:relative;margin-top:4px}
@@ -163,7 +164,7 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 }
 .seedRow input[type=number]:focus-visible{outline:2px solid var(--route);outline-offset:1px}
 .outcomeList{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:0;border-top:1px solid var(--hair);margin:14px 0 0}.outcomeList dt,.outcomeList dd{margin:0;padding:9px 0;border-bottom:1px solid var(--hair)}.outcomeList dd{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;color:var(--ink-2)}
-@media print{.controls,.scenarioSave,#reports button,button,.skipLink,.pageNav,.partBand{display:none!important}body{background:#fff!important;color:#111!important}section{break-inside:avoid}}
+@media print{#parametros,.scenarioSave,#reports button,button,.skipLink,.pageNav,.partBand{display:none!important}body{background:#fff!important;color:#111!important}section{break-inside:avoid}}
 .scenarioSave{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .scenarioSave input[type=text]{
   flex:1;min-width:160px;
@@ -187,6 +188,7 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
   font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;
   background:none;border:1px solid var(--hair);color:var(--ink);
   padding:4px 9px;cursor:pointer;
+  min-height:32px;display:inline-flex;align-items:center;box-sizing:border-box;
 }
 .scenarioItem button:hover{border-color:var(--route);color:var(--route)}
 .scenarioItem input[type=checkbox]{accent-color:var(--sc-color);width:16px;height:16px;flex:none}
@@ -342,6 +344,20 @@ body:not(.pro) .pro-only{display:none}
 /* Anchor jumps from the sticky nav must not hide the section heading under it. */
 main [id]{scroll-margin-top:52px}
 .pageNav::-webkit-scrollbar{display:none}
+/* Mobile-only affordance: the nav scrolls horizontally with its scrollbar hidden above, so on
+   narrow viewports there is no visual cue that more links exist off-screen. A sticky trailing
+   fade (pinned to the right edge of the visible scroll area, independent of scroll position)
+   hints at the overflow without touching the desktop layout, which never overflows. */
+@media (max-width:640px){
+  .pageNav::after{
+    content:'';
+    position:sticky;
+    top:0; right:0;
+    flex:none; width:24px; margin-left:-24px;
+    background:linear-gradient(to right, transparent, var(--paper) 65%);
+    pointer-events:none;
+  }
+}
 .pageNav a{color:var(--ink);text-decoration:none;white-space:nowrap;padding:2px 0;border-bottom:2px solid transparent}
 .pageNav a:hover{color:var(--route);border-bottom-color:var(--route)}
 .pageNav a:focus-visible{outline:2px solid var(--route);outline-offset:2px}
@@ -1312,8 +1328,22 @@ const CALC_PRECISION_SECONDS = { fast: 4, high: 12, max: 30 };
 // more paths), capped well short of where the O(paths log paths) sort of each of the ~67 annual
 // snapshots (see simulate()'s percentile pass) would make the linear calibration extrapolation
 // unreliable and the wait balloon past what the user asked for.
-function pathsFullMaxFor(timeBudgetMs){
-  return Math.min(500000, Math.round(PATHS_FULL_MAX * timeBudgetMs / FULL_TIME_BUDGET_MS));
+// Memory bound: simulate() allocates 3 Float64Array(paths) (snapVals/contribVals/feeVals) PER
+// annual snapshot, so a fixed 500,000-path ceiling is fine for a ~10-year horizon (a handful of
+// snapshots) but balloons to ~800 MB at an 80-year horizon (~68 snapshots). Scale the ceiling down
+// so 3*snapshots*paths*8 bytes never exceeds ~250 MB, i.e. paths <= 250e6/(24*snapshots).
+function pathsFullMaxFor(timeBudgetMs, annualSnapshotCount){
+  const byTime = Math.round(PATHS_FULL_MAX * timeBudgetMs / FULL_TIME_BUDGET_MS);
+  const byMemory = Math.floor(250e6 / (24 * Math.max(1, annualSnapshotCount || 1)));
+  return Math.max(PATHS_FULL_MIN, Math.min(500000, byTime, byMemory));
+}
+// Number of annual snapshots simulate() takes for a given (ageNow, horizonAge): one per
+// December plus this run's own final month (see the isSnap comment inside simulate()).
+function annualSnapshotCountFor(p){
+  const months=Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1));
+  let count=0;
+  for(let i=0;i<months;i++) if(MONTH_DATES[i].m===12 || i===months-1) count++;
+  return count;
 }
 function selectedTimeBudgetMs(){
   const sel=document.getElementById('calcPrecision');
@@ -1837,9 +1867,14 @@ function simulate(p, paths){
   const inflVolM=p.inflVol/100/Math.sqrt(12);
   const eqInflBeta=0.3; // fracción del shock de inflación que el mercado absorbe el mismo mes
 
+  // A snapshot happens every December, PLUS this run's own final month
+  // (`months-1`), which almost never falls on December for an integer-age
+  // horizon (the model starts in September) — MONTH_DATES[i].isSnap is
+  // precomputed against the GLOBAL max horizon and cannot know that, so it is
+  // deliberately not used here.
   const annualSnapshots=[];
   for(let i=0;i<months;i++){
-    if(MONTH_DATES[i].isSnap) annualSnapshots.push(i);
+    if(MONTH_DATES[i].m===12 || i===months-1) annualSnapshots.push(i);
   }
   const snapVals=annualSnapshots.map(()=>new Float64Array(paths));
   const contribVals=annualSnapshots.map(()=>new Float64Array(paths));
@@ -1910,6 +1945,9 @@ function simulate(p, paths){
     let snap=0;
     for(let i=0;i<months;i++){
       const d=MONTH_DATES[i];
+      // Year-end gate for THIS run: December, or this run's own final month
+      // (the last, partial year), never the global-horizon MONTH_DATES flag.
+      const isSnap=d.m===12 || i===months-1;
       if(d.m===1){ ytdGainCartera=0; ytdProvidentIncome=0; }
       const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
       if(histActive && i>0 && d.m===1){
@@ -2244,7 +2282,7 @@ function simulate(p, paths){
       }
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
-      if(wealthTaxActive && !ruinedPath && spanishResident && !inBeckham && d.isSnap){
+      if(wealthTaxActive && !ruinedPath && spanishResident && !inBeckham && isSnap){
         // Property inclusion in the FIRE target is a liquidity/retirement choice;
         // it must not remove owned real estate from the wealth-tax base.
         const totalWealth=NavlogCore.wealthTaxBase(vEq+vBtc+vProv+vGold+vCons+vCash,vRE,reActive);
@@ -2273,7 +2311,7 @@ function simulate(p, paths){
       }
 
       // Glide path: rebalanceo anual entre activos de riesgo (equity+BTC+oro) y la cartera conservadora.
-      if(glideActive && !ruinedPath && d.isSnap){
+      if(glideActive && !ruinedPath && isSnap){
         const yearsToTarget=(monthIndex(p.glideTargetYear,1)-i)/12;
         let riskyShare;
         if(yearsToTarget>=p.glideStartYears) riskyShare=1;
@@ -2312,7 +2350,7 @@ function simulate(p, paths){
       // adjustment needed since the whole model already runs in real euros), sell 20% of
       // the current equity bucket into vCons — a systematic profit-taking sweep that
       // refills the bonds/cash bucket future withdrawals will draw from first.
-      if(phActive && retired && !ruinedPath && d.isSnap && i>fireMonth[k] && primeHarvestE0>0 && vEq>=1.2*primeHarvestE0){
+      if(phActive && retired && !ruinedPath && isSnap && i>fireMonth[k] && primeHarvestE0>0 && vEq>=1.2*primeHarvestE0){
         const move=vEq*0.2, basisMoved=basisEq*0.2;
         vEq-=move; basisEq-=basisMoved;
         vCons+=move; basisCons+=basisMoved;
@@ -2320,7 +2358,7 @@ function simulate(p, paths){
 
       if(trackBuckets && i===11) earlyWealth[k]=vEq+vBtc+vProv+vGold+vCons+vCash;
       if(trackBuckets){ minBucket=Math.min(minBucket,vEq,vBtc,vProv,vGold,vCons,vCash,vRE,basisEq,basisBtc,basisGold,basisCons,basisCash,basisRE); }
-      if(d.isSnap){
+      if(isSnap){
         const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         snapVals[snap][k]=Math.max(0,totalNow);
         contribVals[snap][k]=totalNow-cumGrowth;
@@ -3078,7 +3116,7 @@ async function calibratePathsFull(p, purpose){
   // Without a Worker, requestSimulation() runs simulate() synchronously on the
   // main thread — calibrating toward the same pathsMax there would block
   // the UI (unresponsive sliders/scroll) for the full multi-second budget.
-  const pathsMax = purpose==='sensitivity' ? PATHS_FULL_MAX : pathsFullMaxFor(timeBudgetMs);
+  const pathsMax = purpose==='sensitivity' ? PATHS_FULL_MAX : pathsFullMaxFor(timeBudgetMs, annualSnapshotCountFor(p));
   const pathsCeiling = jobs.hasWorker() ? pathsMax : 5000;
   return Math.max(PATHS_FULL_MIN, Math.min(pathsCeiling, pathsFull));
 }
@@ -3126,13 +3164,21 @@ const SENSITIVITY_PARAMS = [
 // of them needs its own answer. `calibrate:true` is the existing escape hatch
 // for exactly that ("never compete for latest, always resolve") — it has no
 // effect on the computation itself, only on how the response is dispatched.
-async function runSensitivity(baseParams){
+// onProgress(done, total), when given, is called once immediately with (0, total) and again
+// every time a paired (low/high) job resolves, with `done` advancing by 2 (both requests of that
+// pair) — `total` is the number of requests ACTUALLY issued (respecting the proOnly filter), not
+// the full SENSITIVITY_PARAMS length, so an off-PRO run reports its own smaller total.
+async function runSensitivity(baseParams, onProgress){
   const pathsFull=await calibratePathsFull(baseParams,'sensitivity');
   // A new sensitivity run supersedes whatever this dedicated worker was still doing.
   analysisJobs.cancelPending();
   // Portfolio costs are PRO controls with no effect outside PRO mode, so they are only tested
   // there. Seeds still come from the full list, so each parameter keeps its own paired seed.
-  const jobs=SENSITIVITY_PARAMS.filter(def=>!def.proOnly || baseParams.proMode).map(async def=>{
+  const defs=SENSITIVITY_PARAMS.filter(def=>!def.proOnly || baseParams.proMode);
+  const total=defs.length*2;
+  let done=0;
+  if(onProgress) onProgress(done,total);
+  const jobs=defs.map(async def=>{
     const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
     const base=baseParams[def.key];
     const pair=NavlogCore.boundedPair(base, delta, def.min, def.max);
@@ -3141,6 +3187,8 @@ async function runSensitivity(baseParams){
       requestAnalysisSimulation({...baseParams,[def.key]:pair.low,seed:pairSeed}, pathsFull, {calibrate:true}),
       requestAnalysisSimulation({...baseParams,[def.key]:pair.high,seed:pairSeed}, pathsFull, {calibrate:true}),
     ]);
+    done+=2;
+    if(onProgress) onProgress(done,total);
     // A newer sensitivity/stress click can supersede this one on the shared analysisJobs worker
     // (cancelPending()/supersedeOlderJobs() resolve dropped requests as {stale:true}, no .result):
     // signal that upward instead of dereferencing an absent .result.
@@ -3787,14 +3835,18 @@ let sensGeneration=0, srrGeneration=0;
 document.getElementById('runSensitivity').addEventListener('click', async () => {
   const myGen=++sensGeneration;
   const btn=document.getElementById('runSensitivity'), loadingEl=document.getElementById('sensLoading');
-  btn.disabled=true; loadingEl.style.display='inline';
+  btn.disabled=true; loadingEl.style.display='inline'; loadingEl.textContent='Calculando…';
   try{
     const error=document.getElementById('assumptionError'); if(error) error.textContent='';
-    const results=await runSensitivity(readParams());
+    const results=await runSensitivity(readParams(), (done,total)=>{
+      // Guarded by generation: a superseded click's late progress ticks must never
+      // overwrite the loading text a newer, still-running click already owns.
+      if(myGen===sensGeneration) loadingEl.textContent='Calculando… '+done+' de '+total+' simulaciones';
+    });
     if(results && myGen===sensGeneration) renderSensitivity(results); // null => superseded: leave the previous render alone
   } catch(err){ if(myGen===sensGeneration) reportError(err);
   } finally {
-    if(myGen===sensGeneration){ btn.disabled=false; loadingEl.style.display='none'; }
+    if(myGen===sensGeneration){ btn.disabled=false; loadingEl.style.display='none'; loadingEl.textContent='Calculando…'; }
   }
 });
 document.getElementById('runSrrStress').addEventListener('click', async () => {

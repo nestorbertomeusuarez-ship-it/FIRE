@@ -16,9 +16,12 @@ const { simulate, DEFAULTS, buildRuinCurve, readParams, controls, MONTHS } = con
 const flat = { ...DEFAULTS, seed: 3, proMode: false, startEq: 10000000, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
   gasto: 100000, swr: 4, vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, horizonAge: 60,
   allocCash: 0, allocBonds: 0, allocEquities: 100 };
-const lastDecember = (params) => { const s = simulate(params, 3).series; return s[s.length - 1]; };
+// The engine now snapshots every December PLUS its own final month (a partial
+// year for an integer-age horizon, since the model starts in September), so
+// the LAST series point is the run's final month, not necessarily a December.
+const lastSnapshot = (params) => { const s = simulate(params, 3).series; return s[s.length - 1]; };
 const model = ({ start, spend, pension = 0, pensionAge = 999, health = 0, healthAge = 999, lumps = [], childAnnual = 0, childStart = 0, childEnd = 0, barista = 0, baristaYears = 0 }, params) => {
-  let balance = start; const months = Math.floor((params.horizonAge - params.ageNow) * 12) + 1; let lastDec = null;
+  let balance = start; const months = Math.floor((params.horizonAge - params.ageNow) * 12) + 1;
   for (let i = 0; i < months; i++) {
     const d = new Date(2026, 8 + i, 1), year = d.getFullYear(), month = d.getMonth() + 1, age = params.ageNow + i / 12;
     if (i > 0) {
@@ -29,34 +32,33 @@ const model = ({ start, spend, pension = 0, pensionAge = 999, health = 0, health
       wd = wd - (age >= pensionAge ? pension / 12 : 0) + (age >= healthAge ? health / 12 : 0) - child - lump;
       balance -= wd; // a negative withdrawal is surplus income that is added to the portfolio
     }
-    if (month === 12) lastDec = balance;
   }
-  return lastDec;
+  return balance; // balance at the run's own final month, matching the engine's last snapshot
 };
 
 // Baseline: pure spending.
-assert.ok(Math.abs(lastDecember(flat).p50 - model({ start: 10000000, spend: 100000 }, flat)) < 1, 'baseline drawdown matches the model');
+assert.ok(Math.abs(lastSnapshot(flat).p50 - model({ start: 10000000, spend: 100000 }, flat)) < 1, 'baseline drawdown matches the model');
 // Health costs and recurring retirement income (below spending) change the drawdown exactly.
 const withRetirementFlows = { ...flat, healthcareAnnual: 6000, healthcareStartAge: 40, pensionAnnual: 30000, pensionStartAge: 50 };
-assert.ok(Math.abs(lastDecember(withRetirementFlows).p50 - model({ start: 10000000, spend: 100000, health: 6000, healthAge: 40, pension: 30000, pensionAge: 50 }, flat)) < 1, 'pension + health costs are applied from their start ages');
+assert.ok(Math.abs(lastSnapshot(withRetirementFlows).p50 - model({ start: 10000000, spend: 100000, health: 6000, healthAge: 40, pension: 30000, pensionAge: 50 }, flat)) < 1, 'pension + health costs are applied from their start ages');
 // Income above spending is surplus, not lost money.
 const richPension = { ...flat, gasto: 40000, swr: 4, pensionAnnual: 90000, pensionStartAge: 45 };
-assert.ok(Math.abs(lastDecember(richPension).p50 - model({ start: 10000000, spend: 40000, pension: 90000, pensionAge: 45 }, richPension)) < 1, 'pension surplus above spending is added to the portfolio');
+assert.ok(Math.abs(lastSnapshot(richPension).p50 - model({ start: 10000000, spend: 40000, pension: 90000, pensionAge: 45 }, richPension)) < 1, 'pension surplus above spending is added to the portfolio');
 // A large one-off inflow while retired is kept, not silently capped at that month's spending.
 const inflow = { ...flat, lumpSums: '[{"year":2032,"month":3,"amount":2000000}]' };
-assert.ok(Math.abs(lastDecember(inflow).p50 - model({ start: 10000000, spend: 100000, lumps: [{ year: 2032, month: 3, amount: 2000000 }] }, flat)) < 1, 'a EUR 2M inflow while retired increases wealth by EUR 2M');
+assert.ok(Math.abs(lastSnapshot(inflow).p50 - model({ start: 10000000, spend: 100000, lumps: [{ year: 2032, month: 3, amount: 2000000 }] }, flat)) < 1, 'a EUR 2M inflow while retired increases wealth by EUR 2M');
 const outflow = { ...flat, lumpSums: '[{"year":2032,"month":3,"amount":-500000}]' };
-assert.ok(Math.abs(lastDecember(outflow).p50 - model({ start: 10000000, spend: 100000, lumps: [{ year: 2032, month: 3, amount: -500000 }] }, flat)) < 1, 'a one-off expense while retired is deducted');
+assert.ok(Math.abs(lastSnapshot(outflow).p50 - model({ start: 10000000, spend: 100000, lumps: [{ year: 2032, month: 3, amount: -500000 }] }, flat)) < 1, 'a one-off expense while retired is deducted');
 // Child costs: exact interval [start, end).
 const kid = { ...flat, childAnnual: 12000, childStartAge: 30, childEndAge: 34 };
-assert.ok(Math.abs(lastDecember(kid).p50 - model({ start: 10000000, spend: 100000, childAnnual: 12000, childStart: 30, childEnd: 34 }, flat)) < 1, 'child cost is charged for ages [30, 34) only');
+assert.ok(Math.abs(lastSnapshot(kid).p50 - model({ start: 10000000, spend: 100000, childAnnual: 12000, childStart: 30, childEnd: 34 }, flat)) < 1, 'child cost is charged for ages [30, 34) only');
 
 // Barista income above spending is surplus too (it used to be clamped away).
 const barista = { ...flat, proMode: true, baristaOn: true, baristaIncome: 90000, baristaYears: 5 };
-assert.ok(Math.abs(lastDecember(barista).p50 - model({ start: 10000000, spend: 100000, barista: 90000, baristaYears: 5 }, barista)) < 1, 'barista income is applied for its years');
+assert.ok(Math.abs(lastSnapshot(barista).p50 - model({ start: 10000000, spend: 100000, barista: 90000, baristaYears: 5 }, barista)) < 1, 'barista income is applied for its years');
 const baristaRich = { ...barista, gasto: 40000, baristaIncome: 120000 };
-assert.ok(Math.abs(lastDecember(baristaRich).p50 - model({ start: 10000000, spend: 40000, barista: 120000, baristaYears: 5 }, baristaRich)) < 1, 'barista income above spending is invested, not discarded');
-assert.ok(lastDecember(baristaRich).p50 - lastDecember({ ...baristaRich, baristaOn: false }).p50 > 589000, 'the EUR 600k of five years of barista income ends up in the portfolio');
+assert.ok(Math.abs(lastSnapshot(baristaRich).p50 - model({ start: 10000000, spend: 40000, barista: 120000, baristaYears: 5 }, baristaRich)) < 1, 'barista income above spending is invested, not discarded');
+assert.ok(lastSnapshot(baristaRich).p50 - lastSnapshot({ ...baristaRich, baristaOn: false }).p50 > 589000, 'the EUR 600k of five years of barista income ends up in the portfolio');
 
 // ---- ruin curve: a route only counts as "at risk" for year y when the SIMULATION reached it ----
 const fireMonthAll = new Int32Array(200).fill(12), ruinMonth = new Int32Array(200).fill(-1), ruined = new Uint8Array(200);
