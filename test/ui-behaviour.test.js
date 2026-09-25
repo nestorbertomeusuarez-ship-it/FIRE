@@ -216,14 +216,14 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.doesNotMatch(el('ruinTable').innerHTML, /15 años<\/td><td class="na">/, 'a 62-year horizon does cover year 15');
 
   // ---- CSV for Spanish Excel: semicolon delimiter, decimal comma, UTF-8 BOM ----
-  const report = call('buildReportCsv({seed:null, gasto:60000, srrShockPct:-30, ret:5.5, lumpSums:[{year:2030,month:1,amount:-500.5}], name:"a;b"}, [{year:2030,p10:1.5,p50:2500.25,p90:3}], 1800000.5)');
+  const report = call('buildReportCsv({seed:null, gasto:60000, srrShockPct:-30, ret:5.5, lumpSums:[{year:2030,month:1,amount:-500.5}], name:"a;b"}, [{year:2030,p10:1.5,p50:2500.25,p90:3,fee50:1200.25}], 1800000.5)');
   assert.equal(report.charCodeAt(0), 0xfeff, 'the file starts with a UTF-8 BOM');
   const lines = report.slice(1).split('\n');
-  assert.equal(lines[0], '"kind";"year";"p10";"p50";"p90";"target"', 'semicolon-delimited header');
-  assert.ok(lines.includes('"assumption";"ret";"5,5";"";"";""'), 'decimal comma in numeric cells');
-  assert.ok(lines.includes('"assumption";"srrShockPct";"-30";"";"";""'), 'negative numbers stay numbers');
-  assert.ok(lines.includes('"assumption";"name";"a;b";"";"";""'), 'a semicolon inside a value stays inside its quoted cell');
-  assert.ok(lines.includes('"projection";"2030";"1,5";"2500,25";"3";"1800000,5"'), 'projection rows use decimal commas');
+  assert.equal(lines[0], '"kind";"year";"p10";"p50";"p90";"fee50";"target"', 'semicolon-delimited header includes median cumulative portfolio costs');
+  assert.ok(lines.includes('"assumption";"ret";"5,5";"";"";"";""'), 'decimal comma in numeric cells');
+  assert.ok(lines.includes('"assumption";"srrShockPct";"-30";"";"";"";""'), 'negative numbers stay numbers');
+  assert.ok(lines.includes('"assumption";"name";"a;b";"";"";"";""'), 'a semicolon inside a value stays inside its quoted cell');
+  assert.ok(lines.includes('"projection";"2030";"1,5";"2500,25";"3";"1200,25";"1800000,5"'), 'projection rows include cumulative portfolio costs with decimal commas');
   assert.ok(lines.some(line => line.startsWith('"assumption";"lumpSums";"[{""year"":2030')), 'JSON cells keep their doubled quotes');
   assert.equal(call('csvCell(1234.5)'), '"1234,5"');
   assert.equal(call('csvCell("1234.5")'), '"1234.5"', 'text that merely looks numeric is not reformatted');

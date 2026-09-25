@@ -32,3 +32,13 @@ test('normalizeScenarios migrates legacy keys itself, whatever the caller', () =
   assert.equal(out[0].params.childAnnual, 8000, 'nursery cost carried over');
   assert.equal('gratuityYears' in out[0].params, false, 'obsolete key dropped');
 });
+
+test('legacy life expectancy folds into the end age', () => {
+  assert.deepEqual(core.migrateLegacyParams({ proMode: true, horizonAge: 95, lifeExpOn: true, lifeExp: 85 }), { proMode: true, horizonAge: 85 });
+  assert.deepEqual(core.migrateLegacyParams({ proMode: true, horizonAge: 80, lifeExpOn: true, lifeExp: 85 }), { proMode: true, horizonAge: 80 });
+  assert.deepEqual(core.migrateLegacyParams({ horizonAge: 95, lifeExpOn: false, lifeExp: 85 }), { horizonAge: 95 });
+});
+
+test('legacy life expectancy does not shorten the horizon without PRO mode', () => {
+  assert.deepEqual(core.migrateLegacyParams({ proMode: false, horizonAge: 95, lifeExpOn: true, lifeExp: 85 }), { proMode: false, horizonAge: 95 });
+});

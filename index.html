@@ -423,7 +423,7 @@ section[id],#notas{scroll-margin-top:88px}
       </thead>
       <tbody id="ruinTable"></tbody>
     </table>
-    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación, sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
+    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación, sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener, por ejemplo, 30 años de margen antes de tu «Edad final», así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
   </section>
 
   <section>
@@ -774,6 +774,21 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">El Provident Scheme no es una plusvalía: al retirarlo, Hacienda lo trata como rendimiento del trabajo (tramos generales de IRPF), normalmente con un tipo más alto que el tipo medio sobre plusvalías. Como cada cubo puede tener su propio tipo, el simulador retira automáticamente primero del que salga más barato — con los valores por defecto (mismo tipo en los dos) esto no cambia nada, es exactamente el orden de siempre.</p>
         <input type="range" id="taxRateProv" min="0" max="47" step="0.5">
       </div>
+      <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="useRegionalGeneralIrpf">
+        <label for="useRegionalGeneralIrpf">Calcular IRPF general 2025 del Provident por comunidad</label>
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="taxRegion">Residencia fiscal</label><output id="taxRegion_o" for="taxRegion"></output></div>
+        <p class="hint">Estimación individual sin mínimos ni deducciones; usa las escalas estatal y autonómica 2025. Al activarla sustituye el tipo manual del Provident.</p>
+        <input type="range" id="taxRegion" min="0" max="1" step="1">
+      </div>
+      <div class="ctrl"><div class="row"><label for="feeCash">TER efectivo</label><output id="feeCash_o" for="feeCash"></output></div><input type="range" id="feeCash" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeCons">TER bonos</label><output id="feeCons_o" for="feeCons"></output></div><input type="range" id="feeCons" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeEq">TER renta variable</label><output id="feeEq_o" for="feeEq"></output></div><input type="range" id="feeEq" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeBtc">Coste BTC</label><output id="feeBtc_o" for="feeBtc"></output></div><input type="range" id="feeBtc" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeGold">Coste oro</label><output id="feeGold_o" for="feeGold"></output></div><input type="range" id="feeGold" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeProv">Coste Provident</label><output id="feeProv_o" for="feeProv"></output></div><input type="range" id="feeProv" min="0" max="3" step="0.01"></div>
       <div class="ctrl">
         <div class="row"><label for="burrTaxRate">Tipo sobre la venta de Burriana</label><output id="burrTaxRate_o" for="burrTaxRate"></output></div>
         <p class="hint">Burriana es un inmueble en España: Hacienda grava su venta aunque todavía no residas allí ni hayas activado la Ley Beckham — la exclusión de Beckham solo cubre renta y patrimonio de fuera de España, nunca un inmueble español. Por defecto 19 %, el tipo fijo para no residentes UE/EEE sobre plusvalías inmobiliarias (24 % fuera de la UE/EEE). Brasil no lleva este tratamiento: su cifra ya viene neta de impuestos.</p>
@@ -1036,17 +1051,8 @@ section[id],#notas{scroll-margin-top:88px}
     </div>
 
     <div class="group pro-only">
-      <h3>PRO · Esperanza de vida y FIRE parcial</h3>
-      <p class="grouphint">Por defecto el dinero tiene que durar hasta una edad muy alta (~94 años) aunque no vayas a vivir tanto, y se asume que al jubilarte el ingreso cae a cero de golpe. Aquí puedes acotar el horizonte a tu esperanza de vida real y modelar que sigas ganando algo tras el FIRE.</p>
-      <div class="toggle">
-        <input type="checkbox" id="lifeExpOn">
-        <label for="lifeExpOn">Limitar el horizonte a tu esperanza de vida</label>
-      </div>
-      <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="lifeExp">Esperanza de vida (edad)</label><output id="lifeExp_o" for="lifeExp"></output></div>
-        <p class="hint">A partir de esa edad, cada ruta deja de necesitar retirar dinero de la cartera — lo que quede sigue invertido, como una herencia. "Ruina" pasa a significar quedarte sin fondos antes de esa edad, no antes de 2092.</p>
-        <input type="range" id="lifeExp" min="70" max="100" step="1">
-      </div>
+      <h3>PRO · FIRE parcial</h3>
+      <p class="grouphint">Por defecto se asume que al jubilarte el ingreso cae a cero de golpe. Aquí puedes modelar que sigas ganando algo tras el FIRE. Hasta qué edad tiene que durar el dinero se fija en «Edad final», en Tú y el horizonte.</p>
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="baristaOn">
         <label for="baristaOn">Ingreso parcial tras el FIRE (Barista FIRE)</label>
@@ -1219,7 +1225,7 @@ const DEFAULTS = {
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
-  taxOn:false, useIrpfBrackets:false, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
+  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0, feeCons:0, feeEq:0, feeBtc:0, feeGold:0, feeProv:0, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
   lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
@@ -1235,8 +1241,7 @@ const DEFAULTS = {
   startGold:0, goldRet:1.5, goldVol:15, goldRho:-10, goldAporte:0,
   reOn:false, reValue:0, reYield:3.5, reAppr:1, reCountsFire:false,
   glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4,
-  // esperanza de vida y FIRE parcial
-  lifeExpOn:false, lifeExp:90,
+  // FIRE parcial
   baristaOn:false, baristaIncome:12000, baristaYears:5
 };
 
@@ -1517,6 +1522,8 @@ function paintLabels(p){
   // ---- Modo PRO ----
   set('taxRate',p.taxRate.toFixed(1)+' %');
   set('taxRateProv',p.taxRateProv.toFixed(1)+' %');
+  set('taxRegion',['Cataluña','Comunitat Valenciana'][Math.round(p.taxRegion)]);
+  for(const key of ['feeCash','feeCons','feeEq','feeBtc','feeGold','feeProv']) set(key,p[key].toFixed(2)+' %/año');
   set('burrTaxRate',p.burrTaxRate.toFixed(1)+' %');
   set('lolAnnualProb',p.lolAnnualProb.toFixed(1)+' %/año');
   set('lolPremiumMonthly',eur(p.lolPremiumMonthly)+'/mes');
@@ -1559,7 +1566,6 @@ function paintLabels(p){
   set('glideEqFloor',p.glideEqFloor.toFixed(0)+' %');
   set('consRet',p.consRet.toFixed(2)+' %');
   set('consVol',p.consVol.toFixed(1)+' %');
-  set('lifeExp',p.lifeExp+' años');
   set('baristaIncome',eur(p.baristaIncome)+'/año');
   set('baristaYears',p.baristaYears+(p.baristaYears===1?' año':' años'));
 }
@@ -1638,6 +1644,8 @@ function simulate(p, paths){
   const reActive=p.proMode && p.reOn;
   const glideActive=p.proMode && p.glideOn;
   const taxActive=p.proMode && p.taxOn;
+  const regionalGeneralActive=taxActive && p.useRegionalGeneralIrpf;
+  const taxRegion=Math.round(p.taxRegion)===1 ? 'valencian-community' : 'catalonia';
   const wealthTaxActive=p.proMode && p.wealthTaxOn;
   const beckhamActive=p.proMode && p.beckhamOn;
   const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
@@ -1667,10 +1675,8 @@ function simulate(p, paths){
   // Mortgage balance amortizes in a straight line to 0 by the end of hipEnd's year.
   const mortgageMonths=Math.max(1, monthIndex(p.hipEnd,12)+1);
   const strat=p.proMode ? Math.round(p.wdStrategy) : 0;
-  const lifeActive=p.proMode && p.lifeExpOn;
   // yearFrac(i) is exactly i/12 by construction of monthIndex, so the month a given
   // age is reached is just (age-ageNow)*12 — no need to walk MONTH_DATES for this.
-  const lifeMonth=lifeActive ? Math.round((p.lifeExp-p.ageNow)*12) : Infinity;
   // Mandatory retirement age: a core career assumption (like profitShareWeeks/
   // profitShareWeeks), not a Modo PRO toggle. Off by default — no single "correct" age
   // is asserted (ICAO Annex 1 caps multi-crew ops at 65, but a carrier's own
@@ -1696,6 +1702,12 @@ function simulate(p, paths){
   function netTaken(oldBal, newBal, ratePct){
     const gross=oldBal-newBal;
     return ratePct>0 ? gross*(1-ratePct/100) : gross;
+  }
+  function takeProvident(bal, needNet, ratePct, ytdIncome){
+    if(needNet<=0 || bal<=0) return {bal,net:0,gross:0};
+    const grossWanted=regionalGeneralActive ? NavlogCore.grossForNetGeneralIncome(needNet,ytdIncome,taxRegion,bal) : (ratePct>0 ? needNet/(1-ratePct/100) : needNet);
+    const gross=Math.min(bal,grossWanted);
+    return {bal:bal-gross, gross, net:regionalGeneralActive ? NavlogCore.netAfterGeneralIncomeTax(gross,ytdIncome,taxRegion) : (ratePct>0 ? gross*(1-ratePct/100) : gross)};
   }
   // Average-cost basis tracking for the capital-gains-taxed buckets (vEq/vBtc/
   // vGold/vCons/vRE): a withdrawal should only be taxed on its gain fraction, not
@@ -1743,6 +1755,7 @@ function simulate(p, paths){
   }
   const snapVals=annualSnapshots.map(()=>new Float64Array(paths));
   const contribVals=annualSnapshots.map(()=>new Float64Array(paths));
+  const feeVals=annualSnapshots.map(()=>new Float64Array(paths));
   const fireMonth=new Int32Array(paths); fireMonth.fill(-1);
   const ruined=new Uint8Array(paths);
   // Left the company at the mandatory retirement age without having hit the FIRE
@@ -1779,10 +1792,10 @@ function simulate(p, paths){
     // takeFromBucket's comment above.
     let basisEq=vEq, basisBtc=p.startBtc;
     let basisGold=goldActive?p.startGold:0, basisCons=vCons, basisCash=vCash, basisRE=reActive?p.reValue:0;
-    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1;
+    let fxCur=p.fx, cumInfl=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1, cumFees=0;
     // Running year-to-date realized gain on the capital-gains-taxed buckets, reset
     // every January — feeds irpfBracketRate() when useIrpfBrackets is on.
-    let ytdGainCartera=0;
+    let ytdGainCartera=0, ytdProvidentIncome=0;
     // Tracks pure market-driven growth (returns compounding on whatever balance
     // already existed), independent of contributions/withdrawals — so "aportado"
     // (net cash you put in) can be recovered as totalWealth-cumGrowth without
@@ -1805,7 +1818,7 @@ function simulate(p, paths){
     let snap=0;
     for(let i=0;i<months;i++){
       const d=MONTH_DATES[i];
-      if(d.m===1) ytdGainCartera=0;
+      if(d.m===1){ ytdGainCartera=0; ytdProvidentIncome=0; }
       const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
       if(histActive && i>0 && d.m===1){
         histPos=(histPos+1)%HIST_EQ_REAL_RETURNS.length;
@@ -1825,14 +1838,17 @@ function simulate(p, paths){
       const rEqEff=inflActive ? rEq-inflShockM*(1-eqInflBeta) : rEq;
       const rBtcEff=inflActive ? rBtc-inflShockM*(1-eqInflBeta) : rBtc;
 
-      vEq*=1+rEqEff; vBtc*=1+rBtcEff; vProv*=1+rEqEff;
+      const rEqNet=NavlogCore.netMonthlyReturn(rEqEff,p.feeEq), rBtcNet=NavlogCore.netMonthlyReturn(rBtcEff,p.feeBtc), rProvNet=NavlogCore.netMonthlyReturn(rEqEff,p.feeProv);
+      cumFees+=vEq*(rEqEff-rEqNet)+vBtc*(rBtcEff-rBtcNet)+vProv*(rEqEff-rProvNet);
+      vEq*=1+rEqNet; vBtc*=1+rBtcNet; vProv*=1+rProvNet;
       if(goldActive){
         const z3=gauss();
         const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
-        vGold*=1+rGold;
+        const rGoldNet=NavlogCore.netMonthlyReturn(rGold,p.feeGold); cumFees+=vGold*(rGold-rGoldNet); vGold*=1+rGoldNet;
       }
-      vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
-      vCash*=1+(cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet);
+      const rCons=consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet, rCash=cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet;
+      const rConsNet=NavlogCore.netMonthlyReturn(rCons,p.feeCons), rCashNet=NavlogCore.netMonthlyReturn(rCash,p.feeCash);
+      cumFees+=vCons*(rCons-rConsNet)+vCash*(rCash-rCashNet); vCons*=1+rConsNet; vCash*=1+rCashNet;
       if(reActive) vRE*=1+reApprM;
       cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
 
@@ -1943,7 +1959,7 @@ function simulate(p, paths){
       const lumpNet=p.lumpSums.reduce((sum,event)=>sum+(event.year===d.y&&event.month===d.m?event.amount:0),0);
       // Computed here (not just inside the retirement branch below) so the wealth
       // tax check further down — which runs regardless of the retired/working
-      // branch, and even past the esperanza de vida cutoff — can also see whether
+      // branch — can also see whether
       // the Ley Beckham window is still open.
         let inBeckham=NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,i,p.beckhamYears);
 
@@ -2021,14 +2037,11 @@ function simulate(p, paths){
           if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           curSpendAnnual=p.gasto;
         }
-      } else if(!ruinedPath && (!lifeActive || i<=lifeMonth)){
+      } else if(!ruinedPath){
         // Replacement income is cash flow, not a tax-free balance adjustment: invest
         // it first, then let the ordinary withdrawal cover expenses for this month.
         if(net>0){ vEq+=net*alloc.equities/100; basisEq+=net*alloc.equities/100; vCons+=net*alloc.bonds/100; basisCons+=net*alloc.bonds/100; vCash+=net*alloc.cash/100; basisCash+=net*alloc.cash/100; }
         // Retirement phase: real annual retirement spend, inflation already stripped.
-        // Past lifeMonth (esperanza de vida) this whole block is skipped: no more
-        // withdrawals, no more ruin risk — the balance just keeps compounding, like
-        // an inheritance, because you don't need money you'll never spend.
         const yearsSinceFire=(i-fireMonth[k])/12;
         let wd;
         if(strat===0){
@@ -2092,19 +2105,20 @@ function simulate(p, paths){
         const bracketsActive=taxNow && p.useIrpfBrackets;
         const gravRate=taxNow ? (bracketsActive ? 0 : p.taxRate) : 0;
         const provRate=taxNow ? p.taxRateProv : 0;
+        const provMarginal=regionalGeneralActive ? (NavlogCore.generalIncomeTax(ytdProvidentIncome+1,taxRegion)-NavlogCore.generalIncomeTax(ytdProvidentIncome,taxRegion))*100 : provRate;
         const provFirst=taxNow && (bracketsActive
-          ? NavlogCore.providentFirst(provRate,[{balance:vCash,basis:basisCash},{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
-          : provRate<gravRate);
+          ? NavlogCore.providentFirst(provMarginal,[{balance:vCash,basis:basisCash},{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
+          : provMarginal<gravRate);
 
         let deficit=wd, nb, r;
-        if(provFirst){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        if(provFirst){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
         if(deficit>0){ const ob=vCash, obs=basisCash; r=takeFromBucket(vCash,basisCash,deficit,gravRate,ytdGainCartera,bracketsActive); vCash=r.bal; basisCash=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vCons, obs=basisCons; r=takeFromBucket(vCons,basisCons,deficit,gravRate,ytdGainCartera,bracketsActive); vCons=r.bal; basisCons=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vEq, obs=basisEq; r=takeFromBucket(vEq,basisEq,deficit,gravRate,ytdGainCartera,bracketsActive); vEq=r.bal; basisEq=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0 && goldActive){ const ob=vGold, obs=basisGold; r=takeFromBucket(vGold,basisGold,deficit,gravRate,ytdGainCartera,bracketsActive); vGold=r.bal; basisGold=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0){ const ob=vBtc, obs=basisBtc; r=takeFromBucket(vBtc,basisBtc,deficit,gravRate,ytdGainCartera,bracketsActive); vBtc=r.bal; basisBtc=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
         if(deficit>0 && reActive && p.reCountsFire){ const ob=vRE, obs=basisRE; r=takeFromBucket(vRE,basisRE,deficit,gravRate,ytdGainCartera,bracketsActive); vRE=r.bal; basisRE=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(!provFirst && deficit>0){ nb=takeGross(vProv,deficit,provRate); deficit-=netTaken(vProv,nb,provRate); vProv=nb; }
+        if(!provFirst && deficit>0){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
         // ytdGainCartera is incremented per bucket above, so progressive brackets apply exactly across a cascade.
         // Each cascade step round-trips through a gross-up/net-back division and
         // multiplication, so a fully-covered deficit can land on a tiny positive
@@ -2179,6 +2193,7 @@ function simulate(p, paths){
         const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         snapVals[snap][k]=Math.max(0,totalNow);
         contribVals[snap][k]=totalNow-cumGrowth;
+        feeVals[snap][k]=cumFees;
         snap++;
       }
     }
@@ -2191,6 +2206,7 @@ function simulate(p, paths){
   const series=annualSnapshots.map((idx,j)=>{
     const a=Float64Array.from(snapVals[j]).sort();
     const cSorted=Float64Array.from(contribVals[j]).sort();
+    const fSorted=Float64Array.from(feeVals[j]).sort();
     return {idx, year:MONTH_DATES[idx].y,
       p10:a[Math.floor((paths-1)*0.10)],
       p25:a[Math.floor((paths-1)*0.25)],
@@ -2200,7 +2216,8 @@ function simulate(p, paths){
       // Median of cumulative net contributions across paths — an independent
       // measurement, not derived from p50 above, so it can occasionally run a
       // touch higher than p50 for the same year; the chart clamps for display.
-      contrib50:cSorted[Math.floor((paths-1)*0.50)]
+      contrib50:cSorted[Math.floor((paths-1)*0.50)],
+      fee50:fSorted[Math.floor((paths-1)*0.50)]
     };
   });
 
@@ -2756,7 +2773,8 @@ function buildWorkerSource(){
     'const PARAM_BOUNDS='+literal(PARAM_BOUNDS)+';',
     'let spare=null, activeRandom=Math.random;',
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+'};',
+    'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     'const progressiveSavingsTax=NavlogCore.progressiveSavingsTax, netAfterSavingsTax=NavlogCore.netAfterSavingsTax;',
     'const monthIndex='+monthIndex.toString()+';',
@@ -3051,18 +3069,18 @@ function renderSrrStress(res, shockPct, shockMonths){
 }
 
 function renderHistoricalBacktest(){
-  const capital=Number(document.getElementById('btCapital').value), spend=Number(document.getElementById('btSpend').value), years=Number(document.getElementById('btYears').value);
+  const capital=Number(document.getElementById('btCapital').value), spend=Number(document.getElementById('btSpend').value), years=Number(document.getElementById('btYears').value), feeEq=Number(document.getElementById('feeEq').value)||0;
   document.getElementById('btCapitalValue').textContent=eur(capital);
   document.getElementById('btSpendValue').textContent=eur(spend)+'/año';
   document.getElementById('btYearsValue').textContent=years+' años';
-  const outcomes=NavlogCore.historicalWithdrawalBacktest(HIST_EQ_REAL_RETURNS,capital,spend,years);
+  const outcomes=NavlogCore.historicalWithdrawalBacktest(HIST_EQ_REAL_RETURNS,capital,spend,years,feeEq);
   const survivors=outcomes.filter(x=>!x.ruined).length;
   const finals=outcomes.map(x=>x.finalBalance).sort((a,b)=>a-b);
   const quantile=q=>finals.length?finals[Math.floor((finals.length-1)*q)]:0;
   const failures=outcomes.filter(x=>x.ruined).map(x=>1928+x.startIndex);
   document.getElementById('btResults').innerHTML='<p class="calc">Sobrevivieron '+survivors+' de '+outcomes.length+' periodos ('+(outcomes.length?Math.round(100*survivors/outcomes.length):0)+' %). '+(failures.length?'Años de inicio con ruina: '+failures.join(', ')+'.':'No hubo ruina en los periodos probados.')+'</p><table><thead><tr><th>Capital final real</th><th>P10</th><th>Mediana</th><th>P90</th></tr></thead><tbody><tr><td>Tras '+years+' años</td><td>'+eurK(quantile(.1))+'</td><td>'+eurK(quantile(.5))+'</td><td>'+eurK(quantile(.9))+'</td></tr></tbody></table>';
 }
-['btCapital','btSpend','btYears'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistoricalBacktest));
+['btCapital','btSpend','btYears','feeEq'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistoricalBacktest));
 renderHistoricalBacktest();
 
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
@@ -3266,7 +3284,7 @@ async function run(mode){
   const licenseLossRate=pathsUsed?licenseLossCount/pathsUsed:0;
   renderOutcomeDashboard(cohortCounts,pathsUsed);
 
-  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1), p.proMode&&p.lifeExpOn ? Math.round((p.lifeExp-p.ageNow)*12)+1 : Infinity));
+  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1)));
   renderRuinTable(ruinCurve);
   ruinChart.update(ruinCurve, null);
 
@@ -3290,7 +3308,6 @@ async function run(mode){
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
     if(p.inflOn) calcTxt+=' · inflación estocástica';
     if(p.glideOn) calcTxt+=' · glide path activo';
-    if(p.lifeExpOn) calcTxt+=' · horizonte limitado a esperanza de vida '+p.lifeExp+' años';
     if(p.baristaOn) calcTxt+=' · ingreso parcial tras FIRE ('+eurK(p.baristaIncome)+'/año, '+p.baristaYears+'a)';
   }
   document.getElementById('calc').textContent=calcTxt;
@@ -3486,9 +3503,9 @@ function csvCell(value){
 }
 // UTF-8 BOM first so Excel detects the encoding of accents and the euro sign.
 function buildReportCsv(params, series, target){
-  const header=['kind','year','p10','p50','p90','target'];
-  const assumptions=Object.entries(params).map(([key,value])=>['assumption',key,Array.isArray(value)?JSON.stringify(value):value,'','','']);
-  const rows=series.map(point=>['projection',point.year,point.p10,point.p50,point.p90,target]);
+  const header=['kind','year','p10','p50','p90','fee50','target'];
+  const assumptions=Object.entries(params).map(([key,value])=>['assumption',key,Array.isArray(value)?JSON.stringify(value):value,'','','','']);
+  const rows=series.map(point=>['projection',point.year,point.p10,point.p50,point.p90,point.fee50,target]);
   return '\ufeff'+[header,...assumptions,...rows].map(row=>row.map(csvCell).join(';')).join('\n');
 }
 function exportCurrentReport(){

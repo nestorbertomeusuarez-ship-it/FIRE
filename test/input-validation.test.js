@@ -71,7 +71,7 @@ assert.ok(Array.from(deficitResult.ruined).filter(Boolean).length >= 10, 'the ho
 // Every numeric control at its minimum and maximum yields finite results (or a clear validation error).
 const tag = key => (html.match(new RegExp('<(?:input|select)[^>]*id="' + key + '"[^>]*>')) || [''])[0];
 const heavy = { ...DEFAULTS, seed: 3, proMode: true, taxOn: true, useIrpfBrackets: true, beckhamOn: true, wealthTaxOn: true, lolOn: true, fxVolOn: true, inflOn: true,
-  glideOn: true, lifeExpOn: true, baristaOn: true, reOn: true, reValue: 200000, startGold: 50000, goldAporte: 5, btcAporte: 5, profitShareWeeks: 5,
+  glideOn: true, baristaOn: true, reOn: true, reValue: 200000, startGold: 50000, goldAporte: 5, btcAporte: 5, profitShareWeeks: 5,
   mandatoryRetireOn: true, wdStrategy: 1, srrShockOn: true, startEq: 2000000, horizonAge: 70 };
 heavy.debugTrackBuckets = true;
 // Per-control expectations: every min/max is accepted EXCEPT the listed cross-field violations,

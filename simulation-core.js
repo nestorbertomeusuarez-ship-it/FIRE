@@ -7,6 +7,41 @@
     { upTo: 6000, rate: 0.19 }, { upTo: 50000, rate: 0.21 }, { upTo: 200000, rate: 0.23 },
     { upTo: 300000, rate: 0.27 }, { upTo: Infinity, rate: 0.30 }
   ];
+  // 2025 IRPF general scales. This is deliberately an individual, no-deductions
+  // estimate: the caller supplies the taxable general base, not a full return.
+  const GENERAL_STATE_BRACKETS = [
+    { upTo: 12450, rate: 0.095 }, { upTo: 20200, rate: 0.12 }, { upTo: 35200, rate: 0.15 },
+    { upTo: 60000, rate: 0.185 }, { upTo: 300000, rate: 0.225 }, { upTo: Infinity, rate: 0.245 }
+  ];
+  const GENERAL_REGIONAL_BRACKETS = {
+    catalonia: [{ upTo: 12500, rate: 0.095 }, { upTo: 22000, rate: 0.125 }, { upTo: 33000, rate: 0.16 }, { upTo: 53000, rate: 0.19 }, { upTo: 90000, rate: 0.215 }, { upTo: 120000, rate: 0.235 }, { upTo: 175000, rate: 0.245 }, { upTo: Infinity, rate: 0.255 }],
+    'valencian-community': [{ upTo: 12000, rate: 0.09 }, { upTo: 22000, rate: 0.12 }, { upTo: 32000, rate: 0.15 }, { upTo: 42000, rate: 0.175 }, { upTo: 52000, rate: 0.20 }, { upTo: 62000, rate: 0.225 }, { upTo: 72000, rate: 0.25 }, { upTo: 100000, rate: 0.265 }, { upTo: 150000, rate: 0.275 }, { upTo: 200000, rate: 0.285 }, { upTo: Infinity, rate: 0.295 }]
+  };
+  function progressiveTax(base, brackets) {
+    let tax = 0, lower = 0;
+    for (const bracket of brackets) { tax += Math.max(0, Math.min(Math.max(0, Number(base) || 0), bracket.upTo) - lower) * bracket.rate; lower = bracket.upTo; if (base <= bracket.upTo) break; }
+    return tax;
+  }
+  function netMonthlyReturn(grossMonthlyReturn, annualFeePct) {
+    const fee = Math.min(1, Math.max(0, Number(annualFeePct) || 0) / 100);
+    if (fee === 0) return grossMonthlyReturn;
+    return (1 + grossMonthlyReturn) * Math.pow(1 - fee, 1 / 12) - 1;
+  }
+  function generalIncomeTax(base, region) {
+    const regional = GENERAL_REGIONAL_BRACKETS[region];
+    if (!regional) throw new RangeError('Unsupported IRPF region');
+    return progressiveTax(base, GENERAL_STATE_BRACKETS) + progressiveTax(base, regional);
+  }
+  function netAfterGeneralIncomeTax(gross, ytdIncome, region) {
+    const income = Math.max(0, Number(gross) || 0), ytd = Math.max(0, Number(ytdIncome) || 0);
+    return income - (generalIncomeTax(ytd + income, region) - generalIncomeTax(ytd, region));
+  }
+  function grossForNetGeneralIncome(needNet, ytdIncome, region, maxGross) {
+    if (needNet <= 0 || maxGross <= 0) return 0;
+    let low = 0, high = maxGross;
+    for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (netAfterGeneralIncomeTax(mid, ytdIncome, region) >= needNet) high = mid; else low = mid; }
+    return high;
+  }
   // Single gate for every seed source (UI text, saved scenarios, sensitivity pairs).
   // Returns null (= random, not reproducible) for anything that is not an unsigned
   // 32-bit number; otherwise the truncated integer. Zero is a valid seed.
@@ -90,15 +125,16 @@
     const bracket = SAVINGS_BRACKETS.find(item => base < item.upTo) || SAVINGS_BRACKETS[SAVINGS_BRACKETS.length - 1];
     return bracket.rate * fraction * 100;
   }
-  function historicalWithdrawalBacktest(realAnnualReturns, capital, annualSpend, years) {
+  function historicalWithdrawalBacktest(realAnnualReturns, capital, annualSpend, years, annualFeePct = 0) {
     if (!Array.isArray(realAnnualReturns) || !Number.isFinite(capital) || !Number.isFinite(annualSpend) || !Number.isInteger(years) || years < 1) return [];
+    const annualFee = Math.min(1, Math.max(0, Number(annualFeePct) || 0) / 100);
     const result = [];
     for (let start = 0; start + years <= realAnnualReturns.length; start++) {
       let balance = capital;
       for (let year = 0; year < years && balance > 0; year++) {
         const annualReturn = realAnnualReturns[start + year];
         if (!Number.isFinite(annualReturn) || annualReturn <= -1) { balance = 0; break; }
-        const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
+        const monthlyReturn = Math.pow((1 + annualReturn) * (1 - annualFee), 1 / 12) - 1;
         for (let month = 0; month < 12; month++) {
           balance = balance * (1 + monthlyReturn) - annualSpend / 12;
           if (balance <= 0) { balance = 0; break; }
@@ -300,11 +336,15 @@
   }
   // Scenarios saved before `gratuityYears` was replaced by the automatic gratuity-vs-Provident
   // comparison: the key is dropped so it neither fails validation nor double-counts.
+  // Also folds the removed life-expectancy control into the end age: it only took effect in
+  // PRO mode, and then the simulation effectively ended at the lower of the two ages.
+  const LEGACY_KEYS = ['gratuityYears', 'lifeExpOn', 'lifeExp'];
   function migrateLegacyParams(params) {
     const child = migrateLegacyChildParams(params);
-    if (!child || typeof child !== 'object' || Array.isArray(child) || !('gratuityYears' in child)) return child;
+    if (!child || typeof child !== 'object' || Array.isArray(child) || !LEGACY_KEYS.some(key => key in child)) return child;
     const migrated = {};
-    for (const [key, value] of Object.entries(child)) if (key !== 'gratuityYears') migrated[key] = value;
+    for (const [key, value] of Object.entries(child)) if (!LEGACY_KEYS.includes(key)) migrated[key] = value;
+    if (child.proMode === true && child.lifeExpOn === true && Number.isFinite(child.lifeExp) && Number.isFinite(child.horizonAge)) migrated.horizonAge = Math.min(child.horizonAge, child.lifeExp);
     return migrated;
   }
   function migrateLegacyChildParams(params) {
@@ -314,5 +354,5 @@
     if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
     return migrated;
   }
-  return { gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams };
+  return { gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams };
 });
