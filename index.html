@@ -3081,7 +3081,13 @@ function renderHistoricalBacktest(){
   document.getElementById('btResults').innerHTML='<p class="calc">Sobrevivieron '+survivors+' de '+outcomes.length+' periodos ('+(outcomes.length?Math.round(100*survivors/outcomes.length):0)+' %). '+(failures.length?'Años de inicio con ruina: '+failures.join(', ')+'.':'No hubo ruina en los periodos probados.')+'</p><table><thead><tr><th>Capital final real</th><th>P10</th><th>Mediana</th><th>P90</th></tr></thead><tbody><tr><td>Tras '+years+' años</td><td>'+eurK(quantile(.1))+'</td><td>'+eurK(quantile(.5))+'</td><td>'+eurK(quantile(.9))+'</td></tr></tbody></table>';
 }
 ['btCapital','btSpend','btYears','feeEq'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistoricalBacktest));
+function appendHistoricalFeeNote(){
+  const feeEq=Number(document.getElementById('feeEq').value)||0;
+  if(feeEq) document.getElementById('btResults').querySelector('.calc').append(document.createTextNode(' Coste de renta variable aplicado: '+feeEq.toFixed(2)+' %/año.'));
+}
+document.getElementById('feeEq').addEventListener('input',appendHistoricalFeeNote);
 renderHistoricalBacktest();
+appendHistoricalFeeNote();
 
 const mainChart=makeChartController(document.getElementById('chart'), document.getElementById('chartTip'), document.getElementById('zoomReset'));
 const modalChart=makeChartController(document.getElementById('chartModalCanvas'), document.getElementById('chartTipModal'), document.getElementById('zoomResetModal'));

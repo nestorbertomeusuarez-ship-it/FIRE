@@ -27,6 +27,7 @@ assert.throws(()=>simulate({...DEFAULTS,cashRet:NaN},2),/cashRet.*n.mero finito/
 assert.match(html,/function serializeScenarioParams\(params\)/,'scenario saves serialize reconstructed payment schedules');
 assert.match(html,/exportScenarios[\s\S]*?addEventListener/,'scenario export control is wired');
 assert.match(html,/exportCsv[\s\S]*?addEventListener/,'report export control is wired');
+assert.match(html,/Coste de renta variable aplicado/,'historical backtest discloses the configured equity cost');
 assert.match(html,/id="ageNow"[^>]*min="18"[^>]*max="75"/,'current age is an editable bounded control');
 assert.match(html,/function syncHorizonControl\(\)[\s\S]*?current\+80/,'horizon maximum is synchronized to the engine limit');
 const syncSource=inline.slice(inline.indexOf('function syncHorizonControl(){'),inline.indexOf('\nfunction readParams(){'));
