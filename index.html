@@ -338,7 +338,9 @@ body:not(.pro) .pro-only{display:none}
   padding:9px 0;margin:0;
   font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
 }
-.pageNav{scrollbar-width:none}
+.pageNav{scrollbar-width:none;box-shadow:0 6px 10px -8px rgba(0,0,0,.35)}
+/* Anchor jumps from the sticky nav must not hide the section heading under it. */
+main [id]{scroll-margin-top:52px}
 .pageNav::-webkit-scrollbar{display:none}
 .pageNav a{color:var(--ink);text-decoration:none;white-space:nowrap;padding:2px 0;border-bottom:2px solid transparent}
 .pageNav a:hover{color:var(--route);border-bottom-color:var(--route)}
@@ -811,6 +813,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="wealthRate">Tipo medio anual sobre el exceso</label><output id="wealthRate_o" for="wealthRate"></output></div>
+        <p class="hint">Se aplica cada diciembre sobre la parte de tu patrimonio neto que supera el mínimo exento, ya con la bonificación autonómica descontada. Con el 0,5 % por defecto y, por ejemplo, 1.000.000 € de exceso sobre el mínimo, la cuota de ese año sería de 5.000 €. Los tipos reales de patrimonio son progresivos por tramos (hasta ~3,5 % en los más altos); esta cifra es un tipo medio simplificado, no la tarifa exacta.</p>
         <input type="range" id="wealthRate" min="0" max="3.5" step="0.05">
       </div>
       <div class="ctrl">
@@ -840,18 +843,22 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="lolPayoutMode">Tipo de indemnización</label><output id="lolPayoutMode_o" for="lolPayoutMode"></output></div>
+        <p class="hint">Elige cómo cobras si ocurre el LOL: "Pago único" añade de golpe el importe de "Pago único (€)" a tu cartera gravable; "Sustitución de ingreso" en cambio te paga cada mes un % de tu último salario durante la "Duración de la sustitución" que configures. Solo uno de los dos modos aplica a la vez, según cuál esté seleccionado.</p>
         <input type="range" id="lolPayoutMode" min="0" max="1" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="lolPayout">Pago único (€)</label><output id="lolPayout_o" for="lolPayout"></output></div>
+        <p class="hint">Solo cuenta si "Tipo de indemnización" está en "Pago único": ese importe se suma de una vez a tu cartera (renta variable) el mes exacto del LOL, como un capital indemnizatorio del seguro. Con el valor por defecto son 150.000 €; ajústalo al capital que realmente cubre tu póliza.</p>
         <input type="range" id="lolPayout" min="0" max="500000" step="10000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="lolReplacePct">Sustitución de ingreso (% del último salario)</label><output id="lolReplacePct_o" for="lolReplacePct"></output></div>
+        <p class="hint">Solo cuenta si "Tipo de indemnización" está en "Sustitución de ingreso": cada mes cobras este % de tu último salario en euros, en vez de un pago único. Con el 60 % por defecto, si tu último salario mensual eran 5.000 €, cobrarías 3.000 €/mes mientras dure la sustitución.</p>
         <input type="range" id="lolReplacePct" min="0" max="100" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="lolReplaceYears">Duración de la sustitución (años)</label><output id="lolReplaceYears_o" for="lolReplaceYears"></output></div>
+        <p class="hint">Solo cuenta en modo "Sustitución de ingreso": número de años tras el LOL durante los que sigues cobrando ese % del salario. Con el valor por defecto de 3 años, pasado ese plazo el ingreso se corta y solo queda lo que ya hayas acumulado en la cartera.</p>
         <input type="range" id="lolReplaceYears" min="1" max="10" step="1">
       </div>
       <p class="note">Al ocurrir un LOL se considera que dejas la compañía (cobras gratuity si aplica), igual que una jubilación normal, pero no cuenta como FIRE exitoso ni voluntario.</p>
@@ -866,6 +873,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="fxVol">Volatilidad anual del tipo de cambio</label><output id="fxVol_o" for="fxVol"></output></div>
+        <p class="hint">Cuánto puede desviarse mes a mes el tipo AED→EUR alrededor del valor base de Carrera, antes de que la reversión a la media lo empuje de vuelta. Con el 4 % por defecto los meses malos son suaves; súbelo (por ejemplo a 10-15 %) para simular un dírham que pudiera desvincularse del dólar o un euro más inestable.</p>
         <input type="range" id="fxVol" min="0" max="15" step="0.5">
       </div>
       <div class="ctrl">
@@ -879,6 +887,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="inflVol">Volatilidad anual de la sorpresa de inflación</label><output id="inflVol_o" for="inflVol"></output></div>
+        <p class="hint">Ruido mensual alrededor de la inflación real ya asumida en el resto del modelo, no una segunda tasa de inflación aparte. Cuando la sorpresa es al alza, erosiona algo el retorno de ese mes en bolsa y BTC (el mercado absorbe el 30 % del golpe) y abarata en términos reales la hipoteca nominal fija. Con el 1,2 %/año por defecto el efecto es discreto; súbelo para estresar carteras y deuda fija frente a inflación más errática.</p>
         <input type="range" id="inflVol" min="0" max="4" step="0.1">
       </div>
       <p class="note">El modelo ya trabaja en euros reales de 2026. Esto no reintroduce una base nominal completa: añade ruido alrededor de esa base real, erosionando algo el retorno de mercado y abaratando en términos reales la hipoteca nominal fija cuando la inflación sorprende al alza.</p>
@@ -889,46 +898,56 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="grouphint">En el modo simple, una vez jubilado retiras siempre la misma cantidad cada año. Aquí puedes probar alternativas que ajustan el gasto según cómo le va a la cartera o según la edad.</p>
       <div class="ctrl">
         <div class="row"><label for="wdStrategy">Estrategia</label><output id="wdStrategy_o" for="wdStrategy"></output></div>
+        <p class="hint">Elige cómo se calcula el gasto mes a mes tras el FIRE, entre tres opciones excluyentes: "SWR fijo" (idéntico al modo simple: siempre el gasto configurado), "Guyton-Klinger" (ajusta el gasto según cómo evoluciona la cartera, con los quitamiedos de esta misma sección) o "Fases go-go/slow-go/no-go" (ajusta el gasto según los años transcurridos desde el FIRE). Solo los sliders del grupo correspondiente a la opción elegida afectan al resultado.</p>
         <input type="range" id="wdStrategy" min="0" max="2" step="1">
       </div>
       <p class="subhead">Guyton-Klinger (guardrails)</p>
-      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más.</p>
+      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más. Solo actúa cuando "Estrategia" está en "Guyton-Klinger".</p>
       <div class="ctrl">
         <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o" for="gkGuard"></output></div>
+        <p class="hint">Define el techo y el suelo de la banda como un % por encima y por debajo del SWR objetivo (Objetivo → Tasa de retiro segura, 3,25 % por defecto). Con el 20 % por defecto: techo = 3,25 %×1,20 = 3,9 %, suelo = 3,25 %×0,80 = 2,6 %. Si la tasa de retiro efectiva (gasto actual / cartera total) supera el 3,9 % se aplica el "Recorte de gasto al tocar el techo"; si cae por debajo del 2,6 % se aplica la "Subida de gasto al tocar el suelo".</p>
         <input type="range" id="gkGuard" min="10" max="30" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkCut">Recorte de gasto al tocar el techo</label><output id="gkCut_o" for="gkCut"></output></div>
+        <p class="hint">% que se descuenta del gasto anual vigente la próxima vez que toque revisión (según la "Frecuencia de revisión" configurada) si la tasa de retiro efectiva está por encima del techo de la banda. Con el 10 % por defecto y un gasto de 60.000 €/año, ese recorte lo deja en 54.000 €/año; el recorte se aplica sobre el gasto ya vigente, así que se acumula si vuelve a activarse en revisiones sucesivas.</p>
         <input type="range" id="gkCut" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkRaise">Subida de gasto al tocar el suelo</label><output id="gkRaise_o" for="gkRaise"></output></div>
+        <p class="hint">% que se añade al gasto anual vigente cuando, en la revisión periódica, la tasa de retiro efectiva está por debajo del suelo de la banda (la cartera ha ido mejor de lo esperado). Con el 10 % por defecto y un gasto de 60.000 €/año, la subida lo deja en 66.000 €/año.</p>
         <input type="range" id="gkRaise" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkFreq">Frecuencia de revisión (meses)</label><output id="gkFreq_o" for="gkFreq"></output></div>
+        <p class="hint">Cada cuántos meses tras el FIRE se comprueba si la tasa de retiro efectiva se ha salido de la banda y, si toca, se aplica el recorte o la subida. Con los 12 meses por defecto la revisión es anual; en los meses intermedios el gasto se mantiene igual aunque la cartera se mueva.</p>
         <input type="range" id="gkFreq" min="6" max="24" step="6">
       </div>
       <p class="subhead">Fases go-go / slow-go / no-go</p>
-      <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go).</p>
+      <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go). Las tres fases son consecutivas y cubren siempre todo el tiempo tras el FIRE: primero go-go, luego slow-go, y no-go el resto de años, sin fecha de fin. Solo actúa cuando "Estrategia" está en "Fases go-go/slow-go/no-go".</p>
       <div class="ctrl">
         <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o" for="goGoMult"></output></div>
+        <p class="hint">Multiplicador que se aplica al gasto base (Objetivo → Gasto anual al jubilarte, 60.000 € por defecto) durante los primeros años tras el FIRE. Con el 115 % por defecto, el gasto real en esta fase es 69.000 €/año — a diferencia de Guyton-Klinger, aquí el gasto no depende de cómo vaya la cartera, solo de los años transcurridos.</p>
         <input type="range" id="goGoMult" min="80" max="150" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="goGoYears">Duración go-go (años)</label><output id="goGoYears_o" for="goGoYears"></output></div>
+        <p class="hint">Cuántos años dura la fase go-go antes de pasar a slow-go, contados desde el FIRE de cada ruta (que varía ruta a ruta). Con el valor por defecto de 10 años, del año 0 al 10 se gasta al multiplicador go-go y a partir del año 10 se pasa a slow-go.</p>
         <input type="range" id="goGoYears" min="0" max="20" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="slowGoMult">Gasto fase slow-go (% del base)</label><output id="slowGoMult_o" for="slowGoMult"></output></div>
+        <p class="hint">Multiplicador sobre el gasto base durante la fase intermedia, tras acabar go-go. Con el 90 % por defecto y un gasto base de 60.000 €/año, el gasto en esta fase es 54.000 €/año.</p>
         <input type="range" id="slowGoMult" min="60" max="120" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="slowGoYears">Duración slow-go (años)</label><output id="slowGoYears_o" for="slowGoYears"></output></div>
+        <p class="hint">Cuántos años dura la fase slow-go antes de pasar a no-go. Se cuenta a partir de que termina go-go: con los valores por defecto (10 años de go-go + 10 de slow-go), slow-go va del año 10 al 20 tras el FIRE, y desde el año 20 en adelante se aplica no-go indefinidamente.</p>
         <input type="range" id="slowGoYears" min="0" max="20" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="noGoMult">Gasto fase no-go (% del base)</label><output id="noGoMult_o" for="noGoMult"></output></div>
+        <p class="hint">Multiplicador sobre el gasto base a partir de que terminan go-go y slow-go, y hasta el final del horizonte. Con el 100 % por defecto el gasto vuelve a ser igual al gasto base (60.000 €/año) — sube o baja este valor si esperas gastar más o menos en la vejez que en la fase intermedia.</p>
         <input type="range" id="noGoMult" min="50" max="110" step="5">
       </div>
       <p class="note">Con "SWR fijo" el gasto es idéntico al modo simple. Guyton-Klinger ajusta el gasto anual cuando la tasa de retiro efectiva se sale de la banda alrededor del SWR objetivo. Las fases aplican un multiplicador al gasto base según los años transcurridos desde el FIRE de cada ruta.</p>
@@ -940,14 +959,17 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="subhead">Oro</p>
       <div class="ctrl">
         <div class="row"><label for="startGold">Oro hoy (€)</label><output id="startGold_o" for="startGold"></output></div>
+        <p class="hint">Valor de oro que ya tienes al empezar la simulación, aparte de la renta variable y BTC. Por defecto es 0 €: el oro solo se modela como clase de activo si pones algo aquí o en "Del ahorro nuevo, a oro" — con los dos en 0 el oro no interviene en absoluto en los resultados.</p>
         <input type="range" id="startGold" min="0" max="100000" step="1000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="goldRet">Rentabilidad real media del oro</label><output id="goldRet_o" for="goldRet"></output></div>
+        <p class="hint">Rentabilidad media anual del oro, ya descontada la inflación, usada junto con su volatilidad para simular un retorno mensual aleatorio (igual que con acciones o BTC). Con el 1,5 % por defecto el oro rinde poco de media pero amortigua la cartera gracias a su correlación negativa con la bolsa.</p>
         <input type="range" id="goldRet" min="-5" max="10" step="0.5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="goldVol">Volatilidad anual del oro</label><output id="goldVol_o" for="goldVol"></output></div>
+        <p class="hint">Cuánto oscila el retorno del oro de un año a otro. Con el 15 % por defecto es bastante más estable que la bolsa (17 %) o BTC (55 %) — súbelo si quieres modelar un oro más volátil que el histórico habitual.</p>
         <input type="range" id="goldVol" min="5" max="30" step="1">
       </div>
       <div class="ctrl">
@@ -957,6 +979,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="goldAporte">Del ahorro nuevo, a oro</label><output id="goldAporte_o" for="goldAporte"></output></div>
+        <p class="hint">% del ahorro mensual que se destina a oro, antes de repartir el resto entre acciones/bonos/efectivo según tu allocation básica (igual mecánica que "% de aportación en BTC"). Por defecto es 0 %: nada del ahorro nuevo va a oro salvo que subas este valor.</p>
         <input type="range" id="goldAporte" min="0" max="30" step="1">
       </div>
       <p class="subhead">Inmueble en alquiler</p>
@@ -966,10 +989,12 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="reValue">Valor del inmueble (€)</label><output id="reValue_o" for="reValue"></output></div>
+        <p class="hint">Valor de mercado del inmueble en alquiler al empezar la simulación (por defecto 0 €, es decir sin efecto salvo que actives "Contar un inmueble en alquiler" y pongas aquí un importe). Este valor no se suma directamente a tu capital FIRE salvo que marques "Contar el inmueble como capital FIRE".</p>
         <input type="range" id="reValue" min="0" max="500000" step="5000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="reYield">Rentabilidad neta de alquiler</label><output id="reYield_o" for="reYield"></output></div>
+        <p class="hint">Ingreso neto anual de alquiler como % del valor del inmueble, ya descontados gastos e impuestos del alquiler; entra cada mes como cash flow adicional (se suma al ahorro o reduce la retirada de cartera). Con el 3,5 % por defecto y un inmueble de 200.000 €, son 7.000 €/año (~583 €/mes) de ingreso neto.</p>
         <input type="range" id="reYield" min="0" max="8" step="0.25">
       </div>
       <div class="ctrl">
@@ -988,14 +1013,17 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o" for="glideTargetYear"></output></div>
+        <p class="hint">Fecha en la que el glide path debe haber terminado de des-arriesgar, usada como referencia fija para calcular cuántos años faltan cada vez que se revisa (una vez al año). Con el valor por defecto de 2045 y 7 años de rampa, el des-arriesgado empieza en 2038; ajústalo para que se acerque a la mediana de FIRE de tu ruta, ya que el FIRE real varía de una simulación a otra.</p>
         <input type="range" id="glideTargetYear" min="2027" max="2106" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="glideStartYears">Años antes de empezar a des-arriesgar</label><output id="glideStartYears_o" for="glideStartYears"></output></div>
+        <p class="hint">Duración de la rampa: cuántos años antes del "Año FIRE esperado" empieza a moverse dinero de renta variable/BTC/oro hacia la cartera conservadora. Mientras falten más años que este valor, el reparto se mantiene 100 % en activos de riesgo; a partir de ahí, el % en riesgo baja de forma lineal hasta llegar al mínimo configurado justo en la fecha ancla. Con el valor por defecto de 7 años y ancla en 2045, la rampa va de 2038 a 2045.</p>
         <input type="range" id="glideStartYears" min="1" max="15" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="glideEqFloor">Mínimo en riesgo al llegar la fecha</label><output id="glideEqFloor_o" for="glideEqFloor"></output></div>
+        <p class="hint">% mínimo de la cartera de riesgo+conservadora que sigue en activos de riesgo (acciones, BTC, oro) una vez llegada la fecha ancla; el resto queda en la cartera conservadora. Con el 50 % por defecto, en 2045 la mitad de esa cartera sigue en riesgo y la otra mitad ya está des-arriesgada — nunca baja de este suelo por mucho que pasen los años.</p>
         <input type="range" id="glideEqFloor" min="20" max="90" step="5">
       </div>
       <p class="note">El dinero des-arriesgado por el glide path va a la misma cartera conservadora que los "Bonos (%)" de la sección "Reparto de la cartera básica": ajusta su rentabilidad y volatilidad ahí (rentabilidad/volatilidad de bonos), no aquí. "Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
@@ -1019,6 +1047,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o" for="baristaIncome"></output></div>
+        <p class="hint">Se resta directamente, mes a mes, de la retirada que tocaría hacer de la cartera (no se suma como ahorro nuevo). Con el gasto base de 60.000 €/año (5.000 €/mes) y el valor por defecto de 12.000 €/año (1.000 €/mes), solo hace falta retirar 4.000 €/mes de la cartera durante los años que dure este ingreso.</p>
         <input type="range" id="baristaIncome" min="0" max="40000" step="1000">
       </div>
       <div class="ctrl">
