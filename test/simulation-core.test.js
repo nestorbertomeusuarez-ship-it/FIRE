@@ -3,6 +3,8 @@ const core = require('../simulation-core.js');
 const a = core.seededRandom(42), b = core.seededRandom(42);
 assert.deepEqual([a(),a(),a()], [b(),b(),b()], 'seeded PRNG must reproduce paths');
 assert.equal(core.progressiveSavingsTax(6000), 1140);
+assert.equal(core.netMonthlyReturn(.01, 0), .01, 'zero fee preserves gross monthly return');
+assert.ok(core.netMonthlyReturn(.01, 1) < .01, 'annual fee reduces the monthly return');
 assert.equal(core.generalIncomeTax(50000, 'catalonia'), 14465.75, '2025 individual general IRPF combines state and Catalan scales without deductions');
 assert.equal(core.generalIncomeTax(50000, 'valencian-community'), 14230.75, '2025 individual general IRPF combines state and Valencian scales without deductions');
 for (const [region, ytd, net] of [['catalonia', 0, 10000], ['valencian-community', 49000, 3000]]) {

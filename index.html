@@ -783,6 +783,11 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Estimación individual sin mínimos ni deducciones; usa las escalas estatal y autonómica 2025. Al activarla sustituye el tipo manual del Provident.</p>
         <input type="range" id="taxRegion" min="0" max="1" step="1">
       </div>
+      <div class="ctrl"><div class="row"><label for="feeCash">TER efectivo</label><output id="feeCash_o" for="feeCash"></output></div><input type="range" id="feeCash" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeCons">TER bonos</label><output id="feeCons_o" for="feeCons"></output></div><input type="range" id="feeCons" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeEq">TER renta variable</label><output id="feeEq_o" for="feeEq"></output></div><input type="range" id="feeEq" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeBtc">Coste BTC</label><output id="feeBtc_o" for="feeBtc"></output></div><input type="range" id="feeBtc" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeGold">Coste oro</label><output id="feeGold_o" for="feeGold"></output></div><input type="range" id="feeGold" min="0" max="3" step="0.01"></div>
       <div class="ctrl">
         <div class="row"><label for="burrTaxRate">Tipo sobre la venta de Burriana</label><output id="burrTaxRate_o" for="burrTaxRate"></output></div>
         <p class="hint">Burriana es un inmueble en España: Hacienda grava su venta aunque todavía no residas allí ni hayas activado la Ley Beckham — la exclusión de Beckham solo cubre renta y patrimonio de fuera de España, nunca un inmueble español. Por defecto 19 %, el tipo fijo para no residentes UE/EEE sobre plusvalías inmobiliarias (24 % fuera de la UE/EEE). Brasil no lleva este tratamiento: su cifra ya viene neta de impuestos.</p>
@@ -1219,7 +1224,7 @@ const DEFAULTS = {
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
-  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
+  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0, feeCons:0, feeEq:0, feeBtc:0, feeGold:0, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
   lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
@@ -1517,6 +1522,7 @@ function paintLabels(p){
   set('taxRate',p.taxRate.toFixed(1)+' %');
   set('taxRateProv',p.taxRateProv.toFixed(1)+' %');
   set('taxRegion',['Cataluña','Comunitat Valenciana'][Math.round(p.taxRegion)]);
+  for(const key of ['feeCash','feeCons','feeEq','feeBtc','feeGold']) set(key,p[key].toFixed(2)+' %/año');
   set('burrTaxRate',p.burrTaxRate.toFixed(1)+' %');
   set('lolAnnualProb',p.lolAnnualProb.toFixed(1)+' %/año');
   set('lolPremiumMonthly',eur(p.lolPremiumMonthly)+'/mes');
@@ -1830,14 +1836,14 @@ function simulate(p, paths){
       const rEqEff=inflActive ? rEq-inflShockM*(1-eqInflBeta) : rEq;
       const rBtcEff=inflActive ? rBtc-inflShockM*(1-eqInflBeta) : rBtc;
 
-      vEq*=1+rEqEff; vBtc*=1+rBtcEff; vProv*=1+rEqEff;
+      vEq*=1+NavlogCore.netMonthlyReturn(rEqEff,p.feeEq); vBtc*=1+NavlogCore.netMonthlyReturn(rBtcEff,p.feeBtc); vProv*=1+rEqEff;
       if(goldActive){
         const z3=gauss();
         const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
-        vGold*=1+rGold;
+        vGold*=1+NavlogCore.netMonthlyReturn(rGold,p.feeGold);
       }
-      vCons*=1+(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet);
-      vCash*=1+(cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet);
+      vCons*=1+NavlogCore.netMonthlyReturn(consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet,p.feeCons);
+      vCash*=1+NavlogCore.netMonthlyReturn(cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet,p.feeCash);
       if(reActive) vRE*=1+reApprM;
       cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
 
@@ -2760,7 +2766,7 @@ function buildWorkerSource(){
     'let spare=null, activeRandom=Math.random;',
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     'const progressiveSavingsTax=NavlogCore.progressiveSavingsTax, netAfterSavingsTax=NavlogCore.netAfterSavingsTax;',
     'const monthIndex='+monthIndex.toString()+';',
