@@ -118,7 +118,7 @@ const { loadApp } = require('./helpers/fake-app.js');
   const rows = []; const list = el('outcomeSummary').children[0].children;
   for (let i = 0; i < list.length; i += 2) rows.push({ label: list[i].textContent, count: Number(list[i + 1].textContent.split(' rutas')[0].replace(/\./g, '')) });
   assert.equal(rows.length, 7);
-  assert.match(rows[1].label, /incluida en la fila anterior/, 'voluntary ruin is shown as a subset');
+  assert.match(rows[1].label, /incluida en el total de FIRE voluntario/, 'voluntary ruin is shown as a subset');
   assert.match(rows[4].label, /Ruina antes de llegar al FIRE/);
   assert.match(rows[5].label, /sin ruina/, 'the no-retirement row excludes ruined paths');
   const paths = Number(/muestra ([\d.]+) rutas/.exec(el('simulationContext').textContent)[1].replace(/\./g, ''));

@@ -211,3 +211,77 @@ test('VPW plans to age 100 like Bogleheads, so it never empties the portfolio at
   const ruined = [...r.ruinMonth].filter(m => m >= 0).length;
   assert.ok(ruined <= 4, `VPW should almost never run out, got ${ruined}/400 ruined paths`);
 });
+
+// ---- E1/E2: a Loss-of-License forced exit must set up Prime Harvesting and the first
+// year's spend exactly like the voluntary and mandatory-retirement exits already do -------
+// startDelay:0 makes careerStart a deterministic Jun-2027 (i=9); lolAnnualProb:100 with
+// lolAgeCurveOn:false forces the LOL draw to succeed at the very first eligible month.
+const lolBase = {
+  ...baseFlat, startDelay: 0, lolOn: true, lolAnnualProb: 100, lolAgeCurveOn: false,
+  lolEmiratesOn: false, lolPayoutMode: 0, lolPremiumMonthly: 0, mandatoryRetireOn: false,
+};
+
+test('E1: Prime Harvesting activates after a Loss-of-License forced exit (phOn changes the trajectory once equities grow >=1.2x E0)', () => {
+  const lolGrowth = { ...lolBase, startEq: 0, lolPayout: 3000000, gasto: 60000, swr: 5, ret: 10, vol: 0 };
+  const phOff = simulate({ ...lolGrowth, phOn: false }, 4).series.map(x => x.p50);
+  const phOn = simulate({ ...lolGrowth, phOn: true }, 4).series.map(x => x.p50);
+  assert.ok(anyDiffer(phOff, phOn), 'Prime Harvesting must change the wealth trajectory once a LOL-forced retiree\'s equities grow past 1.2x E0');
+});
+
+test('E2: a Loss-of-License forced exit computes its first-year spend the same way a mandatory exit does (wdStrategy 4, unclamped first year)', () => {
+  const lolFlat = { ...lolBase, startEq: 0, lolPayout: 3000000, gasto: 60000, swr: 5, wdStrategy: 4, fcFloor: 90, fcCeiling: 125 };
+  const result = simulate(lolFlat, 1);
+  // LOL fires at careerStart=9 (Jun-2027); gratuity is 0 (zero years of service) and the
+  // Emirates contract is off, so totalAtFire = lolPayout = 3,000,000 exactly. A raw 5% SWR
+  // of that portfolio (150,000) would blow straight through the 125%-of-gasto ceiling
+  // (75,000), but floor & ceiling's first year is always the plain configured spend
+  // (unclamped) - exactly like a voluntary or mandatory exit, never the clamped formula.
+  // The withdrawal cascade already runs from the LOL month itself; the first December
+  // snapshot (Dec-2027) is 7 months later, at 0% real return with no other cash flow.
+  const totalAtFire = 3000000;
+  const expectedAnnual = 60000; // unclamped first year, same as p.gasto
+  const expected = totalAtFire - 7 * (expectedAnnual / 12);
+  const dec2027 = result.series.find(x => x.year === 2027).p50;
+  assert.ok(Math.abs(dec2027 - expected) < 1, `expected ~${expected}, got ${dec2027}`);
+});
+
+// ---- E3: VPW's rWeighted must be consistent with the totalNow it is applied to -----------
+// annualSpendFor's rWeighted historically only mixed riskyNow (equities/BTC/gold) against
+// safeNow (bonds/cash), excluding vProv from both sides of the ratio even though vProv is
+// part of totalNow and grows/spends at the equity rate. This scenario builds up a real
+// Provident balance through a short, fully deterministic career (flat markets, no salary
+// growth, always first-officer pay) so vProv is a material share of totalNow at FIRE.
+test('E3: VPW weights vProv as risky money, consistent with the totalNow it is spent from', () => {
+  const fx = DEFAULTS.fx, basicFO = DEFAULTS.basicFO, salFO = DEFAULTS.salFO, provCo = DEFAULTS.provCo;
+  const basicEUR = basicFO * fx, salaryEUR = salFO / 12 * fx;
+  const FS1_GAP = 10400; // fixed non-configurable cost the model applies through all of 2029/2031
+  let vEq = 0, vCons = 0, vCash = 0, vProv = 0;
+  for (let m = 0; m < 24; m++) { // monthsSinceCareer 0..23 (i = careerStart(9) + m); captMonth (88) is never reached here
+    const year = 2026 + Math.floor((8 + 9 + m) / 12); // mirrors monthIndex's inverse for START_YEAR=2026/START_MONTH=9
+    let net = salaryEUR;
+    if (m >= 6) { // 6-month Provident waiting period; 12% company + 5% employee
+      vProv += basicEUR * (provCo / 100 + 0.05);
+      net -= basicEUR * 0.05;
+    }
+    if (year === 2029 || year === 2031) net -= FS1_GAP / 12;
+    vEq += net * 0.70; vCons += net * 0.20; vCash += net * 0.10;
+  }
+  const totalAtFire = vEq + vCons + vCash + vProv;
+  const safeNow = vCons + vCash;
+  const rWeighted = ((totalAtFire - safeNow) * 0.05 + safeNow * 0.018) / totalAtFire;
+  const ageAtFire = DEFAULTS.ageNow + 32 / 12; // FIRE fires at i=32 (careerStart 9 + 23 months)
+  const yearsLeft = Math.max(1, Math.max(100, DEFAULTS.horizonAge) - ageAtFire);
+  const annual = totalAtFire * core.vpwRate(rWeighted, yearsLeft);
+
+  const provScenario = {
+    ...baseFlat, wdStrategy: 3, startEq: 0, startDelay: 0, captDelay: 0, salG: 0,
+    salFO, basicFO, // baseFlat zeroes these out for the other fixtures; this scenario needs them
+    provOn: true, swr: 5, gasto: totalAtFire * 0.05,
+  };
+  const result = simulate(provScenario, 1);
+  // target = gasto/(swr/100) = totalAtFire exactly, first reached at i=32 (May-2029); the
+  // first December snapshot (Dec-2029) is 7 months later, at 0% real return.
+  const expected = totalAtFire - 7 * (annual / 12);
+  const dec2029 = result.series.find(x => x.year === 2029).p50;
+  assert.ok(Math.abs(dec2029 - expected) < 5, `expected ~${expected}, got ${dec2029}`);
+});

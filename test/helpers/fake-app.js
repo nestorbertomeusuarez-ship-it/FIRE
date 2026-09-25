@@ -10,19 +10,23 @@ const HTML_PATH = path.join(__dirname, '..', '..', 'index.html');
 
 function parseTags(html) {
   const tags = new Map();
+  const all = [];
   for (const match of html.matchAll(/<(input|select|textarea|canvas|p|div|span|output|button|label|details|summary|table|tbody|thead|ul|dl|section|a|dialog|h2|li|b|i)\b([^>]*)>/g)) {
     const attrs = {};
     for (const attr of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) attrs[attr[1]] = attr[2] === undefined ? '' : attr[2];
-    if (attrs.id && !tags.has(attrs.id)) tags.set(attrs.id, { tag: match[1], attrs, classes: (attrs.class || '').split(/\s+/).filter(Boolean) });
+    const info = { tag: match[1], attrs, classes: (attrs.class || '').split(/\s+/).filter(Boolean), index: all.length };
+    all.push(info);
+    if (attrs.id && !tags.has(attrs.id)) tags.set(attrs.id, info);
   }
-  return tags;
+  return { tags, all };
 }
 
 function createEnvironment(html) {
-  const tags = parseTags(html);
+  const { tags, all } = parseTags(html);
   const timers = []; let timerId = 0;
+  const byIndex = new Map();
   const env = {
-    tags, timers,
+    tags, all, timers,
     setTimeout(fn, delay) { const id = ++timerId; timers.push({ id, fn, delay: delay || 0 }); return id; },
     clearTimeout(id) { const index = timers.findIndex(t => t.id === id); if (index >= 0) timers.splice(index, 1); },
     pendingTimers() { return timers.length; },
@@ -67,15 +71,33 @@ function createEnvironment(html) {
     };
     return element;
   }
+  // Cached element for a parsed tag `info`, keyed by id when it has one (so it's the
+  // very same instance getElementById would hand out), or by its document-order index.
+  function elementFor(info) {
+    const key = info.attrs.id || null;
+    if (key) {
+      if (!env.elements.has(key)) env.elements.set(key, makeElement(info.tag, info));
+      return env.elements.get(key);
+    }
+    if (!byIndex.has(info.index)) byIndex.set(info.index, makeElement(info.tag, info));
+    return byIndex.get(info.index);
+  }
+  // Minimal selector support: only a single class selector (".foo"), which is all the
+  // real inline script ever queries document-wide (e.g. syncWdStrategy's '.wdPhase').
+  function queryAll(selector) {
+    const match = /^\.([\w-]+)$/.exec(String(selector || '').trim());
+    if (!match) return [];
+    const className = match[1];
+    return all.filter(info => info.classes.includes(className)).map(elementFor);
+  }
   const document = {
     getElementById(id) {
       if (!tags.has(id)) return null;
-      if (!env.elements.has(id)) env.elements.set(id, makeElement(tags.get(id).tag, tags.get(id)));
-      return env.elements.get(id);
+      return elementFor(tags.get(id));
     },
     createElement(tag) { const element = makeElement(tag, null); env.created.push(element); return element; },
     createTextNode(text) { return { nodeType: 3, textContent: String(text) }; },
-    querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, removeEventListener() {},
+    querySelector: selector => queryAll(selector)[0] || null, querySelectorAll: queryAll, addEventListener() {}, removeEventListener() {},
     body: null, documentElement: null
   };
   document.body = makeElement('body', null); document.documentElement = makeElement('html', null);

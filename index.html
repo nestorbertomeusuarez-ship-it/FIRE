@@ -922,6 +922,7 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Elige cómo se calcula el gasto mes a mes tras el FIRE, entre seis opciones excluyentes: "SWR fijo" (idéntico al modo simple: siempre el gasto configurado), "Guyton-Klinger" (ajusta el gasto según cómo evoluciona la cartera, con los quitamiedos de esta misma sección), "Fases go-go/slow-go/no-go" (ajusta el gasto según los años transcurridos desde el FIRE), "VPW (Bogleheads)" (recalcula el gasto cada año como un % fijo de la cartera restante, así que nunca se agota del todo pero el ingreso fluctúa con el mercado), "Suelo y techo (Bengen)" (un % de retiro variable sobre la cartera, pero acotado entre un suelo y un techo del gasto base) o "Yield Shield" (los primeros años solo gastas lo que rinde la cartera, nunca más que tu gasto normal). Solo los sliders del grupo correspondiente a la opción elegida afectan al resultado; el interruptor "Prime Harvesting" de esta misma sección es independiente y se puede combinar con cualquiera de las seis.</p>
         <input type="range" id="wdStrategy" min="0" max="5" step="1">
       </div>
+      <div class="wdPhase" data-wd="1">
       <p class="subhead">Guyton-Klinger (guardrails)</p>
       <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más. Solo actúa cuando "Estrategia" está en "Guyton-Klinger".</p>
       <div class="ctrl">
@@ -944,6 +945,8 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Cada cuántos meses tras el FIRE se comprueba si la tasa de retiro efectiva se ha salido de la banda y, si toca, se aplica el recorte o la subida. Con los 12 meses por defecto la revisión es anual; en los meses intermedios el gasto se mantiene igual aunque la cartera se mueva.</p>
         <input type="range" id="gkFreq" min="6" max="24" step="6">
       </div>
+      </div>
+      <div class="wdPhase" data-wd="2">
       <p class="subhead">Fases go-go / slow-go / no-go</p>
       <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go). Las tres fases son consecutivas y cubren siempre todo el tiempo tras el FIRE: primero go-go, luego slow-go, y no-go el resto de años, sin fecha de fin. Solo actúa cuando "Estrategia" está en "Fases go-go/slow-go/no-go".</p>
       <div class="ctrl">
@@ -971,8 +974,12 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Multiplicador sobre el gasto base a partir de que terminan go-go y slow-go, y hasta el final del horizonte. Con el 100 % por defecto el gasto vuelve a ser igual al gasto base (60.000 €/año) — sube o baja este valor si esperas gastar más o menos en la vejez que en la fase intermedia.</p>
         <input type="range" id="noGoMult" min="50" max="110" step="5">
       </div>
+      </div>
+      <div class="wdPhase" data-wd="3">
       <p class="subhead">VPW (Bogleheads)</p>
       <p class="hint">Variable Percentage Withdrawal: cada año tras el FIRE (el primero, en el propio mes del FIRE) se recalcula el gasto anual como un % de la cartera líquida de ese momento. Ese % es la cuota de una "anualidad" que reparte la cartera entre los años que quedan hasta los 100 años (como la tabla de Bogleheads; o hasta tu Edad final si es mayor), a una rentabilidad real esperada que pondera el reparto actual entre riesgo (acciones+BTC+oro, 5 %/año) y activos conservadores (bonos+efectivo, 1,8 %/año). Ejemplo con los valores por defecto: una cartera 70/30 riesgo/conservador da una r ponderada del 4,04 %; con 30 años restantes (por ejemplo, a los 70) eso es un 5,59 % de la cartera ese año (con 1.000.000 € de cartera, 55.855 €). A diferencia de "SWR fijo", el gasto no es una cantidad fija sino un % de lo que quede, así que la cartera prácticamente nunca llega a 0 — pero a cambio el ingreso sube y baja con el mercado, incluso de un año para otro.</p>
+      </div>
+      <div class="wdPhase" data-wd="4">
       <p class="subhead">Suelo y techo (Bengen)</p>
       <p class="hint">Cada año tras el primero (que gasta el Gasto anual configurado) se recalcula el gasto como la Tasa de retiro objetivo aplicada a la cartera líquida de ese momento, pero el resultado se acota entre un suelo y un techo definidos como % del gasto base. Con los valores por defecto (gasto 60.000 €, SWR 3,25 %, suelo 90 %, techo 125 %): suelo = 54.000 €, techo = 75.000 €. Si la cartera ha subido a 2.500.000 €, el 3,25 % serían 81.250 €/año pero el techo lo recorta a 75.000 €/año; si la cartera ha caído a 1.000.000 €, el 3,25 % serían 32.500 €/año pero el suelo lo sube a 54.000 €/año.</p>
       <div class="ctrl">
@@ -985,6 +992,8 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Por encima de este % del gasto base el gasto nunca sube, aunque la cartera vaya muy bien. Con el 125 % por defecto, el techo es 75.000 €/año — limita el gasto en mercados alcistas para no comprometer la sostenibilidad futura de la cartera.</p>
         <input type="range" id="fcCeiling" min="100" max="200" step="5">
       </div>
+      </div>
+      <div class="wdPhase" data-wd="5">
       <p class="subhead">Yield Shield</p>
       <p class="hint">Aproximación a la táctica difundida por Millennial Revolution: durante los primeros años tras el FIRE solo gastas lo que "rinde" la cartera (un % de su valor), nunca más que tu gasto normal configurado; pasados esos años, el gasto vuelve a ser el gasto base fijo, igual que "SWR fijo". Ejemplo con los valores por defecto (gasto 60.000 €, rendimiento objetivo 4 %): con una cartera de 1.200.000 € el rendimiento sería 48.000 €/año, así que ese año gastas 48.000 € (por debajo de lo normal); con una cartera de 2.000.000 € el rendimiento sería 80.000 €/año, pero el gasto sigue topado en 60.000 €/año (nunca por encima del gasto normal). Es una táctica pensada para sortear temporalmente una mala racha del mercado nada más jubilarte, no una regla permanente — y el modelo no distingue dividendos de plusvalías, así que "rendimiento" aquí es simplemente un % de la cartera total, no solo su renta.</p>
       <div class="ctrl">
@@ -996,6 +1005,7 @@ section[id],#notas{scroll-margin-top:88px}
         <div class="row"><label for="ysYield">Rendimiento objetivo (% de la cartera)</label><output id="ysYield_o" for="ysYield"></output></div>
         <p class="hint">% de la cartera líquida que se considera "rendimiento disponible" cada año durante la duración de Yield Shield. Con el 4 % por defecto y una cartera de 1.500.000 €, el gasto de ese año sería 60.000 € (coincide con el gasto base en este ejemplo porque 4 % de 1.500.000 € es exactamente 60.000 €).</p>
         <input type="range" id="ysYield" min="1" max="8" step="0.25">
+      </div>
       </div>
       <p class="subhead">Prime Harvesting</p>
       <p class="hint">Aproximación a la técnica de McClung: un interruptor independiente de la "Estrategia" elegida en esta misma sección, que decide de dónde sale el dinero, no cuánto se gasta. Con Prime Harvesting activo, cada retirada sigue drenando primero efectivo y bonos (vCash/vCons) y solo recurre a la renta variable cuando esos dos se agotan (el mismo orden que ya usa la cascada de retirada por defecto). Además, una vez al año tras el FIRE, si la renta variable ha crecido un 20 % o más en términos reales desde el momento del FIRE, se vende automáticamente un 20 % de esa renta variable y se traspasa a la cartera conservadora (vCons), recogiendo beneficios de forma sistemática. Ejemplo: si al jubilarte tenías 1.000.000 € en renta variable, en cuanto llegue a 1.200.000 € se traspasan 240.000 € a bonos/efectivo ese año. Solo decide el origen del dinero, no evita la ruina por sí sola — para que tenga margen de maniobra conviene mantener un 30-40 % de la cartera en bonos/efectivo.</p>
@@ -1320,6 +1330,8 @@ const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
 const END_YEAR = 2107, END_MONTH = 12;          // maximum supported simulation date
 const FS1_GAP = 10400;
+// Shared by paintLabels' calc summary and renderPrintAssumptions' printed row.
+const STRAT_NAMES = ['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go','VPW (Bogleheads)','Suelo y techo (Bengen)','Yield Shield'];
 const MONTHS = (END_YEAR-START_YEAR)*12+(END_MONTH-START_MONTH)+1;
 
 const ids = Object.keys(DEFAULTS);
@@ -1449,6 +1461,17 @@ function syncAllocation(){
   if(Number(bonds.value)!==b) bonds.value=String(b);
   eq.disabled=true;
   eq.value=String(100-c-b);
+}
+// Shows only the PRO · Estrategia de retirada sub-section that matches the selected
+// wdStrategy (its sliders are the only ones that affect the result for that strategy);
+// "SWR fijo" (0) has no sub-section of its own, and the independent Prime Harvesting
+// toggle is never hidden since it can combine with any of the six strategies.
+function syncWdStrategy(){
+  if(!el.wdStrategy) return;
+  const selected=String(Math.round(Number(el.wdStrategy.value)));
+  document.querySelectorAll('.wdPhase').forEach(phase=>{
+    phase.hidden = phase.getAttribute('data-wd')!==selected;
+  });
 }
 // Keeps the child spending interval non-empty: the end age is always above the start age.
 function syncChildAges(){
@@ -1749,8 +1772,10 @@ function simulate(p, paths){
       // Bogleheads VPW plans to age 100: planning only to the end age would withdraw 100 %
       // in the last year and report a planned depletion as ruin.
       const yearsLeft=Math.max(1, Math.max(100, p.horizonAge)-ageAtMonth);
-      const base=riskyNow+safeNow;
-      const rWeighted=base>0 ? (riskyNow*0.05+safeNow*0.018)/base : 0;
+      // Weighted against totalNow itself (not just riskyNow+safeNow) so every bucket that
+      // isn't bonds/cash — including vProv, which grows/spends at the equity rate — counts
+      // as risky, consistent with the totalNow the resulting rate is applied to.
+      const rWeighted=totalNow>0 ? ((totalNow-safeNow)*0.05+safeNow*0.018)/totalNow : 0;
       return totalNow*NavlogCore.vpwRate(rWeighted, yearsLeft);
     }
     if(strat===4) return NavlogCore.floorCeilingWithdrawal(totalNow, p.swr, p.gasto, p.fcFloor, p.fcCeiling);
@@ -1990,7 +2015,13 @@ function simulate(p, paths){
         }
         // This is an involuntary career exit, never a voluntary FIRE success. It still
         // starts drawdown so the payout/portfolio can be evaluated honestly.
-        retired=true; licenseLossPath=true; fireMonth[k]=i; curSpendAnnual=p.gasto;
+        retired=true; licenseLossPath=true; fireMonth[k]=i;
+        primeHarvestE0=vEq;
+        // Same first-year spend rule as a voluntary or mandatory exit: VPW/Yield Shield
+        // apply their own formula from year 0, floor & ceiling's initial withdrawal is
+        // the plain configured spend (only later years get clamped), and 0/1/2 always
+        // start from the plain spend.
+        curSpendAnnual = strat===4 ? p.gasto : annualSpendFor(strat, vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0), vEq+vBtc+(goldActive?vGold:0), vCons+vCash, 0, p.ageNow+i/12);
       }
       if(lolFeatureActive && lolTriggered && p.lolPayoutMode===1 && i<lolReplaceEndMonth) net+=lolReplaceMonthlyAmt;
 
@@ -2136,11 +2167,12 @@ function simulate(p, paths){
           wd=(p.gasto/12)*mult;
         } else {
           // strat 3 (VPW), 4 (floor & ceiling), 5 (Yield Shield): the first year's spend
-          // was already set above when retirement started; recompute once a year from
-          // then on (monthsSinceRetire never reaches 0 in this branch — see the comment
-          // by the fireMonth-crossing block above — so this only fires at 12, 24, ...).
+          // was already set above when retirement started (voluntary, mandatory, or a
+          // Loss-of-License forced exit — the latter can reach this same branch in its
+          // own retirement month, unlike the other two); recompute once a year from
+          // then on, at 12, 24, ... never again at 0.
           const monthsSinceRetire=i-fireMonth[k];
-          if(monthsSinceRetire%12===0){
+          if(monthsSinceRetire>0 && monthsSinceRetire%12===0){
             const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
             const riskyNow=vEq+vBtc+(goldActive?vGold:0), safeNow=vCons+vCash;
             curSpendAnnual=annualSpendFor(strat,totalNow,riskyNow,safeNow,yearsSinceFire,ageNow);
@@ -3236,7 +3268,9 @@ function renderPrintAssumptions(p, pathsUsed){
     ['Edad actual / final',p.ageNow+' / '+p.horizonAge],['Gasto anual al jubilarte',eur(p.gasto)],['Tasa de retiro',p.swr.toFixed(2)+' %'],
     ['Rentabilidad / volatilidad de la bolsa',p.ret.toFixed(1)+' % / '+p.vol.toFixed(1)+' %'],
     ['Asignación efectivo / bonos / acciones',p.allocCash+' % / '+p.allocBonds+' % / '+p.allocEquities+' %'],
-    ['Modo PRO',yesNo(p.proMode)],['Fiscalidad ES',yesNo(p.proMode&&p.taxOn)+(p.proMode&&p.taxOn&&p.useIrpfBrackets?' (tramos)':'')],
+    ['Modo PRO',yesNo(p.proMode)],
+    ['Estrategia de retirada',p.proMode?STRAT_NAMES[Math.round(p.wdStrategy)]+(p.phOn?' + Prime Harvesting':''):'SWR fijo (modo simple)'],
+    ['Fiscalidad ES',yesNo(p.proMode&&p.taxOn)+(p.proMode&&p.taxOn&&p.useIrpfBrackets?' (tramos)':'')],
     ['Ley Beckham',yesNo(p.proMode&&p.beckhamOn)],['Impuesto de patrimonio',yesNo(p.proMode&&p.wealthTaxOn)]
   ];
   const nodes=[];
@@ -3249,7 +3283,7 @@ function summarizeContribution(series){
   const last=Array.isArray(series) && series.length ? series[series.length-1] : null;
   if(!last || !Number.isFinite(last.p50)) return 'Sin datos de aportaciones todavía.';
   const contrib=Math.max(0,Math.min(Number.isFinite(last.contrib50)?last.contrib50:0,last.p50)), growth=last.p50-contrib;
-  return 'Ruta mediana en '+last.year+': patrimonio total '+eurK(last.p50)+', de los cuales aportado '+eurK(contrib)+' y rendimiento '+eurK(growth)+'. La tabla siguiente detalla cada año.';
+  return 'Ruta mediana en '+last.year+': patrimonio total '+eurK(last.p50)+', de los cuales aportado '+eurK(contrib)+' y rendimiento '+eurK(growth)+'. La tabla de aportaciones y rendimiento detalla cada año.';
 }
 
 function renderOutcomeDashboard(counts, pathsUsed){
@@ -3260,7 +3294,7 @@ function renderOutcomeDashboard(counts, pathsUsed){
   // the second row is a SUBSET of the first, shown as a share of voluntary FIRE.
   const entries=[
     ['FIRE voluntario',counts.voluntary,pct(counts.voluntary)],
-    ['de ellos, ruina después del FIRE (incluida en la fila anterior)',counts.voluntaryRuined,counts.voluntary ? Math.round(counts.voluntaryRuined/counts.voluntary*100)+' % de FIRE voluntario' : 'sin cohorte'],
+    ['de ellos, ruina después del FIRE (incluida en el total de FIRE voluntario)',counts.voluntaryRuined,counts.voluntary ? Math.round(counts.voluntaryRuined/counts.voluntary*100)+' % de FIRE voluntario' : 'sin cohorte'],
     ['Salida forzosa',counts.forced,pct(counts.forced)],
     ['Pérdida de licencia',counts.licenseLoss,pct(counts.licenseLoss)],
     ['Ruina antes de llegar al FIRE',counts.preFireRuin,pct(counts.preFireRuin)],
@@ -3403,8 +3437,7 @@ async function run(mode){
   if(p.histMarketOn) calcTxt+=' · bolsa: bootstrap histórico real 1928-2025 (no teórico)';
   if(p.mandatoryRetireOn) calcTxt+=' · jubilación forzosa a los '+p.mandatoryRetireAge+' sin objetivo: '+Math.round(forcedOutRate*100)+' %';
   if(p.proMode){
-    const stratNames=['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go','VPW (Bogleheads)','Suelo y techo (Bengen)','Yield Shield'];
-    calcTxt+=' · PRO: estrategia '+stratNames[Math.round(p.wdStrategy)];
+    calcTxt+=' · PRO: estrategia '+STRAT_NAMES[Math.round(p.wdStrategy)];
     if(p.phOn) calcTxt+=' + Prime Harvesting';
     if(p.taxOn) calcTxt+=' · fiscalidad ES activa ('+(p.useIrpfBrackets?'tramos progresivos del ahorro 19-30 %':'tipo medio '+p.taxRate.toFixed(1)+'%')+', repat. +'+p.taxRepatDelay+'a)';
     // Ordering is decided per month: flat-rate mode compares the two configured rates;
@@ -3473,6 +3506,7 @@ if(el.allocCash) el.allocCash.addEventListener('input',syncAllocation);
 if(el.allocBonds) el.allocBonds.addEventListener('input',syncAllocation);
 if(el.childStartAge) el.childStartAge.addEventListener('input',syncChildAges);
 if(el.childEndAge) el.childEndAge.addEventListener('input',syncChildAges);
+if(el.wdStrategy) el.wdStrategy.addEventListener('input',syncWdStrategy);
 
 ids.forEach(k=>{
   const n=el[k]; if(!n) return;
@@ -3523,6 +3557,7 @@ document.getElementById('reset').addEventListener('click',()=>{
   syncHorizonControl();
   syncAllocation();
   syncChildAges();
+  syncWdStrategy();
   safeRun('full');
 });
 
@@ -3709,6 +3744,7 @@ function loadScenario(id){
   syncHorizonControl();
   syncAllocation();
   syncChildAges();
+  syncWdStrategy();
   const finalValues={}; Object.keys(intended).forEach(k=>{ finalValues[k]=el[k].value; });
   showScenarioMsg(describeAdjustedValues(intended,finalValues));
   initVisibleLabels();
@@ -3796,6 +3832,7 @@ document.body.classList.toggle('pro',DEFAULTS.proMode);
 syncHorizonControl();
 syncAllocation();
 syncChildAges();
+syncWdStrategy();
 initVisibleLabels();
 safeRun('full').catch(e=>{
   // Keep the controls usable and values visible even if a browser-specific runtime issue occurs.
