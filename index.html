@@ -423,7 +423,7 @@ section[id],#notas{scroll-margin-top:88px}
       </thead>
       <tbody id="ruinTable"></tbody>
     </table>
-    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación, sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener 30 años de margen antes de 2092, así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
+    <p class="hint">De las rutas que llegaron a FIRE, qué porcentaje ya se ha quedado sin dinero a los N años de jubilarse — no al final del horizonte de la simulación, sino contando desde la fecha de FIRE de cada ruta. "n" es cuántas rutas tenían suficiente horizonte restante para comprobarlo a ese plazo: las que se jubilan tarde no llegan a tener, por ejemplo, 30 años de margen antes de tu «Edad final», así que no cuentan ahí ni a favor ni en contra — "muestra insuficiente" cuando quedan demasiado pocas para que la cifra signifique algo.</p>
   </section>
 
   <section>
@@ -1036,17 +1036,8 @@ section[id],#notas{scroll-margin-top:88px}
     </div>
 
     <div class="group pro-only">
-      <h3>PRO · Esperanza de vida y FIRE parcial</h3>
-      <p class="grouphint">Por defecto el dinero tiene que durar hasta una edad muy alta (~94 años) aunque no vayas a vivir tanto, y se asume que al jubilarte el ingreso cae a cero de golpe. Aquí puedes acotar el horizonte a tu esperanza de vida real y modelar que sigas ganando algo tras el FIRE.</p>
-      <div class="toggle">
-        <input type="checkbox" id="lifeExpOn">
-        <label for="lifeExpOn">Limitar el horizonte a tu esperanza de vida</label>
-      </div>
-      <div class="ctrl" style="margin-top:14px">
-        <div class="row"><label for="lifeExp">Esperanza de vida (edad)</label><output id="lifeExp_o" for="lifeExp"></output></div>
-        <p class="hint">A partir de esa edad, cada ruta deja de necesitar retirar dinero de la cartera — lo que quede sigue invertido, como una herencia. "Ruina" pasa a significar quedarte sin fondos antes de esa edad, no antes de 2092.</p>
-        <input type="range" id="lifeExp" min="70" max="100" step="1">
-      </div>
+      <h3>PRO · FIRE parcial</h3>
+      <p class="grouphint">Por defecto se asume que al jubilarte el ingreso cae a cero de golpe. Aquí puedes modelar que sigas ganando algo tras el FIRE. Hasta qué edad tiene que durar el dinero se fija en «Edad final», en Tú y el horizonte.</p>
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="baristaOn">
         <label for="baristaOn">Ingreso parcial tras el FIRE (Barista FIRE)</label>
@@ -1235,8 +1226,7 @@ const DEFAULTS = {
   startGold:0, goldRet:1.5, goldVol:15, goldRho:-10, goldAporte:0,
   reOn:false, reValue:0, reYield:3.5, reAppr:1, reCountsFire:false,
   glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4,
-  // esperanza de vida y FIRE parcial
-  lifeExpOn:false, lifeExp:90,
+  // FIRE parcial
   baristaOn:false, baristaIncome:12000, baristaYears:5
 };
 
@@ -1559,7 +1549,6 @@ function paintLabels(p){
   set('glideEqFloor',p.glideEqFloor.toFixed(0)+' %');
   set('consRet',p.consRet.toFixed(2)+' %');
   set('consVol',p.consVol.toFixed(1)+' %');
-  set('lifeExp',p.lifeExp+' años');
   set('baristaIncome',eur(p.baristaIncome)+'/año');
   set('baristaYears',p.baristaYears+(p.baristaYears===1?' año':' años'));
 }
@@ -1667,10 +1656,8 @@ function simulate(p, paths){
   // Mortgage balance amortizes in a straight line to 0 by the end of hipEnd's year.
   const mortgageMonths=Math.max(1, monthIndex(p.hipEnd,12)+1);
   const strat=p.proMode ? Math.round(p.wdStrategy) : 0;
-  const lifeActive=p.proMode && p.lifeExpOn;
   // yearFrac(i) is exactly i/12 by construction of monthIndex, so the month a given
   // age is reached is just (age-ageNow)*12 — no need to walk MONTH_DATES for this.
-  const lifeMonth=lifeActive ? Math.round((p.lifeExp-p.ageNow)*12) : Infinity;
   // Mandatory retirement age: a core career assumption (like profitShareWeeks/
   // profitShareWeeks), not a Modo PRO toggle. Off by default — no single "correct" age
   // is asserted (ICAO Annex 1 caps multi-crew ops at 65, but a carrier's own
@@ -1943,7 +1930,7 @@ function simulate(p, paths){
       const lumpNet=p.lumpSums.reduce((sum,event)=>sum+(event.year===d.y&&event.month===d.m?event.amount:0),0);
       // Computed here (not just inside the retirement branch below) so the wealth
       // tax check further down — which runs regardless of the retired/working
-      // branch, and even past the esperanza de vida cutoff — can also see whether
+      // branch — can also see whether
       // the Ley Beckham window is still open.
         let inBeckham=NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,i,p.beckhamYears);
 
@@ -2021,14 +2008,11 @@ function simulate(p, paths){
           if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           curSpendAnnual=p.gasto;
         }
-      } else if(!ruinedPath && (!lifeActive || i<=lifeMonth)){
+      } else if(!ruinedPath){
         // Replacement income is cash flow, not a tax-free balance adjustment: invest
         // it first, then let the ordinary withdrawal cover expenses for this month.
         if(net>0){ vEq+=net*alloc.equities/100; basisEq+=net*alloc.equities/100; vCons+=net*alloc.bonds/100; basisCons+=net*alloc.bonds/100; vCash+=net*alloc.cash/100; basisCash+=net*alloc.cash/100; }
         // Retirement phase: real annual retirement spend, inflation already stripped.
-        // Past lifeMonth (esperanza de vida) this whole block is skipped: no more
-        // withdrawals, no more ruin risk — the balance just keeps compounding, like
-        // an inheritance, because you don't need money you'll never spend.
         const yearsSinceFire=(i-fireMonth[k])/12;
         let wd;
         if(strat===0){
@@ -3266,7 +3250,7 @@ async function run(mode){
   const licenseLossRate=pathsUsed?licenseLossCount/pathsUsed:0;
   renderOutcomeDashboard(cohortCounts,pathsUsed);
 
-  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1), p.proMode&&p.lifeExpOn ? Math.round((p.lifeExp-p.ageNow)*12)+1 : Infinity));
+  const ruinCurve=buildRuinCurve(r, pathsUsed, Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1)));
   renderRuinTable(ruinCurve);
   ruinChart.update(ruinCurve, null);
 
@@ -3290,7 +3274,6 @@ async function run(mode){
     if(p.fxVolOn) calcTxt+=' · FX estocástico';
     if(p.inflOn) calcTxt+=' · inflación estocástica';
     if(p.glideOn) calcTxt+=' · glide path activo';
-    if(p.lifeExpOn) calcTxt+=' · horizonte limitado a esperanza de vida '+p.lifeExp+' años';
     if(p.baristaOn) calcTxt+=' · ingreso parcial tras FIRE ('+eurK(p.baristaIncome)+'/año, '+p.baristaYears+'a)';
   }
   document.getElementById('calc').textContent=calcTxt;

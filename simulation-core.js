@@ -300,11 +300,15 @@
   }
   // Scenarios saved before `gratuityYears` was replaced by the automatic gratuity-vs-Provident
   // comparison: the key is dropped so it neither fails validation nor double-counts.
+  // Also folds the removed life-expectancy control into the end age: when it was on, the
+  // simulation effectively ended at the lower of the two ages.
+  const LEGACY_KEYS = ['gratuityYears', 'lifeExpOn', 'lifeExp'];
   function migrateLegacyParams(params) {
     const child = migrateLegacyChildParams(params);
-    if (!child || typeof child !== 'object' || Array.isArray(child) || !('gratuityYears' in child)) return child;
+    if (!child || typeof child !== 'object' || Array.isArray(child) || !LEGACY_KEYS.some(key => key in child)) return child;
     const migrated = {};
-    for (const [key, value] of Object.entries(child)) if (key !== 'gratuityYears') migrated[key] = value;
+    for (const [key, value] of Object.entries(child)) if (!LEGACY_KEYS.includes(key)) migrated[key] = value;
+    if (child.lifeExpOn === true && Number.isFinite(child.lifeExp) && Number.isFinite(child.horizonAge)) migrated.horizonAge = Math.min(child.horizonAge, child.lifeExp);
     return migrated;
   }
   function migrateLegacyChildParams(params) {

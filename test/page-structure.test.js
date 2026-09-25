@@ -51,7 +51,7 @@ const EXPECTED_IDS = [
   'goldVol', 'goldRho_o', 'goldRho', 'goldAporte_o', 'goldAporte', 'reOn', 'reValue_o', 'reValue',
   'reYield_o', 'reYield', 'reAppr_o', 'reAppr', 'reCountsFire', 'glideOn', 'glideTargetYear_o', 'glideTargetYear',
   'glideStartYears_o', 'glideStartYears', 'glideEqFloor_o', 'glideEqFloor', 'consRet_o', 'consRet', 'consVol_o', 'consVol',
-  'lifeExpOn', 'lifeExp_o', 'lifeExp', 'baristaOn', 'baristaIncome_o', 'baristaIncome', 'baristaYears_o', 'baristaYears',
+  'baristaOn', 'baristaIncome_o', 'baristaIncome', 'baristaYears_o', 'baristaYears',
   'gasto_o', 'gasto', 'swr_o', 'swr', 'reset', 'seed', 'calc', 'calcAnnounce',
   'simulationContext', 'calcLoading',
 ];
@@ -138,7 +138,7 @@ test('Parametros is one section with the groups in the agreed order', () => {
     'Objetivo', 'Tú y el horizonte', 'Carrera', 'Gastos', 'Ingresos en jubilación', 'Reparto de la cartera básica',
     'Cartera hoy', 'Liquidaciones', 'Fondo de previsión', 'Mercado',
     'PRO · Fiscalidad España', 'PRO · Riesgo de pérdida de licencia (LOL)', 'PRO · Inflación y FX estocásticos',
-    'PRO · Estrategia de retirada', 'PRO · Activos y allocation adicionales', 'PRO · Esperanza de vida y FIRE parcial',
+    'PRO · Estrategia de retirada', 'PRO · Activos y allocation adicionales', 'PRO · FIRE parcial',
   ], 'h3 order in Parametros');
   assert.equal((section.match(/<h2>/g) || []).length, 1, 'one h2 in Parametros');
   assert.equal((section.match(/class="group pro-only"/g) || []).length, 6);
@@ -175,7 +175,7 @@ test('Parametros is one section with the groups in the agreed order', () => {
 
   const actionsAt = section.indexOf('<div class="actions">');
   const actions = section.slice(actionsAt);
-  assert.ok(actionsAt > groupStart('PRO · Esperanza de vida y FIRE parcial'), 'actions come last');
+  assert.ok(actionsAt > groupStart('PRO · FIRE parcial'), 'actions come last');
   assert.ok(actions.indexOf('id="reset"') > -1 && actions.indexOf('id="seed"') > actions.indexOf('id="reset"'));
   for (const id of ['calc', 'calcAnnounce', 'simulationContext', 'calcLoading']) {
     assert.equal(actions.includes('id="' + id + '"'), false, '#' + id + ' left the actions row');
