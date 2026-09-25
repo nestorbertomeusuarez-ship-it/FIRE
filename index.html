@@ -972,7 +972,7 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="noGoMult" min="50" max="110" step="5">
       </div>
       <p class="subhead">VPW (Bogleheads)</p>
-      <p class="hint">Variable Percentage Withdrawal: cada año tras el FIRE (el primero, en el propio mes del FIRE) se recalcula el gasto anual como un % de la cartera líquida de ese momento. Ese % es la cuota de una "anualidad" que reparte la cartera entre los años que quedan hasta la Edad final, a una rentabilidad real esperada que pondera el reparto actual entre riesgo (acciones+BTC+oro, 5 %/año) y activos conservadores (bonos+efectivo, 1,8 %/año). Ejemplo con los valores por defecto: una cartera 70/30 riesgo/conservador da una r ponderada del 4,04 %; con 30 años restantes hasta la Edad final eso es un 5,59 % de la cartera ese año (con 1.000.000 € de cartera, 55.855 €). A diferencia de "SWR fijo", el gasto no es una cantidad fija sino un % de lo que quede, así que la cartera prácticamente nunca llega a 0 — pero a cambio el ingreso sube y baja con el mercado, incluso de un año para otro.</p>
+      <p class="hint">Variable Percentage Withdrawal: cada año tras el FIRE (el primero, en el propio mes del FIRE) se recalcula el gasto anual como un % de la cartera líquida de ese momento. Ese % es la cuota de una "anualidad" que reparte la cartera entre los años que quedan hasta los 100 años (como la tabla de Bogleheads; o hasta tu Edad final si es mayor), a una rentabilidad real esperada que pondera el reparto actual entre riesgo (acciones+BTC+oro, 5 %/año) y activos conservadores (bonos+efectivo, 1,8 %/año). Ejemplo con los valores por defecto: una cartera 70/30 riesgo/conservador da una r ponderada del 4,04 %; con 30 años restantes (por ejemplo, a los 70) eso es un 5,59 % de la cartera ese año (con 1.000.000 € de cartera, 55.855 €). A diferencia de "SWR fijo", el gasto no es una cantidad fija sino un % de lo que quede, así que la cartera prácticamente nunca llega a 0 — pero a cambio el ingreso sube y baja con el mercado, incluso de un año para otro.</p>
       <p class="subhead">Suelo y techo (Bengen)</p>
       <p class="hint">Cada año tras el primero (que gasta el Gasto anual configurado) se recalcula el gasto como la Tasa de retiro objetivo aplicada a la cartera líquida de ese momento, pero el resultado se acota entre un suelo y un techo definidos como % del gasto base. Con los valores por defecto (gasto 60.000 €, SWR 3,25 %, suelo 90 %, techo 125 %): suelo = 54.000 €, techo = 75.000 €. Si la cartera ha subido a 2.500.000 €, el 3,25 % serían 81.250 €/año pero el techo lo recorta a 75.000 €/año; si la cartera ha caído a 1.000.000 €, el 3,25 % serían 32.500 €/año pero el suelo lo sube a 54.000 €/año.</p>
       <div class="ctrl">
@@ -1742,11 +1742,13 @@ function simulate(p, paths){
   // is safe to call with each path's own current bucket totals.
   function annualSpendFor(strat, totalNow, riskyNow, safeNow, yearsSinceFireNow, ageAtMonth){
     if(strat===3){
-      // VPW: pct = annuity-due PMT rate over the years left to horizonAge, at a real
+      // VPW: pct = annuity-due PMT rate over the years left to age 100, at a real
       // return weighted by the current risky (equities+BTC+gold) vs safe (bonds+cash)
       // split. With no risky or safe money at all (everything in vProv/RE) fall back
       // to r=0, i.e. spend the remainder in equal annual instalments.
-      const yearsLeft=Math.max(1, p.horizonAge-ageAtMonth);
+      // Bogleheads VPW plans to age 100: planning only to the end age would withdraw 100 %
+      // in the last year and report a planned depletion as ruin.
+      const yearsLeft=Math.max(1, Math.max(100, p.horizonAge)-ageAtMonth);
       const base=riskyNow+safeNow;
       const rWeighted=base>0 ? (riskyNow*0.05+safeNow*0.018)/base : 0;
       return totalNow*NavlogCore.vpwRate(rWeighted, yearsLeft);

@@ -91,20 +91,23 @@ for (const [strat, name] of [[3, 'VPW'], [4, 'floor & ceiling'], [5, 'Yield Shie
 test('strat 3 (VPW): first-snapshot spend matches totalAtFire * vpwRate(rWeighted, yearsLeft)', () => {
   // allocCash 10/allocBonds 20/allocEquities 70 -> riskyNow=840,000 (equities),
   // safeNow=360,000 (bonds+cash) out of a 1,200,000 portfolio -> rWeighted = 0.0404,
-  // yearsLeft = horizonAge(90) - ageNow(28) = 62.
+  // yearsLeft = max(100, horizonAge 90) - ageNow(28) = 72 (VPW plans to age 100).
   const totalAtFire = 1200000;
   const rWeighted = (840000 * 0.05 + 360000 * 0.018) / totalAtFire;
-  const annual = totalAtFire * core.vpwRate(rWeighted, 62);
+  const annual = totalAtFire * core.vpwRate(rWeighted, 72);
   const expected = totalAtFire - 3 * (annual / 12);
   const result = simulate({ ...flat, wdStrategy: 3 }, 1);
   assert.ok(Math.abs(result.series[0].p50 - expected) < 1, `expected ~${expected}, got ${result.series[0].p50}`);
 });
 
-test('strat 3 (VPW): a shorter horizon spends faster than a longer one (higher pct of a smaller n)', () => {
-  // Both retire at i=0 with the same 1,200,000 portfolio; only horizonAge (and so
-  // yearsLeft) differs, giving each a different vpwRate and thus a different spend.
-  const shortHorizon = simulate({ ...flat, wdStrategy: 3, horizonAge: 40 }, 1).series.map(x => x.p50);
-  const longHorizon = simulate({ ...flat, wdStrategy: 3, horizonAge: 100 }, 1).series.map(x => x.p50);
+test('strat 3 (VPW): an end age beyond 100 extends the plan (lower pct, slower spending)', () => {
+  // VPW plans to age 100; only an end age above 100 lengthens the plan. An end age below
+  // 100 must not change the spending rate at all.
+  const at90 = simulate({ ...flat, wdStrategy: 3, horizonAge: 90 }, 1).series.map(x => x.p50);
+  const at60 = simulate({ ...flat, wdStrategy: 3, horizonAge: 60 }, 1).series.map(x => x.p50);
+  assert.equal(at60[2], at90[2], 'end ages below 100 all plan to 100');
+  const shortHorizon = at90;
+  const longHorizon = simulate({ ...flat, wdStrategy: 3, horizonAge: 108 }, 1).series.map(x => x.p50);
   assert.ok(shortHorizon[2] < longHorizon[2], 'a shorter horizon leaves less wealth at the same early snapshot');
 });
 
@@ -202,3 +205,9 @@ test('paintLabels lists all six wdStrategy names, and no position-dependent word
 });
 
 console.log('withdrawal-strategies.test.js: all assertions passed');
+
+test('VPW plans to age 100 like Bogleheads, so it never empties the portfolio at the end age', () => {
+  const r = simulate({ ...DEFAULTS, seed: 9, proMode: true, wdStrategy: 3 }, 400);
+  const ruined = [...r.ruinMonth].filter(m => m >= 0).length;
+  assert.ok(ruined <= 4, `VPW should almost never run out, got ${ruined}/400 ruined paths`);
+});
