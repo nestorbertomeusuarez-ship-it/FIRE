@@ -307,6 +307,26 @@
       return normalizeScenarios(scenarios, allowedKeys, colors, max);
     } catch (_) { return []; }
   }
+  // Variable Percentage Withdrawal (Bogleheads): the annuity-due PMT rate that spends
+  // exactly the portfolio down to zero over `n` years at a constant real return `r`
+  // (Excel PMT(r,n,-1,0,1) expressed as a withdrawal fraction of the current balance).
+  // n=1 always returns 1 (spend everything in the last year) for any r; r=0 degenerates
+  // to a plain 1/n equal split, which is also the limit of the general formula as r->0.
+  function vpwRate(r, n) {
+    const years = Math.max(1, Math.round(Number(n) || 1));
+    const rate = Number(r) || 0;
+    if (Math.abs(rate) < 1e-12) return 1 / years;
+    return rate / ((1 + rate) * (1 - Math.pow(1 + rate, -years)));
+  }
+  // Floor & ceiling (Bengen): a percentage-of-portfolio withdrawal clamped to a band
+  // around a fixed real base (the initial retirement spend), so a market crash cannot
+  // force spending below the floor and a boom cannot inflate it past the ceiling.
+  function floorCeilingWithdrawal(portfolio, ratePct, base, floorPct, ceilingPct) {
+    const raw = Math.max(0, Number(portfolio) || 0) * (Number(ratePct) || 0) / 100;
+    const floor = Math.max(0, Number(base) || 0) * (Number(floorPct) || 0) / 100;
+    const ceiling = Math.max(0, Number(base) || 0) * (Number(ceilingPct) || 0) / 100;
+    return Math.min(ceiling, Math.max(floor, raw));
+  }
   function providentFirst(providentRate, savingsBuckets, ytdGain) {
     const availableRates = (savingsBuckets || []).filter(bucket => bucket && bucket.balance > 0).map(bucket => {
       const gainFraction = Math.max(0, Math.min(1, 1 - bucket.basis / bucket.balance));
@@ -354,5 +374,5 @@
     if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
     return migrated;
   }
-  return { gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams };
+  return { gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
 });
