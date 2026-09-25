@@ -1592,11 +1592,14 @@ function simulate(p, paths){
         // Gratuity is realized right when you leave the company, so it can count
         // toward crossing the target that same month — a real departure lump sum,
         // not money you already had.
-        const gratuityEUR=gratuityActive ? gratuityCappedDays*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
+        // Emirates pays the gratuity OR the Provident balance, whichever is higher: the Provident
+        // is already in `total`, so only the shortfall of the gratuity over it is added.
+        const gratuityFullEUR=gratuityActive ? gratuityCappedDays*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
+        const gratuityEUR=p.provOn ? Math.max(0, gratuityFullEUR-vProv) : gratuityFullEUR;
         if(total+gratuityEUR>=target && !ruinedPath){
           retired=true;
           fireMonth[k]=i;
-          if(gratuityActive) vEq+=gratuityEUR;
+          if(gratuityEUR>0) vEq+=gratuityEUR;
           curSpendAnnual=p.gasto;
         }
       } else if(!lifeActive || i<=lifeMonth){
