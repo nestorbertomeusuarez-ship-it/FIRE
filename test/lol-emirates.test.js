@@ -24,7 +24,7 @@ test('an early LOL credits 36 months of first-officer basic salary to the portfo
   // difference between the two runs is the contractual Emirates benefit.
   const base = { ...DEFAULTS, seed: 5, proMode: true, lolOn: true, lolAgeCurveOn: false, lolAnnualProb: 100, lolPayoutMode: 0, lolPayout: 0, lolPremiumMonthly: 0,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, startEq: 0, startBtc: 0,
-    childAnnual: 0, vida: 0, hip: 0, gasto: 1, burr: 0, brOn: false, provOn: false, gratuityYears: 0, mandatoryRetireOn: false };
+    childAnnual: 0, vida: 0, hip: 0, gasto: 1, burr: 0, brOn: false, provOn: false, mandatoryRetireOn: false };
   const at2027 = r => r.series.find(x => x.year === 2027).p50;
   const withContract = at2027(simulate({ ...base, lolEmiratesOn: true }, 4));
   const without = at2027(simulate({ ...base, lolEmiratesOn: false }, 4));
@@ -36,10 +36,10 @@ test('age-based LOL risk follows the bathtub curve', () => {
   const { lolAnnualPctAtAge } = context.__test;
   assert.equal(lolAnnualPctAtAge(30), 0.1);
   assert.equal(lolAnnualPctAtAge(45), 0.3);
-  assert.ok(Math.abs(lolAnnualPctAtAge(52.5) - 0.65) < 1e-9, 'linear ramp between 50 and 55');
-  assert.equal(lolAnnualPctAtAge(55), 1);
-  assert.ok(lolAnnualPctAtAge(60) > 1.9 && lolAnnualPctAtAge(60) < 2.1, 'keeps rising past 55');
-  assert.equal(lolAnnualPctAtAge(90), 5, 'capped at 5 % per year');
+  assert.ok(Math.abs(lolAnnualPctAtAge(52.5) - 0.95) < 1e-9, 'linear ramp between 50 and 55');
+  assert.equal(lolAnnualPctAtAge(55), 1.6, 'FAA denial rate at 55-59 is ~1.6 %/year');
+  assert.equal(lolAnnualPctAtAge(60), 1.6, 'flat after 55 (healthy-worker effect), not exponential');
+  assert.equal(lolAnnualPctAtAge(64), 1.6);
 });
 
 test('with the age curve on, the flat probability slider is ignored', () => {

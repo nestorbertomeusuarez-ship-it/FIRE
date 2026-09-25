@@ -66,7 +66,7 @@ const rich = {
   taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0, provOn: true, taxRateProv: 8, beckhamOn: false,
   wealthTaxOn: true, wealthExempt: 300000, mortgageBalance: 50000, reOn: true, reValue: 300000, reCountsFire: true,
   lolOn: true, lolAnnualProb: 3, glideOn: true, glideTargetYear: 2040, fxVolOn: true, inflOn: true, histMarketOn: false,
-  baristaOn: true, lifeExpOn: true, lifeExp: 85, wdStrategy: 1, srrShockOn: true, profitShareWeeks: 6, gratuityYears: 8,
+  baristaOn: true, lifeExpOn: true, lifeExp: 85, wdStrategy: 1, srrShockOn: true, profitShareWeeks: 6,
   mandatoryRetireOn: true, mandatoryRetireAge: 50, pensionAnnual: 6000, pensionStartAge: 40, healthcareAnnual: 1500, healthcareStartAge: 40,
   childAnnual: 3000, childStartAge: 30, childEndAge: 35, lumpSums: '[{"year":2032,"month":3,"amount":-20000},{"year":2034,"month":8,"amount":15000}]',
   horizonAge: 80

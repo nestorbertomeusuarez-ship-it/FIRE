@@ -39,7 +39,7 @@ const EXPECTED_IDS = [
   'brNet', 'brStart_o', 'brStart', 'brYears_o', 'brYears', 'startEq_o', 'startEq', 'startBtc_o',
   'startBtc', 'btcRet_o', 'btcRet', 'btcVol_o', 'btcVol', 'btcRho_o', 'btcRho', 'btcAporte_o',
   'btcAporte', 'provOn', 'basicFO_o', 'basicFO', 'basicCA_o', 'basicCA', 'provCo_o', 'provCo',
-  'gratuityYears_o', 'gratuityYears', 'taxOn', 'useIrpfBrackets', 'taxRate_o', 'taxRate', 'taxRateProv_o', 'taxRateProv',
+  'taxOn', 'useIrpfBrackets', 'taxRate_o', 'taxRate', 'taxRateProv_o', 'taxRateProv',
   'burrTaxRate_o', 'burrTaxRate', 'taxRepatDelay_o', 'taxRepatDelay', 'beckhamOn', 'beckhamYears_o', 'beckhamYears', 'wealthTaxOn',
   'ccaaPreset_o', 'ccaaPreset', 'wealthExempt_o', 'wealthExempt', 'wealthRate_o', 'wealthRate', 'wealthBonusPct_o', 'wealthBonusPct',
   'mortgageBalance_o', 'mortgageBalance', 'lolOn', 'lolEmiratesOn', 'lolAgeCurveOn', 'lolAnnualProb_o', 'lolAnnualProb', 'lolPremiumMonthly_o', 'lolPremiumMonthly', 'lolPayoutMode_o',
