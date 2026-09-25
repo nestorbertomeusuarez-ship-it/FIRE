@@ -35,3 +35,15 @@ test('the backtest fee note is part of the backtest render, not a one-off append
   const render = html.slice(html.indexOf('function renderHistoricalBacktest'), html.indexOf('function renderHistoricalBacktest') + 2500);
   assert.match(render, /Coste de renta variable aplicado/);
 });
+
+test('sensitivity only tests portfolio costs in PRO mode', () => {
+  const start = html.indexOf('const SENSITIVITY_PARAMS');
+  const block = html.slice(start, html.indexOf('\n];', start));
+  for (const id of ['feeCash', 'feeCons', 'feeEq', 'feeBtc', 'feeGold', 'feeProv']) {
+    const line = block.split('\n').find(l => l.includes(`key:'${id}'`));
+    assert.match(line, /proOnly:true/, `${id} must be marked proOnly`);
+  }
+  const run = html.slice(html.indexOf('async function runSensitivity'), html.indexOf('async function runSensitivity') + 800);
+  assert.match(run, /proOnly/, 'runSensitivity must skip proOnly parameters outside PRO mode');
+  assert.match(html, /16 simulaciones sin el modo PRO/);
+});

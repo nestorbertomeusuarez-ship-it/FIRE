@@ -1109,7 +1109,7 @@ section[id],#notas{scroll-margin-top:88px}
     <button type="button" class="reset" id="runSensitivity">Calcular sensibilidad</button>
     <p class="calcLoading" id="sensLoading" style="display:none">Calculando…</p>
     <div class="sensList" id="sensList" aria-live="polite"></div>
-    <p class="hint"><b>Qué hace:</b> repite la simulación Monte Carlo moviendo un solo parámetro cada vez un margen razonable por encima y por debajo de su valor actual, con el resto sin tocar (28 simulaciones).<br><b>Qué te dice:</b> cuántos años adelanta o retrasa cada parámetro tu edad mediana de FIRE, de mayor a menor impacto. Así sabes dónde merece la pena afinar la estimación o dejar margen de seguridad, y dónde da igual acertar al milímetro.<br>Usa la precisión máxima, así que puede tardar de unos segundos a un par de minutos.</p>
+    <p class="hint"><b>Qué hace:</b> repite la simulación Monte Carlo moviendo un solo parámetro cada vez un margen razonable por encima y por debajo de su valor actual, con el resto sin tocar (28 simulaciones con el modo PRO; 16 simulaciones sin el modo PRO, porque los costes de cartera solo se aplican en PRO).<br><b>Qué te dice:</b> cuántos años adelanta o retrasa cada parámetro tu edad mediana de FIRE, de mayor a menor impacto. Así sabes dónde merece la pena afinar la estimación o dejar margen de seguridad, y dónde da igual acertar al milímetro.<br>Usa la precisión máxima, así que puede tardar de unos segundos a un par de minutos.</p>
   </section>
 
   <section>
@@ -2969,12 +2969,12 @@ async function runFullPrecision(p, onPathsKnown){
 const SENSITIVITY_PARAMS = [
   {key:'ret', label:'Rentabilidad real media (bolsa)', delta:1.5, min:2, max:9, fmt:v=>v.toFixed(1)+' %'},
   {key:'vol', label:'Volatilidad anual (bolsa)', delta:5, min:0, max:26, fmt:v=>v.toFixed(1)+' %'},
-  {key:'feeEq', label:'Coste anual renta variable', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %'},
-  {key:'feeCash', label:'Coste anual efectivo', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %'},
-  {key:'feeCons', label:'Coste anual bonos', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %'},
-  {key:'feeBtc', label:'Coste anual BTC', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %'},
-  {key:'feeGold', label:'Coste anual oro', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %'},
-  {key:'feeProv', label:'Coste anual Provident', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %'},
+  {key:'feeEq', label:'Coste anual renta variable', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %', proOnly:true},
+  {key:'feeCash', label:'Coste anual efectivo', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %', proOnly:true},
+  {key:'feeCons', label:'Coste anual bonos', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %', proOnly:true},
+  {key:'feeBtc', label:'Coste anual BTC', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %', proOnly:true},
+  {key:'feeGold', label:'Coste anual oro', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %', proOnly:true},
+  {key:'feeProv', label:'Coste anual Provident', delta:0.5, min:0, max:3, fmt:v=>v.toFixed(2)+' %', proOnly:true},
   {key:'btcRet', label:'Rentabilidad real media (BTC)', delta:3, min:-10, max:30, fmt:v=>v.toFixed(1)+' %'},
   {key:'vida', label:'Vida en Dubái (gasto mensual)', delta:p=>p.vida*0.1, min:1800, max:7000, fmt:v=>eur(v)+'/mes'},
   {key:'swr', label:'Tasa de retiro objetivo (SWR)', delta:0.25, min:2.4, max:4.6, fmt:v=>v.toFixed(2)+' %'},
@@ -3002,7 +3002,9 @@ async function runSensitivity(baseParams){
   const pathsFull=await calibratePathsFull(baseParams,'sensitivity');
   // A new sensitivity run supersedes whatever this dedicated worker was still doing.
   analysisJobs.cancelPending();
-  const jobs=SENSITIVITY_PARAMS.map(async def=>{
+  // Portfolio costs are PRO controls with no effect outside PRO mode, so they are only tested
+  // there. Seeds still come from the full list, so each parameter keeps its own paired seed.
+  const jobs=SENSITIVITY_PARAMS.filter(def=>!def.proOnly || baseParams.proMode).map(async def=>{
     const delta = typeof def.delta==='function' ? def.delta(baseParams) : def.delta;
     const base=baseParams[def.key];
     const pair=NavlogCore.boundedPair(base, delta, def.min, def.max);
