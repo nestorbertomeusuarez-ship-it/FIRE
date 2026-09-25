@@ -38,8 +38,10 @@ file is retained as a historical comparison and is not the canonical app.
   annual S&amp;P 500 real-return series embedded in `index.html`.
 - The starting liquid portfolio and new investable contributions are allocated across
   cash, bonds, and equities by the user-selected percentages. The model keeps that
-  target allocation for new money; it does not model periodic selling-based rebalancing,
-  fund fees, or asset-specific tax lots beyond its simplified gain-basis buckets.
+  target allocation for new money; it does not model periodic selling-based rebalancing
+  or asset-specific tax lots beyond its simplified gain-basis buckets. Configurable
+  annual costs apply to cash, bonds, equities, BTC, gold, and the Provident balance;
+  their median cumulative effect is included as `fee50` in the CSV projection rows.
 - Tax modeling is intentionally approximate. The savings-income bracket values
   embedded in `simulation-core.js` are labeled in `index.html` as
   illustrative 2024/2025 assumptions (documentation reviewed 2026-09-21); they
