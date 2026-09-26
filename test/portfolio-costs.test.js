@@ -14,7 +14,7 @@ const costs = { feeCash: 1, feeCons: 1, feeEq: 1.5, feeBtc: 2, feeGold: 1, feePr
 
 test('portfolio costs always reduce wealth, with no PRO switch involved', () => {
   // No profit sharing: extra income moves the FIRE date, which makes final wealth path-dependent.
-  const base = { ...DEFAULTS, seed: 3, profitShareWeeks: 0 };
+  const base = { ...DEFAULTS, seed: 3, profitShareWeeks: 0, childCount: 0, healthcareAnnual: 0 };
   const withCosts = p50({ ...base, ...costs }), without = p50(base);
   assert.ok(withCosts[withCosts.length - 1] < without[without.length - 1]);
 });

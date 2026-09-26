@@ -414,11 +414,38 @@
   function beckhamApplies(active, residentMonth, currentMonth, years) {
     return Boolean(active && residentMonth >= 0 && currentMonth >= residentMonth && currentMonth - residentMonth < years * 12);
   }
+  // Per-child monthly cost, in real EUR: a flat age-banded amount (0-2 / 3-17 / 18-22 / 23+; from age 3 the child is at school, so the nursery-heavy 0-2 band stops,
+  // in months so callers never need to divide by 12 first), plus:
+  //  - a school-fee amount for ages 3-17 while NOT working at Emirates (Emirates pays
+  //    schooling once the child turns 4, so this only matters after leaving);
+  //  - `fs1Cost` for age 3 only (months [36,48)) while working at Emirates: Emirates'
+  //    education allowance covers ages 4 up to the 19th birthday, so the FS1 (age-3) year is
+  //    a gap even while employed;
+  //  - `insuranceMonthlyEUR` while working at Emirates and the child is under 19 (Emirates
+  //    medical cover and the insurance premium both stop at the 19th birthday). It is an
+  //    already-FX-converted monthly figure, kept as a plain argument rather than folded into
+  //    `costs` so its FX conversion (which can vary month to month under stochastic FX) never
+  //    forces a fresh `costs` object to be allocated every month.
+  // `ageMonths` before birth (negative) always costs 0.
+  function childMonthlyCost(ageMonths, costs, workingAtEmirates, insuranceMonthlyEUR) {
+    const c = costs || {};
+    if (!Number.isFinite(ageMonths) || ageMonths < 0) return 0;
+    let monthly = ageMonths < 36 ? (Number(c.cost0to2) || 0) / 12
+      : ageMonths < 216 ? (Number(c.cost3to17) || 0) / 12
+      : ageMonths < 276 ? (Number(c.cost18to22) || 0) / 12
+      : 0;
+    if (ageMonths >= 36 && ageMonths < 216 && !workingAtEmirates) monthly += (Number(c.schoolCost) || 0) / 12;
+    if (ageMonths >= 36 && ageMonths < 48 && workingAtEmirates) monthly += (Number(c.fs1Cost) || 0) / 12;
+    if (workingAtEmirates && ageMonths < 228) monthly += Number(insuranceMonthlyEUR) || 0;
+    return monthly;
+  }
   // Backward compatibility for scenarios saved before the standalone `nur` (nursery-per-child,
-  // €/año, fixed calendar years) control was folded into the generic age-based child cost
-  // (childAnnual/childStartAge/childEndAge). Drops the legacy key either way, so an unknown
-  // `nur` never fails validScenario/import; when the scenario has no childAnnual of its own,
-  // its value and the equivalent default ages are carried over instead of being silently lost.
+  // €/año, fixed calendar years) control, and later the generic age-based
+  // childAnnual/childStartAge/childEndAge control, were replaced by the per-band child-cost
+  // model (childCost0to2/childCost3to17/childCost18to22/childSchoolCost/childInsuranceAED).
+  // All of these legacy keys are simply dropped (never mapped into the new controls): an
+  // unknown key would otherwise fail validScenario/import (see parameterType), and the new
+  // controls' own DEFAULTS already give a sensible value for any scenario that lacks them.
   // UAE end-of-service gratuity (Federal Decree-Law 33/2021): 21 days of basic pay per year for
   // the first 5 years, 30 days per year after that, nothing under 1 year, capped at 2 years' pay.
   function gratuityDays(years) {
@@ -435,7 +462,9 @@
   // comparison: the key is dropped so it neither fails validation nor double-counts.
   // Also folds the removed life-expectancy control into the end age: it only took effect in
   // PRO mode, and then the simulation effectively ended at the lower of the two ages.
-  const LEGACY_KEYS = ['gratuityYears', 'lifeExpOn', 'lifeExp'];
+  // `healthcareStartAge` is dropped too: healthcare now starts the month the household stops
+  // working at Emirates (see the `healthCost` computation in simulate()), not at a configured age.
+  const LEGACY_KEYS = ['gratuityYears', 'lifeExpOn', 'lifeExp', 'healthcareStartAge'];
   function migrateLegacyParams(params) {
     const child = migrateLegacyChildParams(params);
     if (!child || typeof child !== 'object' || Array.isArray(child) || !LEGACY_KEYS.some(key => key in child)) return child;
@@ -444,12 +473,12 @@
     if (child.proMode === true && child.lifeExpOn === true && Number.isFinite(child.lifeExp) && Number.isFinite(child.horizonAge)) migrated.horizonAge = Math.min(child.horizonAge, child.lifeExp);
     return migrated;
   }
+  const LEGACY_CHILD_KEYS = ['nur', 'childAnnual', 'childStartAge', 'childEndAge'];
   function migrateLegacyChildParams(params) {
-    if (!params || typeof params !== 'object' || Array.isArray(params) || !('nur' in params)) return params;
+    if (!params || typeof params !== 'object' || Array.isArray(params) || !LEGACY_CHILD_KEYS.some(key => key in params)) return params;
     const migrated = {};
-    for (const [key, value] of Object.entries(params)) if (key !== 'nur') migrated[key] = value;
-    if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
+    for (const [key, value] of Object.entries(params)) if (!LEGACY_CHILD_KEYS.includes(key)) migrated[key] = value;
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, childMonthlyCost };
 });

@@ -2,7 +2,7 @@
 //  (a) every range default is reachable (inside [min,max] and on the step grid),
 //  (b) the agreed min/max/step table matches the markup,
 //  (c) Efectivo/Bonos/Acciones always add up to 100 (Acciones is computed, disabled),
-//  (d) childEndAge is always greater than childStartAge,
+//  (d) childCount toggles the child2/child3 visibility classes,
 //  (e) SENSITIVITY_PARAMS bounds equal the matching slider bounds,
 //  (f) loadScenario reports values the browser had to snap/clamp.
 // Behaviour tests run the REAL inline script against test/helpers/fake-app.js.
@@ -22,9 +22,14 @@ function parseRanges(html) {
 const EXPECTED_RANGES = {
   startEq: { step: 500 }, basicFO: { step: 5 }, basicCA: { step: 50 }, brNet: { step: 1000 },
   pensionAnnual: { min: 0, max: 60000, step: 500 },
-  childAnnual: { min: 0, max: 30000, step: 500 }, healthcareAnnual: { min: 0, max: 30000, step: 500 },
-  childStartAge: { min: 18, max: 80 }, childEndAge: { min: 19, max: 100 },
-  pensionStartAge: { min: 55, max: 80 }, healthcareStartAge: { min: 40, max: 90 },
+  healthcareAnnual: { min: 0, max: 30000, step: 500 },
+  pensionStartAge: { min: 55, max: 80 },
+  childCount: { min: 0, max: 3, step: 1 },
+  child1BirthYear: { min: 2020, max: 2045, step: 1 }, child1BirthMonth: { min: 1, max: 12, step: 1 },
+  child2BirthYear: { min: 2026, max: 2050, step: 1 }, child3BirthYear: { min: 2026, max: 2050, step: 1 },
+  childCost0to2: { min: 0, max: 30000, step: 100 }, childCost3to17: { min: 0, max: 30000, step: 100 },
+  childCost18to22: { min: 0, max: 30000, step: 100 }, childFS1Cost: { min: 0, max: 30000, step: 100 },
+  childSchoolCost: { min: 0, max: 20000, step: 50 }, childInsuranceAED: { min: 0, max: 5000, step: 1 },
   cashRet: { min: -5, max: 5, step: 0.1 }, cashVol: { min: 0, max: 10, step: 0.1 },
   careerYear: { min: 2026, max: 2040 }, ageNow: { min: 18, max: 75 }
 };
@@ -90,15 +95,19 @@ const EXPECTED_RANGES = {
   assert.deepEqual(readAlloc(), { cash: 100, bonds: 0, eq: 0 }, 'bonds are clamped down when cash grows');
   assert.equal(el('assumptionError').textContent, '');
 
-  // ---- (d) child spending ages ----
-  drag('childStartAge', 60);
-  assert.equal(el('childEndAge').min, '61'); assert.ok(Number(el('childEndAge').value) >= 61, 'end age is dragged along');
-  drag('childEndAge', 30);
-  assert.ok(Number(el('childEndAge').value) > Number(el('childStartAge').value), 'end age cannot go below start + 1');
-  drag('childStartAge', 40);
-  assert.equal(el('childEndAge').min, '41');
-  drag('childEndAge', 70); drag('childStartAge', 80);
-  assert.ok(Number(el('childEndAge').value) > 80, 'end stays above start at the extreme');
+  // ---- (d) childCount toggles the child2/child3 visibility classes ----
+  drag('childCount', 0);
+  assert.equal(app.run("document.body.classList.contains('child2')"), false);
+  assert.equal(app.run("document.body.classList.contains('child3')"), false);
+  drag('childCount', 2);
+  assert.equal(app.run("document.body.classList.contains('child2')"), true, 'childCount 2 shows the 2nd child controls');
+  assert.equal(app.run("document.body.classList.contains('child3')"), false);
+  drag('childCount', 3);
+  assert.equal(app.run("document.body.classList.contains('child2')"), true);
+  assert.equal(app.run("document.body.classList.contains('child3')"), true, 'childCount 3 also shows the 3rd child controls');
+  drag('childCount', 1);
+  assert.equal(app.run("document.body.classList.contains('child2')"), false, 'dropping back to 1 hides the 2nd/3rd child controls again');
+  assert.equal(app.run("document.body.classList.contains('child3')"), false);
   await quiesce();
   assert.equal(el('assumptionError').textContent, '', 'no child-age error after dragging');
 

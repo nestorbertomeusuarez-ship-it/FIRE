@@ -59,7 +59,7 @@ const baseFlat = {
   ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
   startBtc: 0, allocCash: 10, allocBonds: 20, allocEquities: 70,
   vida: 0, hip: 0, burr: 0, brOn: false, salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
-  childAnnual: 0, pensionAnnual: 0, healthcareAnnual: 0, mandatoryRetireOn: false, srrShockOn: false,
+  childCount: 0, pensionAnnual: 0, healthcareAnnual: 0, mandatoryRetireOn: false, srrShockOn: false,
   histMarketOn: false, fxVolOn: false, inflOn: false, taxOn: false, wealthTaxOn: false, beckhamOn: false,
   lolOn: false, reOn: false, glideOn: false, baristaOn: false,
   // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since these
@@ -207,7 +207,10 @@ test('paintLabels lists all six wdStrategy names, and no position-dependent word
 console.log('withdrawal-strategies.test.js: all assertions passed');
 
 test('VPW plans to age 100 like Bogleheads, so it never empties the portfolio at the end age', () => {
-  const r = simulate({ ...DEFAULTS, seed: 9, wdStrategy: 3 }, 400);
+  // childCount/healthcareAnnual default to non-zero now (realistic family-cost assumptions);
+  // zero them here since this test isolates VPW's own ruin-safety property, not family costs
+  // (a fixed, non-portfolio-scaling monthly cost can push VPW into rare ruin in bad sequences).
+  const r = simulate({ ...DEFAULTS, seed: 9, wdStrategy: 3, childCount: 0, healthcareAnnual: 0 }, 400);
   const ruined = [...r.ruinMonth].filter(m => m >= 0).length;
   assert.ok(ruined <= 4, `VPW should almost never run out, got ${ruined}/400 ruined paths`);
 });
@@ -254,16 +257,15 @@ test('E2: a Loss-of-License forced exit computes its first-year spend the same w
 test('E3: VPW weights vProv as risky money, consistent with the totalNow it is spent from', () => {
   const fx = DEFAULTS.fx, basicFO = DEFAULTS.basicFO, salFO = DEFAULTS.salFO, provCo = DEFAULTS.provCo;
   const basicEUR = basicFO * fx, salaryEUR = salFO / 12 * fx;
-  const FS1_GAP = 10400; // fixed non-configurable cost the model applies through all of 2029/2031
   let vEq = 0, vCons = 0, vCash = 0, vProv = 0;
+  // baseFlat (below) sets childCount:0, so the FS1/child-cost gap the engine models per
+  // child never applies here; this hand-rolled career has no such cost either.
   for (let m = 0; m < 24; m++) { // monthsSinceCareer 0..23 (i = careerStart(9) + m); captMonth (88) is never reached here
-    const year = 2026 + Math.floor((8 + 9 + m) / 12); // mirrors monthIndex's inverse for START_YEAR=2026/START_MONTH=9
     let net = salaryEUR;
     if (m >= 6) { // 6-month Provident waiting period; 12% company + 5% employee
       vProv += basicEUR * (provCo / 100 + 0.05);
       net -= basicEUR * 0.05;
     }
-    if (year === 2029 || year === 2031) net -= FS1_GAP / 12;
     vEq += net * 0.70; vCons += net * 0.20; vCash += net * 0.10;
   }
   const totalAtFire = vEq + vCons + vCash + vProv;
