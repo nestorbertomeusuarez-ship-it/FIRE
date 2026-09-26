@@ -536,6 +536,7 @@ section[id],#notas{scroll-margin-top:88px}
       <h3>Objetivo</h3>
       <div class="ctrl">
         <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o" for="gasto"></output></div>
+        <p class="hint">Gasto anual real que asumes ya jubilado: junto con la Tasa de retiro segura fija tu objetivo FIRE (gasto ÷ SWR; con los valores por defecto, 60.000 € ÷ 3,25 % ≈ 1,85 M€) y es la base del gasto mensual que se retira de la cartera con la estrategia SWR fijo.</p>
         <input type="range" id="gasto" min="25000" max="130000" step="1000">
       </div>
       <div class="ctrl">
@@ -549,9 +550,9 @@ section[id],#notas{scroll-margin-top:88px}
     <div class="group">
       <h3>Tú y el horizonte</h3>
       <p class="grouphint">Tu edad de hoy, hasta qué edad tiene que durar el dinero y cuándo empezó tu carrera.</p>
-      <div class="ctrl"><div class="row"><label for="ageNow">Edad actual</label><output id="ageNow_o" for="ageNow"></output></div><input type="range" id="ageNow" min="18" max="75" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="horizonAge">Edad final (máximo 80 años desde hoy; hasta 110)</label><output id="horizonAge_o" for="horizonAge"></output></div><input type="range" id="horizonAge" min="19" max="108" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="careerYear">Año de inicio de carrera</label><output id="careerYear_o" for="careerYear"></output></div><input type="range" id="careerYear" min="2026" max="2040" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="ageNow">Edad actual</label><output id="ageNow_o" for="ageNow"></output></div><p class="hint">Tu edad de hoy en años completos: fija el mes 0 de la simulación y, junto con la Edad final, cuántos meses dura cada ruta.</p><input type="range" id="ageNow" min="18" max="75" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="horizonAge">Edad final (máximo 80 años desde hoy; hasta 110)</label><output id="horizonAge_o" for="horizonAge"></output></div><p class="hint">Edad hasta la que tiene que aguantar el dinero: junto con la Edad actual determina cuántos meses simula cada ruta; llegar vivo hasta aquí sin agotar la cartera es la condición de éxito, no solo cruzar el objetivo FIRE.</p><input type="range" id="horizonAge" min="19" max="108" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="careerYear">Año de inicio de carrera</label><output id="careerYear_o" for="careerYear"></output></div><p class="hint">Año en que empiezas a volar en Emirates (mes de junio): cuenta la antigüedad para el Provident/gratuity y marca el punto de partida de la Subida salarial real anual; el simulador añade un retraso aleatorio (Riesgo de retraso de entrada) alrededor de esta fecha, así que el inicio real varía algo de una ruta a otra.</p><input type="range" id="careerYear" min="2026" max="2040" step="1"></div>
     </div>
 
     <div class="group">
@@ -559,18 +560,22 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="grouphint">Cuánto ganas y cuándo asciendes no son fechas fijas: se simulan como probabilidades, no como certezas.</p>
       <div class="ctrl">
         <div class="row"><label for="fx">Tipo AED → EUR</label><output id="fx_o" for="fx"></output></div>
+        <p class="hint">Tipo de cambio dirham-euro que convierte a euros tu salario, tu básico y la aportación al Provident mientras trabajas en Emirates (con 385.000 AED/año y 0,235, por ejemplo, salen unos 90.475 €/año). Si activas el tipo aleatorio (Modo PRO), este valor pasa a ser solo el centro alrededor del que fluctúa cada mes.</p>
         <input type="range" id="fx" min="0.19" max="0.29" step="0.005">
       </div>
       <div class="ctrl">
         <div class="row"><label for="salFO">Salario copiloto (AED/año)</label><output id="salFO_o" for="salFO"></output></div>
+        <p class="hint">Salario bruto anual como copiloto, en AED: se convierte a euros cada mes con el Tipo AED → EUR y crece con la Subida salarial real anual desde tu Año de inicio de carrera. Deja de aplicarse en cuanto asciendes a comandante.</p>
         <input type="range" id="salFO" min="280000" max="500000" step="5000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="salCA">Salario comandante (AED/año)</label><output id="salCA_o" for="salCA"></output></div>
+        <p class="hint">Salario bruto anual como comandante, en AED: sustituye al de copiloto desde el mes de ascenso (Año de ascenso a comandante, con su propia dispersión) y crece igual que él con la Subida salarial real anual.</p>
         <input type="range" id="salCA" min="420000" max="750000" step="5000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="captY">Año de ascenso a comandante</label><output id="captY_o" for="captY"></output></div>
+        <p class="hint">Año central en el que se sortea tu ascenso a comandante: el mes exacto se dispersa alrededor de esta fecha según la σ de "Dispersión del ascenso", nunca antes de tu inicio real en la compañía; a partir de ese mes el salario y el básico pasan a ser los de comandante.</p>
         <input type="range" id="captY" min="2030" max="2042" step="1">
       </div>
       <div class="ctrl">
@@ -585,6 +590,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="salG">Subida salarial real anual</label><output id="salG_o" for="salG"></output></div>
+        <p class="hint">Subida real (por encima de la inflación) de tu salario mientras vuelas, compuesta mes a mes desde tu Año de inicio de carrera. Con el 0,5 % por defecto el salario apenas crece en términos reales; en negativo simularía una carrera que pierde poder adquisitivo real.</p>
         <input type="range" id="salG" min="-1" max="2.5" step="0.1">
       </div>
       <div class="ctrl">
@@ -595,6 +601,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="mandatoryRetireOn">
         <label for="mandatoryRetireOn">Tope de edad de jubilación obligatoria</label>
+        <p class="hint">Si lo activas, la ruta se ve forzada a dejar la compañía en la Edad de jubilación obligatoria aunque no haya llegado al objetivo FIRE; con esto desactivado no hay edad límite y la ruta sigue trabajando indefinidamente mientras no se jubile o pierda la licencia.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="mandatoryRetireAge">Edad de jubilación obligatoria</label><output id="mandatoryRetireAge_o" for="mandatoryRetireAge"></output></div>
@@ -613,10 +620,12 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="vidaG">Crecimiento real del gasto</label><output id="vidaG_o" for="vidaG"></output></div>
+        <p class="hint">Crecimiento real anual del gasto de vida en Dubái, compuesto mes a mes desde tu Año de inicio de carrera. En 0 % el gasto mensual se mantiene constante en términos reales durante toda la fase de trabajo.</p>
         <input type="range" id="vidaG" min="0" max="3" step="0.1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="hip">Hipoteca Esparreguera (€/mes)</label><output id="hip_o" for="hip"></output></div>
+        <p class="hint">Cuota mensual de la hipoteca de Esparreguera: se resta del flujo de caja todos los meses desde tu Año de inicio de carrera hasta el año de "Fin de hipoteca", tanto trabajando como ya jubilado, aparte del Gasto anual al jubilarte.</p>
         <input type="range" id="hip" min="0" max="1400" step="10">
       </div>
       <div class="ctrl">
@@ -630,39 +639,41 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="mortgageBalance" min="0" max="500000" step="5000">
       </div>
       <p class="subhead">Hijos (guardería, colegio y otros gastos)</p>
-      <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><input type="range" id="childAnnual" min="0" max="30000" step="500"></div>
-      <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><input type="range" id="childStartAge" min="18" max="80" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><input type="range" id="childEndAge" min="19" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><p class="hint">Gasto anual por hijo, en euros: se reparte a partes iguales entre los 12 meses y se resta del flujo de caja solo durante el tramo de edad que definen Edad inicial del gasto por hijo y Edad final del gasto por hijo (exclusiva).</p><input type="range" id="childAnnual" min="0" max="30000" step="500"></div>
+      <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><p class="hint">Tu edad (no la del hijo) a partir de la cual empieza a restarse el Gasto anual por hijo cada mes.</p><input type="range" id="childStartAge" min="18" max="80" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><p class="hint">Tu edad (no la del hijo) a partir de la cual deja de restarse el Gasto anual por hijo; es exclusiva, así que el último mes que cuenta es el mes previo a cumplir esta edad.</p><input type="range" id="childEndAge" min="19" max="100" step="1"></div>
       <p class="subhead">Sanidad</p>
-      <div class="ctrl"><div class="row"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><output id="healthcareAnnual_o" for="healthcareAnnual"></output></div><input type="range" id="healthcareAnnual" min="0" max="30000" step="500"></div>
-      <div class="ctrl"><div class="row"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><output id="healthcareStartAge_o" for="healthcareStartAge"></output></div><input type="range" id="healthcareStartAge" min="40" max="90" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><output id="healthcareAnnual_o" for="healthcareAnnual"></output></div><p class="hint">Coste sanitario anual supuesto, en euros: se reparte por meses y se resta del flujo de caja, trabajando o ya jubilado, desde la edad que fijes en Edad de inicio del coste sanitario.</p><input type="range" id="healthcareAnnual" min="0" max="30000" step="500"></div>
+      <div class="ctrl"><div class="row"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><output id="healthcareStartAge_o" for="healthcareStartAge"></output></div><p class="hint">Edad a partir de la cual empieza a restarse el Coste sanitario anual supuesto cada mes; antes de esa edad no se descuenta nada por este concepto.</p><input type="range" id="healthcareStartAge" min="40" max="90" step="1"></div>
       <p class="note">La simulación es mensual y el gasto se aplica durante los meses reales de carrera. Revisa manualmente la cronología de colegio/guardería: sin fechas de nacimiento exactas no conviene fingir precisión.</p>
     </div>
 
     <div class="group">
       <h3>Ingresos en jubilación</h3>
       <p class="grouphint">Ingresos recurrentes o puntuales que supones tras dejar de volar. Son supuestos tuyos, no derechos adquiridos.</p>
-      <div class="ctrl"><div class="row"><label for="pensionAnnual">Ingreso recurrente anual desde jubilación (€)</label><output id="pensionAnnual_o" for="pensionAnnual"></output></div><input type="range" id="pensionAnnual" min="0" max="60000" step="500"></div>
-      <div class="ctrl"><div class="row"><label for="pensionStartAge">Edad de inicio del ingreso supuesto</label><output id="pensionStartAge_o" for="pensionStartAge"></output></div><input type="range" id="pensionStartAge" min="55" max="80" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="pensionAnnual">Ingreso recurrente anual desde jubilación (€)</label><output id="pensionAnnual_o" for="pensionAnnual"></output></div><p class="hint">Ingreso recurrente anual que supones a partir de cierta edad (pensión, alquiler propio, etc.), en euros: se suma al flujo de caja mes a mes, trabajando o ya jubilado, desde la edad que fijes en Edad de inicio del ingreso supuesto.</p><input type="range" id="pensionAnnual" min="0" max="60000" step="500"></div>
+      <div class="ctrl"><div class="row"><label for="pensionStartAge">Edad de inicio del ingreso supuesto</label><output id="pensionStartAge_o" for="pensionStartAge"></output></div><p class="hint">Edad a partir de la cual empieza a sumarse el Ingreso recurrente anual desde jubilación configurado; antes de esa edad no se cuenta nada por este concepto.</p><input type="range" id="pensionStartAge" min="55" max="80" step="1"></div>
       <div class="ctrl"><label for="lumpSums">Pagos únicos (JSON: lista de año, mes e importe €)</label><textarea id="lumpSums" rows="3" maxlength="12000" aria-describedby="lumpSumHelp">[]</textarea><p id="lumpSumHelp" class="hint">Ejemplo: [{"year":2030,"month":6,"amount":-5000}]. Importe negativo = gasto; máximo 100 eventos y ±10 M€ por evento.</p></div>
     </div>
 
     <div class="group">
       <h3>Reparto de la cartera básica</h3>
       <p class="grouphint">La cartera básica se reparte entre efectivo, bonos y acciones; el reparto suma siempre 100 %: Acciones se calcula solo con lo que queda. Rendimientos y prestaciones no son previsiones.</p>
-      <div class="ctrl"><div class="row"><label for="allocCash">Efectivo (%)</label><output id="allocCash_o" for="allocCash"></output></div><input type="range" id="allocCash" min="0" max="100" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="allocBonds">Bonos (%)</label><output id="allocBonds_o" for="allocBonds"></output></div><input type="range" id="allocBonds" min="0" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="allocCash">Efectivo (%)</label><output id="allocCash_o" for="allocCash"></output></div><p class="hint">Parte de la cartera básica (líquida, sin BTC/oro) que se mantiene en efectivo, tanto la que ya tienes hoy (Cartera líquida inicial) como el ahorro nuevo mientras trabajas; junto con Bonos y Acciones debe sumar 100 %.</p><input type="range" id="allocCash" min="0" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="allocBonds">Bonos (%)</label><output id="allocBonds_o" for="allocBonds"></output></div><p class="hint">Parte de la cartera básica que se mantiene en bonos/cartera conservadora, con la rentabilidad y volatilidad de Rentabilidad real de bonos y Volatilidad de bonos definidas en este mismo grupo; junto con Efectivo y Acciones debe sumar 100 %.</p><input type="range" id="allocBonds" min="0" max="100" step="1"></div>
       <div class="ctrl">
         <div class="row"><label for="consRet">Rentabilidad real de bonos / cartera conservadora</label><output id="consRet_o" for="consRet"></output></div>
+        <p class="hint">Rentabilidad real media anual de la parte conservadora (bonos) de la cartera, simulada mes a mes con una distribución normal (no lognormal como acciones o BTC): con volatilidad 0 el retorno mensual es siempre exactamente este valor.</p>
         <input type="range" id="consRet" min="0" max="4" step="0.25">
       </div>
       <div class="ctrl">
         <div class="row"><label for="consVol">Volatilidad de bonos / cartera conservadora</label><output id="consVol_o" for="consVol"></output></div>
+        <p class="hint">Volatilidad anual de la parte conservadora (bonos): cuánto oscila su retorno mensual alrededor de la media, con una distribución normal simple, no lognormal como acciones o BTC. En 0 % rinde siempre exactamente su media, sin variación.</p>
         <input type="range" id="consVol" min="0" max="8" step="0.5">
       </div>
-      <div class="ctrl"><div class="row"><label for="allocEquities">Acciones (%)</label><output id="allocEquities_o" for="allocEquities"></output></div><input type="range" id="allocEquities" min="0" max="100" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><output id="cashRet_o" for="cashRet"></output></div><input type="range" id="cashRet" min="-5" max="5" step="0.1"></div>
-      <div class="ctrl"><div class="row"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><output id="cashVol_o" for="cashVol"></output></div><input type="range" id="cashVol" min="0" max="10" step="0.1"></div>
+      <div class="ctrl"><div class="row"><label for="allocEquities">Acciones (%)</label><output id="allocEquities_o" for="allocEquities"></output></div><p class="hint">Se calcula automáticamente como 100 % menos Efectivo y Bonos (el slider queda deshabilitado): es la parte de la cartera básica, tanto la que ya tienes hoy como el ahorro nuevo, que va a renta variable con la Rentabilidad real media de la bolsa y su volatilidad.</p><input type="range" id="allocEquities" min="0" max="100" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="cashRet">Rentabilidad real supuesta del efectivo (%)</label><output id="cashRet_o" for="cashRet"></output></div><p class="hint">Rentabilidad real media anual del efectivo, simulada mes a mes con una distribución normal (no lognormal). Puede ser negativa para representar que el efectivo pierde poder adquisitivo si la inflación real supera su remuneración.</p><input type="range" id="cashRet" min="-5" max="5" step="0.1"></div>
+      <div class="ctrl"><div class="row"><label for="cashVol">Volatilidad anual supuesta del efectivo (%)</label><output id="cashVol_o" for="cashVol"></output></div><p class="hint">Volatilidad anual del efectivo, usada junto con su rentabilidad media para simular su retorno mensual con una distribución normal simple. Con 0 % el efectivo rinde siempre exactamente su media, sin oscilar.</p><input type="range" id="cashVol" min="0" max="10" step="0.1"></div>
     </div>
 
     <div class="group">
@@ -675,10 +686,12 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="startBtc">Bitcoin (€)</label><output id="startBtc_o" for="startBtc"></output></div>
+        <p class="hint">Valor en euros de tu Bitcoin al empezar la simulación, aparte de la Cartera líquida inicial: es un cubo independiente con su propia rentabilidad, volatilidad y correlación con la bolsa definidas en este mismo grupo, no se reparte según el Reparto de la cartera básica.</p>
         <input type="range" id="startBtc" min="0" max="150000" step="500">
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcRet">Rentabilidad real media de BTC</label><output id="btcRet_o" for="btcRet"></output></div>
+        <p class="hint">Rentabilidad real media anual que se asume para Bitcoin, usada junto con su volatilidad para simular un retorno mensual lognormal (como la bolsa). Es una hipótesis, no una previsión: con volatilidad alta la ruta mediana rinde bastante menos que esta media (ver el hint de Volatilidad de BTC).</p>
         <input type="range" id="btcRet" min="-10" max="30" step="0.5">
       </div>
       <div class="ctrl">
@@ -703,22 +716,27 @@ section[id],#notas{scroll-margin-top:88px}
       <h3>Liquidaciones</h3>
       <div class="ctrl">
         <div class="row"><label for="burr">Burriana, tu 50 % neto (€)</label><output id="burr_o" for="burr"></output></div>
+        <p class="hint">Importe neto (tu 50 %) que cobras por la venta de Burriana: entra de una vez como ingreso en diciembre de 2027, sea cual sea tu situación en ese momento: si trabajas se invierte según tu reparto, y si ya te has jubilado reduce lo que retiras ese mes, con el Tipo sobre la venta de Burriana aplicado si la fiscalidad española está activa.</p>
         <input type="range" id="burr" min="0" max="130000" step="1000">
       </div>
       <div class="toggle">
         <input type="checkbox" id="brOn">
         <label for="brOn">Brasil se puede vender</label>
+        <p class="hint">Activa o desactiva la venta de las fincas de Brasil dentro de la simulación; si lo desactivas, ningún importe de Brasil entra en el flujo de caja aunque configures su 50 % neto y las fechas de venta.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="brNet">Brasil, tu 50 % neto de impuestos (€)</label><output id="brNet_o" for="brNet"></output></div>
+        <p class="hint">Importe neto total (tu 50 %, ya descontados los impuestos brasileños) que esperas cobrar por la venta completa de las fincas de Brasil, repartido a partes iguales en pagos mensuales durante toda la ventana de liquidación configurada.</p>
         <input type="range" id="brNet" min="0" max="450000" step="1000">
       </div>
       <div class="ctrl">
         <div class="row"><label for="brStart">Primera venta en Brasil</label><output id="brStart_o" for="brStart"></output></div>
+        <p class="hint">Año en que empiezan a cobrarse los primeros pagos mensuales de Brasil: desde enero de ese año y durante los Años para liquidarlo todo configurados, el importe total de Brasil se reparte a partes iguales entre los 12 meses de cada año.</p>
         <input type="range" id="brStart" min="2027" max="2045" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="brYears">Años para liquidarlo todo</label><output id="brYears_o" for="brYears"></output></div>
+        <p class="hint">Número de años durante los que se cobra, mes a mes y a partes iguales, el importe total de Brasil, tu 50 % neto, empezando en el año de Primera venta en Brasil.</p>
         <input type="range" id="brYears" min="1" max="18" step="1">
       </div>
       <p class="note">Si las fincas siguen a nombre de tu padre, no puedes vender hasta la herencia. Desactiva el interruptor para ver ese escenario.</p>
@@ -729,17 +747,21 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle">
         <input type="checkbox" id="provOn">
         <label for="provOn">Contar el Provident Scheme</label>
+        <p class="hint">Activa el Provident Scheme como parte de tu cartera: si lo desactivas, ni tú ni Emirates aportan nada a ese cubo y, al dejar la compañía, cobras la indemnización de fin de servicio (gratuity) entera en su lugar.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="basicFO">Básico copiloto (AED/mes)</label><output id="basicFO_o" for="basicFO"></output></div>
+        <p class="hint">Salario básico mensual como copiloto, en AED: la parte del salario total que sirve de base a la aportación al Provident Scheme, a la gratuity y a la indemnización de LOL. No crece con la Subida salarial real anual como el salario completo.</p>
         <input type="range" id="basicFO" min="18000" max="40000" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="basicCA">Básico comandante (AED/mes)</label><output id="basicCA_o" for="basicCA"></output></div>
+        <p class="hint">Salario básico mensual como comandante, en AED: sustituye al de copiloto desde el mes de ascenso y, como él, se usa para calcular las aportaciones al Provident Scheme y la gratuity/indemnización de LOL, sin crecer con la Subida salarial real anual.</p>
         <input type="range" id="basicCA" min="28000" max="60000" step="50">
       </div>
       <div class="ctrl">
         <div class="row"><label for="provCo">Aportación de Emirates</label><output id="provCo_o" for="provCo"></output></div>
+        <p class="hint">Porcentaje del básico que aporta Emirates al Provident Scheme durante tus primeros 10 años de servicio (a partir del año 10 sube automáticamente al 15 %, sin usar este slider); tú aportas siempre un 5 % adicional, descontado de tu nómina.</p>
         <input type="range" id="provCo" min="0" max="20" step="0.5">
       </div>
       <p class="note">Emirates aporta el 12 % del básico (15 % a partir de 10 años de servicio) y tú el 5 %, que sale de tu nómina. Solo se cobra al dejar la compañía — y como dejarla es justo lo que significa jubilarse, cuenta para el objetivo. Antes de 5 años solo te llevas parte de lo que puso Emirates; el simulador no aplica ese recorte y asume que cobras el saldo completo, así que una salida muy temprana sale algo mejor de lo real.</p>
@@ -751,6 +773,7 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="grouphint">Estos dos números definen cómo se comporta la bolsa mes a mes en la simulación: cuánto sube de media y cuánto oscila alrededor de esa media.</p>
       <div class="ctrl">
         <div class="row"><label for="ret">Rentabilidad real media de la bolsa</label><output id="ret_o" for="ret"></output></div>
+        <p class="hint">Rentabilidad real media anual de la bolsa: es una media aritmética, no la mediana, que alimenta un modelo mensual lognormal calibrado para que el producto de los 12 meses reproduzca exactamente esta media y la Volatilidad anual de la bolsa configuradas.</p>
         <input type="range" id="ret" min="2" max="9" step="0.1">
       </div>
       <div class="ctrl">
@@ -777,6 +800,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle">
         <input type="checkbox" id="taxOn">
         <label for="taxOn">Tributar plusvalías al repatriar capital</label>
+        <p class="hint">Activa el impuesto español sobre plusvalías al vender cartera: con esto activo, la venta de Burriana en diciembre de 2027 tributa de inmediato al Tipo sobre la venta de Burriana, y las retiradas de cartera tributan en cuanto la ruta se hace residente fiscal en España (Años tras el FIRE hasta residencia fiscal), salvo que la Ley Beckham esté activa.</p>
       </div>
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="useIrpfBrackets">
@@ -796,6 +820,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="useRegionalGeneralIrpf">
         <label for="useRegionalGeneralIrpf">Calcular IRPF general 2025 del Provident por comunidad</label>
+        <p class="hint">Al activarlo, el Provident Scheme deja de tributar al Tipo medio efectivo sobre el Provident/plan de empresa configurado y pasa a calcularse con las escalas reales de IRPF general (estatal + autonómica 2025) de la Residencia fiscal elegida, aplicadas sobre el rendimiento del trabajo que supone cada retirada.</p>
       </div>
       <div class="ctrl">
         <div class="row"><label for="taxRegion">Residencia fiscal</label><output id="taxRegion_o" for="taxRegion"></output></div>
@@ -821,6 +846,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="beckhamOn">
         <label for="beckhamOn">Acogido a la Ley Beckham (régimen de impatriados)</label>
+        <p class="hint">Activa el régimen de impatriados para la fase en que resides fiscalmente en España: mientras esté dentro de su ventana (Duración del régimen), se suspenden tanto el impuesto sobre plusvalías de toda la cartera como el de patrimonio, salvo sobre el inmueble en alquiler si lo cuentas.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="beckhamYears">Duración del régimen (años)</label><output id="beckhamYears_o" for="beckhamYears"></output></div>
@@ -830,6 +856,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="wealthTaxOn">
         <label for="wealthTaxOn">Aplicar impuesto de patrimonio</label>
+        <p class="hint">Activa el impuesto de patrimonio (y, por encima de 3,7 M€ de patrimonio neto, el estatal de solidaridad de las grandes fortunas) sobre tu patrimonio neto una vez la ruta es residente fiscal en España; con esto desactivado, ninguno de los dos impuestos se aplica nunca.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="ccaaPreset">Comunidad autónoma (rellena mínimo/bonificación)</label><output id="ccaaPreset_o" for="ccaaPreset"></output></div>
@@ -860,10 +887,12 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle">
         <input type="checkbox" id="lolOn">
         <label for="lolOn">Modelar riesgo de LOL</label>
+        <p class="hint">Activa el modelado del riesgo de pérdida de licencia: sin esto, ninguna ruta puede sufrir una incapacidad médica permanente, y el resto de controles de este grupo (probabilidad, cobertura, indemnización) no tienen ningún efecto.</p>
       </div>
       <div class="toggle">
         <input type="checkbox" id="lolEmiratesOn">
         <label for="lolEmiratesOn">Cobertura LOL del contrato de Emirates</label>
+        <p class="hint">Añade el pago contractual de Emirates por LOL (cláusula 10.2, hasta 36 meses de básico según tu edad) a la cartera el mes en que ocurre, aparte de la gratuity y de cualquier seguro privado configurado; sin esto activo, ese pago de la compañía no se cuenta.</p>
       </div>
       <div class="toggle">
         <input type="checkbox" id="lolAgeCurveOn">
@@ -910,6 +939,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle">
         <input type="checkbox" id="fxVolOn">
         <label for="fxVolOn">Tipo AED→EUR aleatorio (en vez de fijo)</label>
+        <p class="hint">Sustituye el Tipo AED → EUR fijo de Carrera por uno aleatorio que fluctúa mes a mes alrededor de ese valor, con la volatilidad y la reversión a la media de este mismo grupo; con esto desactivado, el tipo de cambio se mantiene constante durante toda la simulación.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="fxVol">Volatilidad anual del tipo de cambio</label><output id="fxVol_o" for="fxVol"></output></div>
@@ -924,6 +954,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="inflOn">
         <label for="inflOn">Sorpresas de inflación EUR (en vez de tasas reales fijas)</label>
+        <p class="hint">Activa sorpresas mensuales de inflación en euros alrededor de la inflación real ya asumida en el resto del modelo, erosionando algo el retorno de bolsa/BTC y abaratando en términos reales la hipoteca nominal fija; con esto desactivado, la inflación real se trata como constante.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="inflVol">Volatilidad anual de la sorpresa de inflación</label><output id="inflVol_o" for="inflVol"></output></div>
@@ -1031,6 +1062,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle">
         <input type="checkbox" id="phOn">
         <label for="phOn">Prime Harvesting: vender renta variable con beneficios hacia bonos/efectivo</label>
+        <p class="hint">Activa el Prime Harvesting (técnica de McClung): retira antes de efectivo y bonos, y traspasa a la cartera conservadora un 20 % de la renta variable cada vez que esta suba un 20 % o más en real desde el FIRE; con esto desactivado, el mecanismo no interviene aunque configures el resto de esta sección.</p>
       </div>
       <p class="note">Con "SWR fijo" el gasto es idéntico al modo simple. Guyton-Klinger ajusta el gasto anual cuando la tasa de retiro efectiva se sale de la banda alrededor del SWR objetivo. Las fases aplican un multiplicador al gasto base según los años transcurridos desde el FIRE de cada ruta. VPW recalcula el gasto cada año como % de la cartera restante. Suelo y techo acota un % de retiro variable entre dos límites del gasto base. Yield Shield limita el gasto inicial a lo que rinde la cartera. Prime Harvesting (independiente de la estrategia elegida) decide el orden de las retiradas y recoge beneficios de renta variable hacia bonos/efectivo una vez al año.</p>
     </div>
@@ -1094,6 +1126,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle">
         <input type="checkbox" id="glideOn">
         <label for="glideOn">Activar glide path</label>
+        <p class="hint">Activa el glide path: a partir de los Años antes de empezar a des-arriesgar contados desde el Año FIRE esperado, la cartera de riesgo (acciones, BTC, oro) se vuelve progresivamente más conservadora hasta el Mínimo en riesgo al llegar la fecha; con esto desactivado, la asignación de riesgo se mantiene fija durante toda la simulación.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="glideTargetYear">Año FIRE esperado (ancla)</label><output id="glideTargetYear_o" for="glideTargetYear"></output></div>
@@ -1119,6 +1152,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="baristaOn">
         <label for="baristaOn">Ingreso parcial tras el FIRE (Barista FIRE)</label>
+        <p class="hint">Activa el Barista FIRE: tras el FIRE sigues teniendo el Ingreso extra tras el FIRE configurado durante la Duración del ingreso parcial, que se resta de lo que hay que retirar de la cartera; con esto desactivado, el ingreso cae a cero de golpe en el momento del FIRE.</p>
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o" for="baristaIncome"></output></div>
@@ -1149,6 +1183,7 @@ section[id],#notas{scroll-margin-top:88px}
         </select>
         <div class="ctrl" id="calcSecondsWrap" style="display:none">
           <div class="row"><label for="calcSeconds">Tiempo de cálculo objetivo</label><output id="calcSeconds_o" for="calcSeconds"></output></div>
+          <p class="hint">Solo cuenta si Precisión del cálculo está en "Personalizada": tiempo objetivo en segundos que decide cuántas rutas Monte Carlo se simulan; más segundos, más rutas y resultados más estables, pero un cálculo más lento.</p>
           <input type="range" id="calcSeconds" min="5" max="120" step="5" value="5">
         </div>
       </div>
