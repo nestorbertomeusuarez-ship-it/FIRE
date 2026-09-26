@@ -20,6 +20,7 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
   `index-publico-sensitivity.test.js`,
   `index-sensitivity-bounds.test.js`, `input-validation.test.js`,
   `label-painting.test.js`, `lol-emirates.test.js`, `manual-calc.test.js`,
+  `model-soundness-fixes.test.js`,
   `page-structure.test.js`, `pagenav-fade.test.js`, `param-unification.test.js`,
   `paths-full-max-memory.test.js`, `portfolio-costs.test.js`,
   `post-fix-regressions.test.js`, `print-css.test.js`,
@@ -73,7 +74,7 @@ file is retained as a historical comparison and is not the canonical app.
 ## Features and data provenance
 
 - Additional assumptions include an editable current age and end age. The end age is dynamically constrained to at most 80 years after the current age, never above 110; this maps the fixed September 2026 simulation start to the supported calendar through September 2106. Career start is constrained to that same window. Cash/bond/equity allocation, recurring retirement income, health costs, child costs, and dated one-off cash flows are user inputs, not forecasts.
-- The outcome dashboard separates voluntary FIRE, post-FIRE ruin, forced retirement, loss of licence, and routes that do not retire in the selected horizon.
+- The outcome dashboard separates FIRE voluntario (including its post-FIRE ruin sub-rate, i.e. paths that reached the target but later went broke), salida forzosa (forced retirement at the mandatory age), pérdida de licencia, and two routes that "nunca llega al FIRE": one that ends the horizon still in deuda (pre-FIRE debt never repaid), and one with no retirement in the selected horizon and no debt.
 - Modo PRO offers six mutually exclusive withdrawal strategies (SWR fijo, Guyton-Klinger, go-go/slow-go/no-go phases, VPW/Bogleheads, floor & ceiling/Bengen, and Yield Shield), plus an independent Prime Harvesting toggle that can combine with any of them and applies the same way whether retirement is voluntary, mandatory, or a Loss-of-License forced exit.
 - Sliders/inputs no longer recalculate in real time: they only repaint labels and mark the result stale (visible notice + dimmed results). Press "Calcular" to run the full-precision simulation, with a precision selector ("Rápida" ~4s default, "Alta" ~12s, "Máxima" ~30s, or a custom 5-120s target) that trades wait time for more simulated paths. Reset and loading a saved scenario still recalculate immediately, as does the initial page load.
 - The yearly percentile series (chart, CSV, Hitos table) always includes the run's own final month as its last point, even when that month is not December (an integer-age horizon starting in September rarely lands there); wealth tax, the glide-path rebalance, and the Prime Harvesting sweep also apply in that final partial year when active.

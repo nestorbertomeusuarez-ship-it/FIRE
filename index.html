@@ -622,6 +622,7 @@ section[id],#notas{scroll-margin-top:88px}
         <div class="row"><label for="hipEnd">Fin de hipoteca</label><output id="hipEnd_o" for="hipEnd"></output></div>
         <input type="range" id="hipEnd" min="2027" max="2065" step="1">
       </div>
+      <p class="hint">La cuota mensual de la hipoteca sigue pagándose después del FIRE, hasta el año de "Fin de hipoteca" que hayas fijado: no forma parte de "Gasto anual al jubilarte", se suma aparte cada mes.</p>
       <div class="ctrl pro-only">
         <div class="row"><label for="mortgageBalance">Saldo pendiente hoy de esa hipoteca (€)</label><output id="mortgageBalance_o" for="mortgageBalance"></output></div>
         <p class="hint">Se usa solo para el cálculo del impuesto de patrimonio (patrimonio neto = bienes menos deudas): se amortiza en línea recta hasta 0 en el año de "Fin de hipoteca" que hayas fijado.</p>
@@ -1759,6 +1760,12 @@ function simulate(p, paths){
   // when I choose to retire" without overstating the scenario across every asset.
   // Test hook: track the smallest unclamped bucket/basis value (published snapshots are clamped at 0).
   const trackBuckets=!!p.debugTrackBuckets; let minBucket=Infinity, minBucketExCash=Infinity, minCash=Infinity;
+  // Test hooks for the debt-follow-up fixes: minCashAfterFire tracks vCash from the
+  // moment ANY path's own retirement transition sets fireMonth[k] onward (must never
+  // go negative once debt is settled at that transition); minRawFinalNonRuined tracks
+  // the smallest unclamped final total across every path NOT flagged ruined (must
+  // never be negative, since `ruined` is now set whenever the raw final total is).
+  let minCashAfterFire=Infinity, minRawFinalNonRuined=Infinity;
   const earlyWealth=trackBuckets ? new Float64Array(paths) : null; // wealth after the first year, per path
   const srrShockActive=!!p.srrShockOn;
   const srrShockMonths=Number.isFinite(p.srrShockMonths)&&p.srrShockMonths>0?p.srrShockMonths:12;
@@ -1853,6 +1860,28 @@ function simulate(p, paths){
     }
     const gain=g*gainFrac;
     return {bal:bal-g, basis:shrinkBasis(bal,basis,g), net:netOut, gain};
+  }
+  // Pre-FIRE debt (negative vCash, see the deficit branch below) must never simply
+  // carry into retirement: at the exact month a path transitions to drawdown
+  // (voluntary FIRE, mandatory exit, or Loss-of-License), settle any outstanding
+  // debt immediately by selling assets, in the same order the retirement cascade
+  // uses (vCons -> vEq -> vGold -> vBtc -> vRE -> vProv), instead of letting it wait
+  // for next month's ordinary cascade (voluntary/mandatory retirement don't reach
+  // that cascade until the FOLLOWING month, since the working/retired branches are
+  // an if/else pair and only one runs per iteration). Spanish tax residency can only
+  // start strictly after this same month (spanishResident is only ever set inside
+  // the already-retired branch), so no tax applies here — ratePct/ytdGain/progressive
+  // are passed as 0/0/false throughout, same as an ordinary untaxed sale.
+  function settleFireDebt(vCash, vCons,basisCons, vEq,basisEq, goldActive, vGold,basisGold, vBtc,basisBtc, reActive,reCountsFire, vRE,basisRE, vProv, ytdProvidentIncome){
+    if(vCash>=0) return {vCash,vCons,basisCons,vEq,basisEq,vGold,basisGold,vBtc,basisBtc,vRE,basisRE,vProv,ytdProvidentIncome,ruined:false};
+    let dd=-vCash, r; vCash=0;
+    r=takeFromBucket(vCons,basisCons,dd,0,0,false); vCons=r.bal; basisCons=r.basis; dd-=r.net;
+    if(dd>0){ r=takeFromBucket(vEq,basisEq,dd,0,0,false); vEq=r.bal; basisEq=r.basis; dd-=r.net; }
+    if(dd>0 && goldActive){ r=takeFromBucket(vGold,basisGold,dd,0,0,false); vGold=r.bal; basisGold=r.basis; dd-=r.net; }
+    if(dd>0){ r=takeFromBucket(vBtc,basisBtc,dd,0,0,false); vBtc=r.bal; basisBtc=r.basis; dd-=r.net; }
+    if(dd>0 && reActive && reCountsFire){ r=takeFromBucket(vRE,basisRE,dd,0,0,false); vRE=r.bal; basisRE=r.basis; dd-=r.net; }
+    if(dd>0){ const pr=takeProvident(vProv,dd,0,ytdProvidentIncome); vProv=pr.bal; dd-=pr.net; ytdProvidentIncome+=pr.gross; }
+    return {vCash,vCons,basisCons,vEq,basisEq,vGold,basisGold,vBtc,basisBtc,vRE,basisRE,vProv,ytdProvidentIncome,ruined: dd>1e-6};
   }
   // Progressive savings tax is calculated against year-to-date realised gains; principal is never taxed.
 
@@ -1979,7 +2008,10 @@ function simulate(p, paths){
       }
       const rCons=consVolM>0?normal(consMonthlyRet,consVolM):consMonthlyRet, rCash=cashVolM>0?normal(cashMonthlyRet,cashVolM):cashMonthlyRet;
       const rConsNet=NavlogCore.netMonthlyReturn(rCons,fee.cons), rCashNet=NavlogCore.netMonthlyReturn(rCash,fee.cash);
-      cumFees+=vCons*(rCons-rConsNet)+vCash*(rCash-rCashNet); vCons*=1+rConsNet; vCash*=1+rCashNet;
+      // A negative vCash (unrepaid pre-FIRE debt, see the deficit branch below) must
+      // never contribute a NEGATIVE fee: Math.max(0,vCash) treats debt as fee-free
+      // instead of manufacturing a fee "rebate" out of the fee-drag formula.
+      cumFees+=vCons*(rCons-rConsNet)+Math.max(0,vCash)*(rCash-rCashNet); vCons*=1+rConsNet; vCash*=1+rCashNet;
       if(reActive) vRE*=1+reApprM;
       cumGrowth+=(vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0))-totalBeforeReturns;
 
@@ -2055,6 +2087,11 @@ function simulate(p, paths){
         // This is an involuntary career exit, never a voluntary FIRE success. It still
         // starts drawdown so the payout/portfolio can be evaluated honestly.
         retired=true; licenseLossPath=true; fireMonth[k]=i;
+        if(vCash<0){
+          const sd=settleFireDebt(vCash,vCons,basisCons,vEq,basisEq,goldActive,vGold,basisGold,vBtc,basisBtc,reActive,p.reCountsFire,vRE,basisRE,vProv,ytdProvidentIncome);
+          vCash=sd.vCash; vCons=sd.vCons; basisCons=sd.basisCons; vEq=sd.vEq; basisEq=sd.basisEq; vGold=sd.vGold; basisGold=sd.basisGold; vBtc=sd.vBtc; basisBtc=sd.basisBtc; vRE=sd.vRE; basisRE=sd.basisRE; vProv=sd.vProv; ytdProvidentIncome=sd.ytdProvidentIncome;
+          if(sd.ruined){ ruinedPath=true; ruinMonth[k]=i; }
+        }
         primeHarvestE0=vEq;
         // Same first-year spend rule as a voluntary or mandatory exit: VPW/Yield Shield
         // apply their own formula from year 0, floor & ceiling's initial withdrawal is
@@ -2193,6 +2230,11 @@ function simulate(p, paths){
           retired=true;
           fireMonth[k]=i;
           if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
+          if(vCash<0){
+            const sd=settleFireDebt(vCash,vCons,basisCons,vEq,basisEq,goldActive,vGold,basisGold,vBtc,basisBtc,reActive,p.reCountsFire,vRE,basisRE,vProv,ytdProvidentIncome);
+            vCash=sd.vCash; vCons=sd.vCons; basisCons=sd.basisCons; vEq=sd.vEq; basisEq=sd.basisEq; vGold=sd.vGold; basisGold=sd.basisGold; vBtc=sd.vBtc; basisBtc=sd.basisBtc; vRE=sd.vRE; basisRE=sd.basisRE; vProv=sd.vProv; ytdProvidentIncome=sd.ytdProvidentIncome;
+            if(sd.ruined){ ruinedPath=true; ruinMonth[k]=i; }
+          }
           primeHarvestE0=vEq;
           // The first year's spend: VPW/Yield Shield already apply their own formula from
           // year 0; floor & ceiling's initial withdrawal is the plain configured spend
@@ -2210,6 +2252,11 @@ function simulate(p, paths){
           forcedOutPath=true;
           fireMonth[k]=i;
           if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
+          if(vCash<0){
+            const sd=settleFireDebt(vCash,vCons,basisCons,vEq,basisEq,goldActive,vGold,basisGold,vBtc,basisBtc,reActive,p.reCountsFire,vRE,basisRE,vProv,ytdProvidentIncome);
+            vCash=sd.vCash; vCons=sd.vCons; basisCons=sd.basisCons; vEq=sd.vEq; basisEq=sd.basisEq; vGold=sd.vGold; basisGold=sd.basisGold; vBtc=sd.vBtc; basisBtc=sd.basisBtc; vRE=sd.vRE; basisRE=sd.basisRE; vProv=sd.vProv; ytdProvidentIncome=sd.ytdProvidentIncome;
+            if(sd.ruined){ ruinedPath=true; ruinMonth[k]=i; }
+          }
           primeHarvestE0=vEq;
           curSpendAnnual = strat===4 ? p.gasto : annualSpendFor(strat, vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0), vEq+vBtc+(goldActive?vGold:0), vCons+vCash, 0, p.ageNow+i/12);
         }
@@ -2226,7 +2273,13 @@ function simulate(p, paths){
           const monthsSinceRetire=i-fireMonth[k];
           const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
           if(totalNow>0 && monthsSinceRetire>0 && monthsSinceRetire%p.gkFreq===0){
-            const currentWR=curSpendAnnual/totalNow, anchorWR=p.swr/100;
+            // The mortgage is a real, non-discretionary withdrawal on top of curSpendAnnual
+            // (see the wd computation below) — the guardrail's rate check must see it too,
+            // or a large mortgage can silently keep the guardrail from ever cutting.
+            // Only the RATE COMPARISON includes it; curSpendAnnual itself keeps adjusting
+            // (never the mortgage), same as before.
+            const effSpend=curSpendAnnual+(hipActive?hipReal*12:0);
+            const currentWR=effSpend/totalNow, anchorWR=p.swr/100;
             const upper=anchorWR*(1+p.gkGuard/100), lower=anchorWR*(1-p.gkGuard/100);
             if(currentWR>upper) curSpendAnnual*=(1-p.gkCut/100);
             else if(currentWR<lower) curSpendAnnual*=(1+p.gkRaise/100);
@@ -2426,6 +2479,7 @@ function simulate(p, paths){
         minBucket=Math.min(minBucket,vEq,vBtc,vProv,vGold,vCons,vCash,vRE,basisEq,basisBtc,basisGold,basisCons,basisCash,basisRE);
         minBucketExCash=Math.min(minBucketExCash,vEq,vBtc,vProv,vGold,vCons,vRE,basisEq,basisBtc,basisGold,basisCons,basisCash,basisRE);
         minCash=Math.min(minCash,vCash);
+        if(fireMonth[k]>=0 && i>=fireMonth[k]) minCashAfterFire=Math.min(minCashAfterFire,vCash);
       }
       if(isSnap){
         const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
@@ -2436,13 +2490,15 @@ function simulate(p, paths){
       }
     }
     // A path that never fired can still end the horizon owing pre-FIRE debt that was
-    // never repaid or offset (see the deficit branch above) — that is the only way
-    // "ruin" can now happen before FIRE, so it reuses the same `ruined` flag/category
-    // (retirementCohortCounts' preFireRuin) instead of a separate one. A path that did
-    // fire is unaffected: its ruin flag still means the original post-retirement
-    // ruin (see `deficit>1e-6` above).
+    // never repaid or offset (see the deficit branch above); a path that DID fire is
+    // now also caught here if it somehow still ends negative (the retirement-transition
+    // debt settlement above should make this unreachable in practice, but this is the
+    // safety net, not a redundant re-check) — either way it is the same `ruined`
+    // flag/category (retirementCohortCounts rolls a fired ruined path into
+    // voluntaryRuined/forced/licenseLoss, an unfired one into preFireRuin).
     const rawFinal=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
-    ruined[k]=(ruinedPath || (fireMonth[k]<0 && rawFinal<0))?1:0;
+    ruined[k]=(ruinedPath || rawFinal<0)?1:0;
+    if(trackBuckets && !ruined[k]) minRawFinalNonRuined=Math.min(minRawFinalNonRuined,rawFinal);
     forcedOut[k]=forcedOutPath?1:0;
     licenseLossOut[k]=licenseLossPath?1:0;
     finalVal[k]=Math.max(0,rawFinal);
@@ -2477,7 +2533,7 @@ function simulate(p, paths){
   const successful=successBuf.subarray(0,successCount);
 
   const result={series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots,forcedOut,licenseLossOut};
-  if(trackBuckets) result.debug={minBucket,minBucketExCash,minCash,earlyWealth};
+  if(trackBuckets) result.debug={minBucket,minBucketExCash,minCash,minCashAfterFire,minRawFinalNonRuined,earlyWealth};
   return result;
 }
 
