@@ -32,6 +32,12 @@
   function solidarityWealthTax(netWealth) {
     return progressiveTax(Math.max(0, (Number(netWealth) || 0) - SOLIDARITY_EXEMPT), SOLIDARITY_BRACKETS);
   }
+  // Real value of a fixed nominal amount after cumulative mean-zero log inflation surprises.
+  // exp(-x) is convex (E[exp(-x)] = exp(var/2) > 1), so subtract var/2 to keep the mean at 1;
+  // otherwise the payment gets cheaper on average.
+  function inflationRealFactor(cumInfl, cumVar) {
+    return Math.exp(-(Number(cumInfl) || 0) - (Number(cumVar) || 0) / 2);
+  }
   function netMonthlyReturn(grossMonthlyReturn, annualFeePct) {
     const fee = Math.min(1, Math.max(0, Number(annualFeePct) || 0) / 100);
     if (fee === 0) return grossMonthlyReturn;
@@ -399,5 +405,5 @@
     if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
     return migrated;
   }
-  return { SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
 });
