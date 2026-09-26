@@ -54,6 +54,11 @@ file is retained as a historical comparison and is not the canonical app.
   embedded in `simulation-core.js` are labeled in `index.html` as
   illustrative 2024/2025 assumptions (documentation reviewed 2026-09-21); they
   are not automatically updated and have not been independently verified here.
+  The general-IRPF brackets (state and regional, used for the Provident balance
+  in regional mode) are 2025 nominal amounts as well, and every bracket table is
+  applied unchanged, in real euros, across the whole simulated horizon — the
+  model implicitly assumes those thresholds are indexed to inflation over time,
+  which Spanish tax law does not guarantee.
   Existing source comments attribute return-series inputs to Damodaran/NYU Stern
   and officialdata.org; these attributions were not independently audited in
   this work. The model does not implement complete

@@ -52,6 +52,21 @@
     for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (netAfterGeneralIncomeTax(mid, ytdIncome, region) >= needNet) high = mid; else low = mid; }
     return high;
   }
+  // FIRE-target haircut for the Provident/company-scheme balance: what fraction of it
+  // would be lost to tax if withdrawn, used ONLY to test whether the FIRE target has
+  // been reached (see simulate() in index.html) — never to adjust the actual balance.
+  // Flat mode uses the configured average rate directly. The regional general-IRPF
+  // mode has no single flat rate (it is progressive against year-to-date income), so
+  // this uses the effective average rate of withdrawing the whole balance spread over
+  // a representative 10 years (generalIncomeTax(vProv/10, region) / (vProv/10)) as a
+  // reasonable, simple estimate — not exact, but conservative enough for a target
+  // comparison, and it keeps the FIRE check independent of the actual withdrawal plan.
+  function providentFireTaxRate(vProv, taxActive, regionalGeneralActive, taxRateProv, region) {
+    if (!taxActive || !(vProv > 0)) return 0;
+    if (!regionalGeneralActive) return Math.max(0, Math.min(1, (Number(taxRateProv) || 0) / 100));
+    const annualTest = vProv / 10;
+    return Math.max(0, Math.min(1, generalIncomeTax(annualTest, region) / annualTest));
+  }
   // Single gate for every seed source (UI text, saved scenarios, sensitivity pairs).
   // Returns null (= random, not reproducible) for anything that is not an unsigned
   // 32-bit number; otherwise the truncated integer. Zero is a valid seed.
@@ -384,5 +399,5 @@
     if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
     return migrated;
   }
-  return { SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
+  return { SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
 });

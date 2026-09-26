@@ -10,9 +10,12 @@ const context = { console, Math, Float64Array, Int32Array, Uint8Array, Date, Inf
 context.globalThis = context; vm.createContext(context); vm.runInContext(source, context, { timeout: 5000 });
 const { simulate, DEFAULTS, readParams, validateSimulationParams, controls, START_YEAR, START_MONTH, CAREER_MONTH, monthIndex } = context.__t;
 // simulate() clamps the published snapshots with Math.max(0, ...), so p50 >= 0 could never fail. The
-// debug hook (p.debugTrackBuckets) exposes the smallest UNCLAMPED bucket value / cost basis seen in any month.
+// debug hook (p.debugTrackBuckets) exposes the smallest UNCLAMPED bucket value / cost basis seen in any
+// month. vCash may legitimately go negative pre-FIRE (debt, see index.html's deficit branch), so the
+// non-negativity check below uses minBucketExCash (every OTHER bucket/basis); minBucket itself is still
+// checked for finiteness only, to catch a genuine NaN/undefined leak from the growth arrays.
 const finiteSeries = result => result.series.every(x => [x.p10, x.p25, x.p50, x.p75, x.p90, x.contrib50].every(Number.isFinite) && x.p50 >= 0)
-  && (result.debug === undefined || result.debug.minBucket >= -1e-6);
+  && (result.debug === undefined || (Number.isFinite(result.debug.minBucket) && result.debug.minBucketExCash >= -1e-6));
 
 // A short horizon must not be rejected because a (zero-valued) pension / health / child age lies beyond it.
 for (const horizonAge of [40, 60, 66]) {
@@ -61,12 +64,14 @@ const stressed = simulate(stress, 40);
 assert.ok(stressed.ruined.some(Boolean) && stressed.fireMonthAll.some(month => month >= 0), 'the stress scenario reaches drawdown and ruin, so bucket exhaustion is exercised');
 assert.ok(stressed.debug.minBucket >= -1e-6, 'no bucket or cost basis goes negative even when every bucket is exhausted (min ' + stressed.debug.minBucket + ')');
 
-// Working household whose costs exceed its income: deficits drain cash, bonds, equities, BTC, gold in turn.
+// Working household whose costs exceed its income: deficits drain cash, bonds, equities, BTC, gold in
+// turn, and any shortfall left once every bucket is at 0 becomes pre-FIRE debt (negative vCash), not
+// permanent ruin — every OTHER bucket/basis still never goes negative.
 const deficitHousehold = { ...DEFAULTS, seed: 5, proMode: true, debugTrackBuckets: true, startEq: 60000, startBtc: 20000, startGold: 20000, goldAporte: 0, salFO: 280000, salCA: 420000,
   vida: 7000, hip: 1400, gasto: 130000, swr: 2.4, allocCash: 10, allocBonds: 20, allocEquities: 70, reOn: true, reValue: 100000, reCountsFire: true };
 const deficitResult = simulate(deficitHousehold, 30);
-assert.ok(deficitResult.debug.minBucket >= -1e-6, 'deficits never push a bucket or basis below zero (min ' + deficitResult.debug.minBucket + ')');
-assert.ok(Array.from(deficitResult.ruined).filter(Boolean).length >= 10, 'the household cannot fund itself, so buckets are exhausted');
+assert.ok(deficitResult.debug.minBucketExCash >= -1e-6, 'deficits never push a bucket other than cash (or its basis) below zero (min ' + deficitResult.debug.minBucketExCash + ')');
+assert.ok(deficitResult.debug.minCash < -1e-6, 'a household that cannot fund itself runs vCash into debt instead (min cash ' + deficitResult.debug.minCash + ')');
 
 // Every numeric control at its minimum and maximum yields finite results (or a clear validation error).
 const tag = key => (html.match(new RegExp('<(?:input|select)[^>]*id="' + key + '"[^>]*>')) || [''])[0];
@@ -128,10 +133,14 @@ assert.ok(worstOffset <= 4, 'growthLen=months+4 headroom must cover the true wor
 // spendGrowthPow[Math.max(0,monthsSinceCareer)] keeps running every month all the
 // way to i=months-1, the exact index that needs the +4 headroom). Confirm no
 // bucket ever reads NaN/undefined from the growth arrays at that boundary.
+// The target (gasto/swr) is set deliberately astronomical (€100M): a persistent
+// pre-FIRE deficit is now financed as debt rather than permanent ruin (see
+// index.html's deficit branch), so a merely large target could eventually be
+// crossed by decades of stochastic equity compounding — this one cannot.
 const worstCase = {
   ...DEFAULTS, seed: 7, careerYear: careerYearMin, startDelay: startDelayMin,
   debugTrackBuckets: true, startEq: 0, startBtc: 0, brOn: false,
-  salFO: 280000, salCA: 420000, vida: 7000, hip: 1400, gasto: 130000, swr: 2.4,
+  salFO: 280000, salCA: 420000, vida: 7000, hip: 1400, gasto: 500000, swr: 0.5,
 };
 const worstResult = simulate(worstCase, 6);
 assert.ok(finiteSeries(worstResult), 'worst-case career-start offset produces finite series and buckets');

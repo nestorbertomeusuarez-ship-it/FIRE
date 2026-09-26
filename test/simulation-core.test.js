@@ -254,3 +254,56 @@ console.log('outcome categories: OK');
   assert.equal(duplicates, 0, 'no two (path, stream) pairs of one seed share their opening draws (found ' + duplicates + ')');
 }
 console.log('pathRandom seeding: OK');
+
+// ---- progressiveTax: bracket edges, exact thresholds, and non-positive bases ----
+{
+  const brackets = [{ upTo: 100, rate: 0.10 }, { upTo: 300, rate: 0.20 }, { upTo: Infinity, rate: 0.30 }];
+  assert.equal(core.progressiveTax(0, brackets), 0, 'zero base pays no tax');
+  assert.equal(core.progressiveTax(-500, brackets), 0, 'a negative base is clamped to zero, never a negative tax');
+  assert.equal(core.progressiveTax(100, brackets), 10, 'exactly at the first threshold stays inside the first bracket (10% of 100)');
+  assert.equal(core.progressiveTax(100.01, brackets), 10 + 0.01 * 0.20, 'one cent above the threshold spills into the second bracket only on the marginal cent');
+  assert.equal(core.progressiveTax(300, brackets), 10 + 200 * 0.20, 'exactly at the second threshold stays inside the second bracket');
+  assert.equal(core.progressiveTax(1000, brackets), 10 + 200 * 0.20 + 700 * 0.30, 'above every finite threshold taxes the remainder at the open top bracket');
+  assert.equal(core.progressiveTax(undefined, brackets), 0, 'a non-numeric base is treated as zero, never NaN');
+}
+console.log('progressiveTax bracket edges: OK');
+
+// ---- validateLumpSums: valid and invalid payment schedules ----
+{
+  assert.deepEqual(core.validateLumpSums([]), [], 'an empty schedule is valid');
+  assert.deepEqual(core.validateLumpSums([{ year: 2030, month: 6, amount: -1500 }]), [{ year: 2030, month: 6, amount: -1500 }], 'a well-formed entry round-trips with only its three fields kept');
+  assert.throws(() => core.validateLumpSums('not-an-array'), /at most 100/, 'a non-array schedule is rejected');
+  assert.throws(() => core.validateLumpSums(new Array(101).fill({ year: 2030, month: 1, amount: 1 })), /at most 100/, 'more than 100 payments is rejected');
+  assert.throws(() => core.validateLumpSums([{ year: 2025, month: 1, amount: 1 }]), /2026/, 'a year before the supported window is rejected');
+  assert.throws(() => core.validateLumpSums([{ year: 2107, month: 1, amount: 1 }]), /2106/, 'a year after the supported window is rejected');
+  assert.throws(() => core.validateLumpSums([{ year: 2030, month: 0, amount: 1 }]), /month/, 'month 0 is rejected');
+  assert.throws(() => core.validateLumpSums([{ year: 2030, month: 13, amount: 1 }]), /month/, 'month 13 is rejected');
+  assert.throws(() => core.validateLumpSums([{ year: 2030, month: 1, amount: 10000001 }]), /10,000,000/, 'an amount above the cap is rejected');
+  assert.throws(() => core.validateLumpSums([{ year: 2030, month: 1, amount: NaN }]), /10,000,000/, 'a non-finite amount is rejected');
+}
+console.log('validateLumpSums valid/invalid schedules: OK');
+
+// ---- canonicalParameterFingerprint: key order never changes the fingerprint ----
+{
+  const a = { b: 1, a: { y: 2, x: [1, 2, 3] }, c: 'text' };
+  const b = { c: 'text', a: { x: [1, 2, 3], y: 2 }, b: 1 };
+  assert.equal(core.canonicalParameterFingerprint(a), core.canonicalParameterFingerprint(b), 'differently ordered keys at every nesting level produce the same fingerprint');
+  assert.notEqual(core.canonicalParameterFingerprint({ a: 1, b: 2 }), core.canonicalParameterFingerprint({ a: 2, b: 1 }), 'different values still produce different fingerprints');
+  assert.equal(core.canonicalParameterFingerprint(-0), '0', 'negative zero fingerprints the same as positive zero');
+  assert.throws(() => core.canonicalParameterFingerprint(Infinity), /finite/, 'a non-finite number cannot be fingerprinted');
+  assert.throws(() => core.canonicalParameterFingerprint(() => {}), /Unsupported/, 'a function cannot be fingerprinted');
+}
+console.log('canonicalParameterFingerprint key-order independence: OK');
+
+// ---- providentFireTaxRate: FIRE-target haircut for the Provident balance (audit fix #1) ----
+{
+  assert.equal(core.providentFireTaxRate(100000, false, false, 30, 'catalonia'), 0, 'taxes off: no haircut regardless of mode');
+  assert.equal(core.providentFireTaxRate(0, true, false, 30, 'catalonia'), 0, 'an empty balance has nothing to haircut');
+  assert.equal(core.providentFireTaxRate(100000, true, false, 30, 'catalonia'), 0.30, 'flat mode uses the configured average rate directly');
+  assert.equal(core.providentFireTaxRate(100000, true, false, 0, 'catalonia'), 0, 'a 0% flat rate is a 0% haircut');
+  const withdrawal = 100000 / 10;
+  const expectedRegional = core.generalIncomeTax(withdrawal, 'catalonia') / withdrawal;
+  assert.equal(core.providentFireTaxRate(100000, true, true, 30, 'catalonia'), expectedRegional, 'regional mode uses the effective average rate of a 10-year withdrawal, not the flat taxRateProv');
+  assert.ok(core.providentFireTaxRate(100000, true, true, 30, 'catalonia') > 0 && core.providentFireTaxRate(100000, true, true, 30, 'catalonia') < 1, 'the regional haircut is a genuine rate between 0 and 1');
+}
+console.log('providentFireTaxRate: OK');
