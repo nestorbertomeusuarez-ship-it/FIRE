@@ -54,7 +54,10 @@ const kid = { ...flat, childAnnual: 12000, childStartAge: 30, childEndAge: 34 };
 assert.ok(Math.abs(lastSnapshot(kid).p50 - model({ start: 10000000, spend: 100000, childAnnual: 12000, childStart: 30, childEnd: 34 }, flat)) < 1, 'child cost is charged for ages [30, 34) only');
 
 // Barista income above spending is surplus too (it used to be clamped away).
-const barista = { ...flat, proMode: true, baristaOn: true, baristaIncome: 90000, baristaYears: 5 };
+// feeEq/feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
+// this test is about barista cash-flow timing, not portfolio costs, and the hand-rolled model()
+// above does not account for fees.
+const barista = { ...flat, proMode: true, baristaOn: true, baristaIncome: 90000, baristaYears: 5, feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0 };
 assert.ok(Math.abs(lastSnapshot(barista).p50 - model({ start: 10000000, spend: 100000, barista: 90000, baristaYears: 5 }, barista)) < 1, 'barista income is applied for its years');
 const baristaRich = { ...barista, gasto: 40000, baristaIncome: 120000 };
 assert.ok(Math.abs(lastSnapshot(baristaRich).p50 - model({ start: 10000000, spend: 40000, barista: 120000, baristaYears: 5 }, baristaRich)) < 1, 'barista income above spending is invested, not discarded');

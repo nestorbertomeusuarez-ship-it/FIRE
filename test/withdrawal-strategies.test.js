@@ -62,6 +62,10 @@ const baseFlat = {
   childAnnual: 0, pensionAnnual: 0, healthcareAnnual: 0, mandatoryRetireOn: false, srrShockOn: false,
   histMarketOn: false, fxVolOn: false, inflOn: false, taxOn: false, wealthTaxOn: false, beckhamOn: false,
   lolOn: false, reOn: false, glideOn: false, baristaOn: false,
+  // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since these
+  // are deterministic 0%-return fixtures whose exact withdrawal-strategy arithmetic would
+  // otherwise be perturbed by portfolio costs unrelated to what each test isolates.
+  feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0,
 };
 // swr 5% -> target = gasto/0.05 = 1,200,000; startEq set to exactly that so FIRE fires at i=0.
 const flat = { ...baseFlat, gasto: 60000, swr: 5, startEq: 1200000 };
