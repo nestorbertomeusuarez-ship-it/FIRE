@@ -694,8 +694,9 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="ctrl">
         <div class="row"><label for="btcAporte">Del ahorro nuevo, a BTC</label><output id="btcAporte_o" for="btcAporte"></output></div>
         <input type="range" id="btcAporte" min="0" max="40" step="1">
+        <p class="hint">% de lo que ahorras cada mes mientras trabajas que va a BTC; el resto se reparte entre efectivo, bonos y acciones según tu reparto básico. Tras el FIRE ya no hay ahorro nuevo: los excedentes que puedan aparecer (una pensión mayor que tu gasto, un alquiler, un pago único) se invierten con el reparto básico, sin BTC ni oro.</p>
       </div>
-      <p class="note">La rentabilidad futura de BTC no la sabe nadie: el 5 % que viene por defecto es una suposición, no un dato. Prueba a ponerlo en 0 % y en negativo — si el plan solo funciona con BTC subiendo, no es un plan.</p>
+      <p class="note">La rentabilidad futura de BTC no la sabe nadie: el 10 % que viene por defecto es una suposición, no un dato. Prueba a ponerlo en 0 % y en negativo — si el plan solo funciona con BTC subiendo, no es un plan.</p>
     </div>
 
     <div class="group">
@@ -1026,7 +1027,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       </div>
       <p class="subhead">Prime Harvesting</p>
-      <p class="hint">Aproximación a la técnica de McClung: un interruptor independiente de la "Estrategia" elegida en esta misma sección, que decide de dónde sale el dinero, no cuánto se gasta. Con Prime Harvesting activo, cada retirada sigue drenando primero efectivo y bonos (vCash/vCons) y solo recurre a la renta variable cuando esos dos se agotan (el mismo orden que ya usa la cascada de retirada por defecto). Además, una vez al año tras el FIRE, si la renta variable ha crecido un 20 % o más en términos reales desde el momento del FIRE, se vende automáticamente un 20 % de esa renta variable y se traspasa a la cartera conservadora (vCons), recogiendo beneficios de forma sistemática. Ejemplo: si al jubilarte tenías 1.000.000 € en renta variable, en cuanto llegue a 1.200.000 € se traspasan 240.000 € a bonos/efectivo ese año. Solo decide el origen del dinero, no evita la ruina por sí sola — para que tenga margen de maniobra conviene mantener un 30-40 % de la cartera en bonos/efectivo.</p>
+      <p class="hint">Aproximación a la técnica de McClung: un interruptor independiente de la "Estrategia" elegida en esta misma sección, que decide de dónde sale el dinero, no cuánto se gasta. Con Prime Harvesting activo, cada retirada sigue drenando primero efectivo y bonos (vCash/vCons) y solo recurre a la renta variable cuando esos dos se agotan (el mismo orden que ya usa la cascada de retirada por defecto). Además, una vez al año tras el FIRE, si la renta variable ha crecido un 20 % o más en términos reales desde el momento del FIRE, se vende automáticamente un 20 % de esa renta variable y se traspasa a la cartera conservadora (vCons), recogiendo beneficios de forma sistemática. Ejemplo: si al jubilarte tenías 1.000.000 € en renta variable, en cuanto llegue a 1.200.000 € se traspasan 240.000 € a bonos/efectivo ese año. Solo decide el origen del dinero, no evita la ruina por sí sola — para que tenga margen de maniobra conviene mantener un 30-40 % de la cartera en bonos/efectivo. Si además activas el glide path, los dos mueven dinero entre acciones y bonos cada año sin coordinarse; úsalos por separado si quieres ver el efecto de cada uno.</p>
       <div class="toggle">
         <input type="checkbox" id="phOn">
         <label for="phOn">Prime Harvesting: vender renta variable con beneficios hacia bonos/efectivo</label>
@@ -1060,7 +1061,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="goldAporte">Del ahorro nuevo, a oro</label><output id="goldAporte_o" for="goldAporte"></output></div>
-        <p class="hint">% del ahorro mensual que se destina a oro, antes de repartir el resto entre acciones/bonos/efectivo según tu allocation básica (igual mecánica que "% de aportación en BTC"). Por defecto es 0 %: nada del ahorro nuevo va a oro salvo que subas este valor.</p>
+        <p class="hint">% del ahorro mensual que se destina a oro, antes de repartir el resto entre acciones/bonos/efectivo según tu allocation básica (igual mecánica que "% de aportación en BTC"). Por defecto es 0 %: nada del ahorro nuevo va a oro salvo que subas este valor. Solo se aplica mientras trabajas; tras el FIRE los excedentes se invierten con el reparto básico.</p>
         <input type="range" id="goldAporte" min="0" max="30" step="1">
       </div>
       <p class="subhead">Inmueble en alquiler</p>
