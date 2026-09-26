@@ -185,8 +185,7 @@ const { loadApp } = require('./helpers/fake-app.js');
   // newer click has already finished" deterministically.
   {
     const btn = el('runSensitivity'), loadingEl = el('sensLoading');
-    // PRO mode on so every sensitivity parameter (portfolio costs included) is exercised: 14 pairs.
-    el('proMode').checked = true;
+    // Every sensitivity parameter (portfolio costs included) is always exercised: 14 pairs.
     app.run(`
       globalThis.__originalRAS = requestAnalysisSimulation;
       globalThis.__pending = [];

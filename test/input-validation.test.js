@@ -57,7 +57,7 @@ assert.equal(simulate({ ...DEFAULTS, seed: 1 }, 2).debug, undefined, 'no debug o
 const tracked = simulate({ ...DEFAULTS, seed: 1, debugTrackBuckets: true }, 4);
 assert.ok(Number.isFinite(tracked.debug.minBucket) && tracked.debug.minBucket >= 0, 'buckets and cost bases never go negative in the default scenario');
 // Stress: retired household paying wealth tax and spending from empty buckets, with every asset class active.
-const stress = { ...DEFAULTS, seed: 11, proMode: true, debugTrackBuckets: true, startEq: 1500000, startBtc: 100000, startGold: 100000, gasto: 120000, swr: 8, horizonAge: 80,
+const stress = { ...DEFAULTS, seed: 11, fiscalOn: true, debugTrackBuckets: true, startEq: 1500000, startBtc: 100000, startGold: 100000, gasto: 120000, swr: 8, horizonAge: 80,
   taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0, wealthTaxOn: true, wealthExempt: 0, wealthRate: 3, reOn: true, reValue: 600000, reCountsFire: true, glideOn: true,
   glideTargetYear: 2035, lolOn: true, lolAnnualProb: 5, profitShareWeeks: 8, wdStrategy: 1, mortgageBalance: 200000, allocCash: 5, allocBonds: 15, allocEquities: 80 };
 const stressed = simulate(stress, 40);
@@ -67,7 +67,7 @@ assert.ok(stressed.debug.minBucket >= -1e-6, 'no bucket or cost basis goes negat
 // Working household whose costs exceed its income: deficits drain cash, bonds, equities, BTC, gold in
 // turn, and any shortfall left once every bucket is at 0 becomes pre-FIRE debt (negative vCash), not
 // permanent ruin — every OTHER bucket/basis still never goes negative.
-const deficitHousehold = { ...DEFAULTS, seed: 5, proMode: true, debugTrackBuckets: true, startEq: 60000, startBtc: 20000, startGold: 20000, goldAporte: 0, salFO: 280000, salCA: 420000,
+const deficitHousehold = { ...DEFAULTS, seed: 5, debugTrackBuckets: true, startEq: 60000, startBtc: 20000, startGold: 20000, goldAporte: 0, salFO: 280000, salCA: 420000,
   vida: 7000, hip: 1400, gasto: 130000, swr: 2.4, allocCash: 10, allocBonds: 20, allocEquities: 70, reOn: true, reValue: 100000, reCountsFire: true };
 const deficitResult = simulate(deficitHousehold, 30);
 assert.ok(deficitResult.debug.minBucketExCash >= -1e-6, 'deficits never push a bucket other than cash (or its basis) below zero (min ' + deficitResult.debug.minBucketExCash + ')');
@@ -75,7 +75,7 @@ assert.ok(deficitResult.debug.minCash < -1e-6, 'a household that cannot fund its
 
 // Every numeric control at its minimum and maximum yields finite results (or a clear validation error).
 const tag = key => (html.match(new RegExp('<(?:input|select)[^>]*id="' + key + '"[^>]*>')) || [''])[0];
-const heavy = { ...DEFAULTS, seed: 3, proMode: true, taxOn: true, useIrpfBrackets: true, beckhamOn: true, wealthTaxOn: true, lolOn: true, fxVolOn: true, inflOn: true,
+const heavy = { ...DEFAULTS, seed: 3, fiscalOn: true, taxOn: true, useIrpfBrackets: true, beckhamOn: true, wealthTaxOn: true, lolOn: true, fxVolOn: true, inflOn: true,
   glideOn: true, baristaOn: true, reOn: true, reValue: 200000, startGold: 50000, goldAporte: 5, btcAporte: 5, profitShareWeeks: 5,
   mandatoryRetireOn: true, wdStrategy: 1, srrShockOn: true, startEq: 2000000, horizonAge: 70 };
 heavy.debugTrackBuckets = true;

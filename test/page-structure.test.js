@@ -31,7 +31,7 @@ const EXPECTED_IDS = [
   'scenarioName', 'saveScenario', 'deleteAllScenarios', 'exportScenarios', 'importScenariosFile', 'scenarioMsg', 'scenarioList', 'reports',
   'exportCsv', 'printReport', 'printAssumptions', 'printAssumptionsList', 'printLimitsList', 'assumptionsLimits', 'limitsList', 'runSensitivity',
   'sensLoading', 'sensList', 'srrShockPct_o', 'srrShockPct', 'srrShockMonths_o', 'srrShockMonths', 'runSrrStress', 'srrLoading',
-  'srrResult', 'proMode', 'fx_o', 'fx', 'salFO_o', 'salFO', 'salCA_o', 'salCA',
+  'srrResult', 'fiscalOn', 'fx_o', 'fx', 'salFO_o', 'salFO', 'salCA_o', 'salCA',
   'captY_o', 'captY', 'captDelay_o', 'captDelay', 'startDelay_o', 'startDelay', 'salG_o', 'salG',
   'profitShareWeeks_o', 'profitShareWeeks', 'mandatoryRetireOn', 'mandatoryRetireAge_o', 'mandatoryRetireAge', 'ret_o', 'ret', 'vol_o',
   'vol', 'histMarketOn', 'vida_o', 'vida', 'vidaG_o', 'vidaG', 'hip_o', 'hip',
@@ -138,11 +138,11 @@ test('Parametros is one section with the groups in the agreed order', () => {
   assert.deepEqual(h3, [
     'Objetivo', 'Tú y el horizonte', 'Carrera', 'Gastos', 'Ingresos en jubilación', 'Reparto de la cartera básica',
     'Cartera hoy', 'Liquidaciones', 'Fondo de previsión', 'Mercado',
-    'PRO · Fiscalidad España', 'PRO · Riesgo de pérdida de licencia (LOL)', 'PRO · Inflación y FX estocásticos',
-    'PRO · Estrategia de retirada', 'PRO · Activos y allocation adicionales', 'PRO · FIRE parcial',
+    'Fiscalidad España', 'Costes de la cartera', 'Riesgo de pérdida de licencia (LOL)', 'Inflación y FX estocásticos',
+    'Estrategia de retirada', 'Activos y allocation adicionales', 'FIRE parcial',
   ], 'h3 order in Parametros');
   assert.equal((section.match(/<h2>/g) || []).length, 1, 'one h2 in Parametros');
-  assert.equal((section.match(/class="group pro-only"/g) || []).length, 6);
+  assert.equal((section.match(/class="group pro-only"/g) || []).length, 0, 'no PRO-only groups remain');
   assert.equal(/<details\b/.test(section), false, 'no <details> inside Parametros');
   assert.equal(/<details\b/.test(body.slice(idAt('parametros'))), false, 'no <details> after Parametros starts');
 
@@ -167,16 +167,21 @@ test('Parametros is one section with the groups in the agreed order', () => {
   expectGroup('Ingresos en jubilación', ['pensionAnnual', 'pensionStartAge', 'lumpSums', 'lumpSumHelp']);
   expectGroup('Reparto de la cartera básica', ['allocCash', 'allocBonds', 'consRet', 'consVol', 'allocEquities', 'cashRet', 'cashVol']);
 
-  const proRow = section.indexOf('class="proRow"');
-  assert.ok(proRow > groupStart('Mercado') && proRow < groupStart('PRO · Fiscalidad España'), 'PRO switch sits right before the PRO groups');
-  assert.ok(section.indexOf('id="proMode"') > proRow);
+  // The former standalone "Modo PRO" switch is gone; fiscalOn is the first control inside
+  // its own Fiscalidad group instead, right after Mercado.
+  assert.equal(section.indexOf('class="proRow"'), -1, 'the proRow wrapper is gone');
+  const fiscalGroupStart = groupStart('Fiscalidad España');
+  assert.ok(fiscalGroupStart > groupStart('Mercado'), 'Fiscalidad España sits after Mercado');
+  const fiscalOnAt = section.indexOf('id="fiscalOn"');
+  assert.ok(fiscalOnAt > fiscalGroupStart && fiscalOnAt < groupStart('Costes de la cartera'), 'fiscalOn lives inside the Fiscalidad group');
+  assert.equal(section.slice(fiscalGroupStart, section.lastIndexOf('<input', fiscalOnAt)).indexOf('<input'), -1, 'fiscalOn is the first control of the Fiscalidad group');
   const errorAt = section.indexOf('id="assumptionError"');
   assert.ok(errorAt > -1 && errorAt < groupStart('Objetivo'), 'validation error sits at the top of the controls');
   assert.match(section, /id="assumptionError" role="alert" aria-live="assertive"/);
 
   const actionsAt = section.indexOf('<div class="actions">');
   const actions = section.slice(actionsAt);
-  assert.ok(actionsAt > groupStart('PRO · FIRE parcial'), 'actions come last');
+  assert.ok(actionsAt > groupStart('FIRE parcial'), 'actions come last');
   assert.ok(actions.indexOf('id="reset"') > -1 && actions.indexOf('id="seed"') > actions.indexOf('id="reset"'));
   for (const id of ['calc', 'calcAnnounce', 'simulationContext', 'calcLoading']) {
     assert.equal(actions.includes('id="' + id + '"'), false, '#' + id + ' left the actions row');

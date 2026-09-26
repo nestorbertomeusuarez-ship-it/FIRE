@@ -13,9 +13,12 @@ context.globalThis = context; vm.createContext(context); vm.runInContext(source,
 const { simulate, DEFAULTS, buildRuinCurve, readParams, controls, MONTHS } = context.__t;
 
 // Deterministic retired profile: no returns, no volatility, retires in month 0 with far more than the target.
-const flat = { ...DEFAULTS, seed: 3, proMode: false, startEq: 10000000, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
+// feeEq/feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
+// the hand-rolled model() below does not account for portfolio costs.
+const flat = { ...DEFAULTS, seed: 3, startEq: 10000000, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
   gasto: 100000, swr: 4, vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, horizonAge: 60,
-  allocCash: 0, allocBonds: 0, allocEquities: 100 };
+  allocCash: 0, allocBonds: 0, allocEquities: 100,
+  feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0 };
 // The engine now snapshots every December PLUS its own final month (a partial
 // year for an integer-age horizon, since the model starts in September), so
 // the LAST series point is the run's final month, not necessarily a December.
@@ -57,7 +60,7 @@ assert.ok(Math.abs(lastSnapshot(kid).p50 - model({ start: 10000000, spend: 10000
 // feeEq/feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
 // this test is about barista cash-flow timing, not portfolio costs, and the hand-rolled model()
 // above does not account for fees.
-const barista = { ...flat, proMode: true, baristaOn: true, baristaIncome: 90000, baristaYears: 5, feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0 };
+const barista = { ...flat, baristaOn: true, baristaIncome: 90000, baristaYears: 5 };
 assert.ok(Math.abs(lastSnapshot(barista).p50 - model({ start: 10000000, spend: 100000, barista: 90000, baristaYears: 5 }, barista)) < 1, 'barista income is applied for its years');
 const baristaRich = { ...barista, gasto: 40000, baristaIncome: 120000 };
 assert.ok(Math.abs(lastSnapshot(baristaRich).p50 - model({ start: 10000000, spend: 40000, barista: 120000, baristaYears: 5 }, baristaRich)) < 1, 'barista income above spending is invested, not discarded');

@@ -22,7 +22,7 @@ test('the Provident balance is haircut for the FIRE-target comparison when taxes
   // target-crossing month should move later once taxOn applies the haircut, purely
   // from the FIRE-target comparison (not from any change to the actual balances).
   const base = {
-    ...DEFAULTS, seed: 1, proMode: true,
+    ...DEFAULTS, seed: 1, fiscalOn: true,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
     startEq: 0, startBtc: 0, startGold: 0,
     allocCash: 0, allocBonds: 0, allocEquities: 100,
@@ -47,7 +47,7 @@ test('the Provident balance is haircut for the FIRE-target comparison when taxes
 
 test('the Provident haircut uses the regional general-IRPF effective rate, not the flat taxRateProv, in regional mode', () => {
   const base = {
-    ...DEFAULTS, seed: 1, proMode: true,
+    ...DEFAULTS, seed: 1, fiscalOn: true,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
     startEq: 0, startBtc: 0, startGold: 0,
     allocCash: 0, allocBonds: 0, allocEquities: 100,
@@ -79,7 +79,7 @@ test('providentFireTaxRate never changes the actual balances, only the FIRE-targ
   // full value) at the untaxed FIRE month must be identical either way, proving the
   // fix only moves the comparison, never vProv itself.
   const base = {
-    ...DEFAULTS, seed: 1, proMode: true,
+    ...DEFAULTS, seed: 1, fiscalOn: true,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
     startEq: 0, startBtc: 0, startGold: 0,
     allocCash: 0, allocBonds: 0, allocEquities: 100,
@@ -109,7 +109,10 @@ test('the mortgage payment keeps being deducted every month after FIRE, until hi
     childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 40000, swr: 4, // target exactly matches startEq: immediate FIRE
     horizonAge: 35, wdStrategy: 0,
-    hipEnd: 2100
+    hipEnd: 2100,
+    // feeEq/etc default to non-zero now (realistic TER assumptions); zero them here since this
+    // test isolates the exact 12,000 EUR/year mortgage delta, not portfolio-cost drag.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0
   };
   const withoutHip = simulate({ ...base, hip: 0 }, 2);
   const withHip = simulate({ ...base, hip: 1000 }, 2);
@@ -149,7 +152,7 @@ test('a household that never earns enough and never recovers ends the horizon in
   const permanentDebt = {
     ...DEFAULTS, seed: 1,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
-    startEq: 0, startBtc: 0, proMode: false,
+    startEq: 0, startBtc: 0,
     vida: 5000, hip: 1000, burr: 0, brOn: false,
     salFO: 20000, salCA: 20000, basicFO: 0, basicCA: 0, provOn: false,
     childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
@@ -190,7 +193,7 @@ test('mandatoryRetireAge defaults to 65', () => {
 // ---- Fix #6: Beckham (obligación real) still taxes Spanish-situated real estate ----
 test('during the Beckham window, wealth tax still applies to the rental property (vRE) only', () => {
   const base = {
-    ...DEFAULTS, seed: 1, proMode: true,
+    ...DEFAULTS, seed: 1, fiscalOn: true,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
     startEq: 2000000, startBtc: 0,
     allocEquities: 100, allocBonds: 0, allocCash: 0,
@@ -220,7 +223,7 @@ test('pre-FIRE debt is repaid at the retirement transition, and no fired path en
   // (negative vCash) while a large Provident balance (locked, untouched by the
   // deficit cascade) still crosses the FIRE target in the same month.
   const base = {
-    ...DEFAULTS, seed: 42, proMode: true, taxOn: true,
+    ...DEFAULTS, seed: 42, fiscalOn: true, taxOn: true,
     ageNow: 25, horizonAge: 75, vida: 9500, hip: 3500, hipEnd: 2032,
     lumpSums: [{ year: 2027, month: 6, amount: -450000 }],
     gasto: 45000, swr: 4.5,
@@ -235,7 +238,7 @@ test('pre-FIRE debt is repaid at the retirement transition, and no fired path en
 // ---- Fix #2 (GK guardrail): the withdrawal-rate check must include the post-FIRE mortgage ----
 test('Guyton-Klinger cuts spending once the mortgage payment is counted in the withdrawal rate', () => {
   const gkBase = {
-    ...DEFAULTS, seed: 1, proMode: true,
+    ...DEFAULTS, seed: 1,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
     startEq: 1000000, startBtc: 0,
     allocEquities: 100, allocBonds: 0, allocCash: 0,
@@ -270,7 +273,7 @@ test('Guyton-Klinger cuts spending once the mortgage payment is counted in the w
 // ---- Fix #3 (fees): cumFees must never read negative, even while vCash is in debt ----
 test('cumulative fees never read negative even while a path is carrying debt (negative vCash)', () => {
   const debtWithFees = {
-    ...DEFAULTS, seed: 1, proMode: true,
+    ...DEFAULTS, seed: 1,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
     feeCash: 2,
     startEq: 0, startBtc: 0,
@@ -306,7 +309,7 @@ test('the hip/hipEnd controls explain the mortgage continues after FIRE and is s
 
 test('during the Beckham window, wealth tax is fully suspended on everything except the rental property', () => {
   const base = {
-    ...DEFAULTS, seed: 1, proMode: true,
+    ...DEFAULTS, seed: 1, fiscalOn: true,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
     startEq: 2000000, startBtc: 0,
     allocEquities: 100, allocBonds: 0, allocCash: 0,

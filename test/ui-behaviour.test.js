@@ -137,7 +137,7 @@ const { loadApp } = require('./helpers/fake-app.js');
     ['ret', '2'], ['vol', '0'], ['btcRet', '0'], ['btcVol', '20'], ['consRet', '0'], ['consVol', '0'], ['cashRet', '0'], ['cashVol', '0']
   ]) setValue(id, value); // ret=2 and btcVol=20 are each control's own minimum (0 is out of range for both)
   el('provOn').checked = false; // no Provident contributions to mask the household's own cash-flow debt
-  setValue('seed', '1'); el('proMode').checked = false;
+  setValue('seed', '1');
   await call("safeRun('preview')");
   const brokeRows = []; const brokeList = el('outcomeSummary').children[0].children;
   for (let i = 0; i < brokeList.length; i += 2) brokeRows.push(Number(brokeList[i + 1].textContent.split(' rutas')[0].replace(/\./g, '')));
@@ -186,7 +186,7 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.equal(csv('safe text - with dash'), '"safe text - with dash"');
 
   // ---- run summary describes bracket mode separately from the flat rate ----
-  setValue('seed', '2'); el('proMode').checked = true; el('taxOn').checked = true; el('useIrpfBrackets').checked = true; setValue('taxRateProv', '5');
+  setValue('seed', '2'); el('fiscalOn').checked = true; el('taxOn').checked = true; el('useIrpfBrackets').checked = true; setValue('taxRateProv', '5');
   await call("safeRun('preview')");
   assert.match(el('calc').textContent, /tramos progresivos del ahorro 19-30 %/);
   assert.match(el('calc').textContent, /Provident \(5\.0%\)/);

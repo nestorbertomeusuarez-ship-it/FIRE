@@ -11,7 +11,7 @@ context.globalThis = context; vm.createContext(context); vm.runInContext(source,
 const { simulate, DEFAULTS } = context.__test;
 
 // Deterministic, flat-return profile: any wealth difference comes from bookkeeping, not markets.
-const flat = { ...DEFAULTS, seed: 7, proMode: true, ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
+const flat = { ...DEFAULTS, seed: 7, ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
   startEq: 0, startBtc: 200000, allocCash: 0, allocBonds: 100, allocEquities: 0, vida: 0, hip: 0, nur: 0, brOn: false, burr: 0,
   salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false, gasto: 1000000, swr: 4 };
 const firstP50 = p => simulate(p, 4).series[0].p50;

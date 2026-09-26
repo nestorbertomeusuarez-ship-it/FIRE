@@ -68,7 +68,7 @@ function hasToggleSiblingHint(block) {
 //   .ctrl block (a sibling of a .ctrl, not of a .toggle), paired with "hip" right above it.
 // - reCountsFire: its effect is already spelled out inline by the neighboring "reAppr" hint
 //   ("Solo cuenta para tu capital FIRE si marcas «Contar el inmueble como capital FIRE»").
-const PRE_EXISTING_EXCEPTIONS = new Set(['proMode', 'seed', 'calcPrecision', 'hipEnd', 'reCountsFire']);
+const PRE_EXISTING_EXCEPTIONS = new Set(['seed', 'calcPrecision', 'hipEnd', 'reCountsFire']);
 
 const controls = Array.from(section.matchAll(/<(input|select)\b[^>]*\bid="([^"]+)"/g), (m) => ({ id: m[2], idx: m.index }));
 

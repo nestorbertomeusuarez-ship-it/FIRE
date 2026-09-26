@@ -64,7 +64,7 @@ for (const fn of embedded) {
 
 // 3) Full simulate() runs through the worker entry point must equal the main thread.
 const rich = {
-  ...DEFAULTS, proMode: true, seed: 20260921, startEq: 2500000, startBtc: 400000, startGold: 150000, gasto: 45000, swr: 3.5,
+  ...DEFAULTS, fiscalOn: true, seed: 20260921, startEq: 2500000, startBtc: 400000, startGold: 150000, gasto: 45000, swr: 3.5,
   taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0, provOn: true, taxRateProv: 8, beckhamOn: false,
   wealthTaxOn: true, wealthExempt: 300000, mortgageBalance: 50000, reOn: true, reValue: 300000, reCountsFire: true,
   lolOn: true, lolAnnualProb: 3, glideOn: true, glideTargetYear: 2040, fxVolOn: true, inflOn: true, histMarketOn: false,
