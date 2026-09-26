@@ -46,7 +46,9 @@ for (const name of called) assert.equal(inWorker('typeof NavlogCore.' + name), '
 
 // 2b) Static free-call check: every bare function call made by an embedded function must resolve inside the worker.
 const KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'typeof', 'new', 'else', 'do', 'in', 'of', 'void', 'throw']);
-const embedded = [main.__main.simulate, main.__main.validateSimulationParams, ...['pathRandom', 'progressiveSavingsTax', 'netAfterSavingsTax', 'marginalSavingsTaxRate', 'providentFirst', 'beckhamApplies', 'wealthTaxBase', 'grossForNetSavings', 'validateAllocation', 'validateHorizon', 'validateLumpSums'].map(name => core[name])];
+// Scan EVERY NavlogCore member embedded in the worker (not a hand-kept list), so a helper whose
+// body calls another core function by its bare name is caught.
+const embedded = [main.__main.simulate, main.__main.validateSimulationParams, ...inWorker('Object.keys(NavlogCore)').filter(name => typeof core[name] === 'function').map(name => core[name])];
 for (const fn of embedded) {
   const stringLiteral = /'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g;
   const text = fn.toString().replace(/\/\*[\s\S]*?\*\//g, '').replace(stringLiteral, "''").replace(/\/\/.*$/gm, ''); // drop comments and string literals
@@ -73,6 +75,8 @@ const rich = {
 };
 const variants = [
   rich,
+  { ...rich, useRegionalGeneralIrpf: true, taxRegion: 0 },
+  { ...rich, useRegionalGeneralIrpf: true, taxRegion: 1 },
   { ...rich, wdStrategy: 2, histMarketOn: true, beckhamOn: true, beckhamYears: 6, useIrpfBrackets: false, taxRate: 21, lolPayoutMode: 1 },
   { ...rich, taxRateProv: 30, startEq: 9000000, gasto: 200000, swr: 4, taxRepatDelay: 1 },
   { ...DEFAULTS, seed: 0 },
