@@ -27,7 +27,7 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
   `reproducibility.test.js`, `sensitivity-progress.test.js`,
   `simulation-core.test.js`,
   `simulation-integration.test.js`, `simulation-jobs.test.js`,
-  `slider-ranges.test.js`, `small-buttons-min-height.test.js`,
+  `slider-ranges.test.js`, `solidarity-tax.test.js`, `small-buttons-min-height.test.js`,
   `tax-accumulation.test.js`, `ui-behaviour.test.js`,
   `wd-strategy-visibility.test.js`, `withdrawal-strategies.test.js`,
   `worker-parity.test.js`.
@@ -50,7 +50,7 @@ file is retained as a historical comparison and is not the canonical app.
   or asset-specific tax lots beyond its simplified gain-basis buckets. Configurable
   annual costs apply to cash, bonds, equities, BTC, gold, and the Provident balance;
   their median cumulative effect is included as `fee50` in the CSV projection rows.
-- Tax modeling is intentionally approximate. The savings-income bracket values
+- Tax modeling is intentionally approximate. Wealth tax is the larger of the regional tax (flat average rate after the regional bonus) and the state solidarity tax on large fortunes (ITSGF: 700 k€ exemption, 0 % on the first 3 M€ of base, then 1.7 / 2.1 / 3.5 %); the 60 % joint IRPF limit is not modeled. The savings-income bracket values
   embedded in `simulation-core.js` are labeled in `index.html` as
   illustrative 2024/2025 assumptions (documentation reviewed 2026-09-21); they
   are not automatically updated and have not been independently verified here.

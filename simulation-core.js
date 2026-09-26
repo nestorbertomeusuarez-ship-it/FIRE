@@ -22,6 +22,16 @@
     for (const bracket of brackets) { tax += Math.max(0, Math.min(Math.max(0, Number(base) || 0), bracket.upTo) - lower) * bracket.rate; lower = bracket.upTo; if (base <= bracket.upTo) break; }
     return tax;
   }
+  // Impuesto Temporal de Solidaridad de las Grandes Fortunas (extended indefinitely by RDL 8/2023):
+  // state tax on net wealth above a 700 k€ exemption, 0 % on the first 3 M€ of base. Regional
+  // 100 % wealth-tax bonuses do not remove it; the wealth tax actually paid is deducted from it.
+  const SOLIDARITY_EXEMPT = 700000;
+  const SOLIDARITY_BRACKETS = [
+    { upTo: 3000000, rate: 0 }, { upTo: 5347998.03, rate: 0.017 }, { upTo: 10695996.06, rate: 0.021 }, { upTo: Infinity, rate: 0.035 }
+  ];
+  function solidarityWealthTax(netWealth) {
+    return progressiveTax(Math.max(0, (Number(netWealth) || 0) - SOLIDARITY_EXEMPT), SOLIDARITY_BRACKETS);
+  }
   function netMonthlyReturn(grossMonthlyReturn, annualFeePct) {
     const fee = Math.min(1, Math.max(0, Number(annualFeePct) || 0) / 100);
     if (fee === 0) return grossMonthlyReturn;
@@ -374,5 +384,5 @@
     if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
     return migrated;
   }
-  return { gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
+  return { SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
 });
