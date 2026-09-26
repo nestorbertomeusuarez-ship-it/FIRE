@@ -19,7 +19,7 @@ test('a 100 % regional bonus does not remove the solidarity tax', () => {
   const c = { console, Math, Float64Array, Int32Array, Uint8Array, Date, Infinity, NavlogCore: core, document: { getElementById: () => null }, globalThis: null };
   c.globalThis = c; vm.createContext(c); vm.runInContext(source, c, { timeout: 1000 });
   const { simulate, DEFAULTS } = c.__t;
-  const rich = { ...DEFAULTS, seed: 1, proMode: true, taxOn: true, taxRepatDelay: 0, startEq: 8000000, startBtc: 0, allocCash: 0, allocBonds: 0, allocEquities: 100,
+  const rich = { ...DEFAULTS, seed: 1, fiscalOn: true, taxOn: true, taxRepatDelay: 0, startEq: 8000000, startBtc: 0, allocCash: 0, allocBonds: 0, allocEquities: 100,
     ret: 0, vol: 0, gasto: 1, burr: 0, brOn: false, childAnnual: 0, vida: 0, hip: 0, wealthTaxOn: true, wealthExempt: 700000, wealthRate: 0.5 };
   const p50 = p => simulate(p, 2).series.map(x => x.p50);
   const madrid = p50({ ...rich, wealthBonusPct: 100 });

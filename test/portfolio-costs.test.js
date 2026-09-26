@@ -12,13 +12,8 @@ const { simulate, DEFAULTS } = context.__test;
 const p50 = p => simulate(p, 6).series.map(x => x.p50);
 const costs = { feeCash: 1, feeCons: 1, feeEq: 1.5, feeBtc: 2, feeGold: 1, feeProv: 1 };
 
-test('portfolio costs are PRO controls: hidden values never change a non-PRO run', () => {
-  const base = { ...DEFAULTS, seed: 3, proMode: false };
-  assert.deepEqual(p50({ ...base, ...costs }), p50(base));
-});
-
-test('portfolio costs reduce wealth in PRO mode', () => {
-  const base = { ...DEFAULTS, seed: 3, proMode: true };
+test('portfolio costs always reduce wealth, with no PRO switch involved', () => {
+  const base = { ...DEFAULTS, seed: 3 };
   const withCosts = p50({ ...base, ...costs }), without = p50(base);
   assert.ok(withCosts[withCosts.length - 1] < without[without.length - 1]);
 });
@@ -36,14 +31,14 @@ test('the backtest fee note is part of the backtest render, not a one-off append
   assert.match(render, /Coste de renta variable aplicado/);
 });
 
-test('sensitivity only tests portfolio costs in PRO mode', () => {
+test('sensitivity always tests portfolio costs: no proOnly gating remains', () => {
   const start = html.indexOf('const SENSITIVITY_PARAMS');
   const block = html.slice(start, html.indexOf('\n];', start));
   for (const id of ['feeCash', 'feeCons', 'feeEq', 'feeBtc', 'feeGold', 'feeProv']) {
     const line = block.split('\n').find(l => l.includes(`key:'${id}'`));
-    assert.match(line, /proOnly:true/, `${id} must be marked proOnly`);
+    assert.equal(/proOnly:true/.test(line), false, `${id} must not be marked proOnly`);
   }
   const run = html.slice(html.indexOf('async function runSensitivity'), html.indexOf('async function runSensitivity') + 800);
-  assert.match(run, /proOnly/, 'runSensitivity must skip proOnly parameters outside PRO mode');
-  assert.match(html, /16 simulaciones sin el modo PRO/);
+  assert.equal(/proOnly/.test(run), false, 'runSensitivity must no longer filter by proOnly');
+  assert.match(html, /28 simulaciones/);
 });

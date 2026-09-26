@@ -11,7 +11,7 @@ const {simulate, DEFAULTS, buildRuinCurve}=context.__test;
 // Deterministic profile with REAL gains: 5 % return, no volatility, capital far above the FIRE target,
 // so every path retires in the first month and withdraws part-gain money each month. (With ret:0 the
 // gain fraction is zero and every tax assertion would pass even if the tax logic were deleted.)
-const gainsBase={...DEFAULTS, seed:444, proMode:true, startEq:10000000, startBtc:0, ret:5, vol:0, btcRet:0, btcVol:0, gasto:120000, swr:4, vida:0, hip:0, nur:0, brOn:false, burr:0, provOn:false, startDelay:0, captDelay:0, taxRepatDelay:0, horizonAge:38, allocCash:0, allocBonds:0, allocEquities:100, taxRate:19};
+const gainsBase={...DEFAULTS, seed:444, fiscalOn:true, startEq:10000000, startBtc:0, ret:5, vol:0, btcRet:0, btcVol:0, gasto:120000, swr:4, vida:0, hip:0, nur:0, brOn:false, burr:0, provOn:false, startDelay:0, captDelay:0, taxRepatDelay:0, horizonAge:38, allocCash:0, allocBonds:0, allocEquities:100, taxRate:19};
 const p50 = params => simulate(params,4).series.map(x=>x.p50);
 const untaxed=p50({...gainsBase,taxOn:false});
 const taxedFlat=p50({...gainsBase,taxOn:true,useIrpfBrackets:false});
@@ -39,7 +39,7 @@ assert.notEqual(oneYear[1],untaxed[1],'the year after the window is already taxe
 // Provident vs savings brackets: in bracket mode the Provident tax rate must still steer the withdrawal
 // order (cheap Provident is drained first, expensive one last), so the two runs cannot coincide.
 // (Final gross wealth is not comparable across the two orders, hence only inequality is asserted.)
-const providentBase={...DEFAULTS,seed:9,proMode:true,startEq:900000,startBtc:0,gasto:40000,swr:3.25,provOn:true,taxOn:true,useIrpfBrackets:true,taxRepatDelay:0,startDelay:0,captDelay:0,horizonAge:70,vol:0,ret:4};
+const providentBase={...DEFAULTS,seed:9,fiscalOn:true,startEq:900000,startBtc:0,gasto:40000,swr:3.25,provOn:true,taxOn:true,useIrpfBrackets:true,taxRepatDelay:0,startDelay:0,captDelay:0,horizonAge:70,vol:0,ret:4};
 const providentCheap=p50({...providentBase,taxRateProv:0}), providentDear=p50({...providentBase,taxRateProv:47});
 assert.notDeepEqual(providentCheap,providentDear,'the Provident rate changes the withdrawal order in bracket mode');
 assert.equal(providentCheap[0],providentDear[0],'orders only diverge once withdrawals start');

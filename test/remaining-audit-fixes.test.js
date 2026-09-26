@@ -42,7 +42,7 @@ test('validateSimulationParams rejects out-of-range numeric params (real slider 
 
   // seed:null must remain allowed, booleans and lumpSums must be untouched.
   assert.doesNotThrow(() => validateSimulationParams({ ...DEFAULTS, seed: null }), 'seed:null stays allowed');
-  assert.doesNotThrow(() => validateSimulationParams({ ...DEFAULTS, proMode: true, taxOn: true }), 'booleans stay allowed');
+  assert.doesNotThrow(() => validateSimulationParams({ ...DEFAULTS, fiscalOn: true, taxOn: true }), 'booleans stay allowed');
   assert.doesNotThrow(() => validateSimulationParams({ ...DEFAULTS, lumpSums: [{ year: 2030, month: 1, amount: 1000 }] }), 'lumpSums stays allowed');
 
   // Slider bounds double as the source of PARAM_BOUNDS.
@@ -75,7 +75,7 @@ test('pension income and healthcare cost also apply while still working, once pa
   // Flat market, no growth, huge gasto/swr so the household never voluntarily FIREs
   // within the short horizon: stays in the "still working" branch the whole time.
   const flat = {
-    ...DEFAULTS, seed: 7, proMode: true, ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
+    ...DEFAULTS, seed: 7, ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
     startEq: 2000000, startBtc: 0, allocCash: 0, allocBonds: 100, allocEquities: 0, vida: 0, hip: 0, nur: 0, brOn: false, burr: 0,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false, gasto: 1e7, swr: 4, ageNow: 66, horizonAge: 70,
   };

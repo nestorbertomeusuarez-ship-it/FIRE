@@ -60,7 +60,8 @@ file is retained as a historical comparison and is not the canonical app.
 
 - Additional assumptions include an editable current age and end age. The end age is dynamically constrained to at most 80 years after the current age, never above 110; this maps the fixed September 2026 simulation start to the supported calendar through September 2106. Career start is constrained to that same window. Cash/bond/equity allocation, recurring retirement income, health costs, child costs, and dated one-off cash flows are user inputs, not forecasts.
 - The outcome dashboard separates FIRE voluntario (including its post-FIRE ruin sub-rate, i.e. paths that reached the target but later went broke), salida forzosa (forced retirement at the mandatory age), pérdida de licencia, and two routes that "nunca llega al FIRE": one that ends the horizon still in deuda (pre-FIRE debt never repaid), and one with no retirement in the selected horizon and no debt.
-- Modo PRO offers six mutually exclusive withdrawal strategies (SWR fijo, Guyton-Klinger, go-go/slow-go/no-go phases, VPW/Bogleheads, floor & ceiling/Bengen, and Yield Shield), plus an independent Prime Harvesting toggle that can combine with any of them and applies the same way whether retirement is voluntary, mandatory, or a Loss-of-License forced exit.
+- Every advanced section (Spanish taxation, Loss-of-License risk, stochastic inflation/FX, withdrawal strategy, additional assets/glide path, and partial FIRE) is always visible and always active through its own toggle; there is no separate all-or-nothing advanced-mode switch anymore. Spanish taxation (IRPF on withdrawals and on the Provident, the Burriana sale tax, wealth/solidarity tax, and Ley Beckham) is additionally gated behind a single "Aplicar fiscalidad española" switch, off by default, so the simulation focuses on the FIRE concept unless you opt into modeling a return to Spanish tax residency. Portfolio costs (TER for cash, bonds, equities, BTC, gold, and the Provident balance) always apply, with their own group.
+- The app offers six mutually exclusive withdrawal strategies (SWR fijo, Guyton-Klinger, go-go/slow-go/no-go phases, VPW/Bogleheads, floor & ceiling/Bengen, and Yield Shield), plus an independent Prime Harvesting toggle that can combine with any of them and applies the same way whether retirement is voluntary, mandatory, or a Loss-of-License forced exit.
 - Sliders/inputs no longer recalculate in real time: they only repaint labels and mark the result stale (visible notice + dimmed results). Press "Calcular" to run the full-precision simulation, with a precision selector ("Rápida" ~4s default, "Alta" ~12s, "Máxima" ~30s, or a custom 5-120s target) that trades wait time for more simulated paths. Reset and loading a saved scenario still recalculate immediately, as does the initial page load.
 - The yearly percentile series (chart, CSV, Hitos table) always includes the run's own final month as its last point, even when that month is not December (an integer-age horizon starting in September rarely lands there); wealth tax, the glide-path rebalance, and the Prime Harvesting sweep also apply in that final partial year when active.
 - "Calcular sensibilidad" shows live progress ("Calculando… X de N simulaciones") as each parameter's paired low/high run finishes, instead of a static message for the ~30-60s the full sweep can take.
@@ -73,6 +74,10 @@ Simulation runs execute in the browser; the app has no backend account or
 database. Compared scenarios are stored in this browser's `localStorage` and
 remain on this device/browser profile until deleted or browser storage is
 cleared. Do not use a shared browser profile for sensitive financial inputs.
+Scenarios saved by a version of the app prior to the removal of the old
+all-or-nothing advanced-mode switch are incompatible and discarded
+automatically (the storage key was bumped, and the old key is cleared) — save
+new scenarios after updating.
 
 ## Disclaimer
 

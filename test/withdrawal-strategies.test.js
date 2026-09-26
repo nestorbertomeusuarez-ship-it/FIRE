@@ -55,7 +55,7 @@ test('floorCeilingWithdrawal: never negative for a zero or negative portfolio', 
 // target, so retirement starts at month 0 and any wealth difference across strategies
 // comes purely from withdrawal-strategy bookkeeping, not market noise.
 const baseFlat = {
-  ...DEFAULTS, seed: 7, proMode: true,
+  ...DEFAULTS, seed: 7,
   ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
   startBtc: 0, allocCash: 10, allocBonds: 20, allocEquities: 70,
   vida: 0, hip: 0, burr: 0, brOn: false, salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
@@ -148,14 +148,10 @@ test('strat 5 (Yield Shield): reverts to plain gasto once ysYears has elapsed', 
 // fixture with a positive, deterministic (0-vol) equity return and no spending.
 const growth = { ...baseFlat, gasto: 0, swr: 5, startEq: 1200000, ret: 8, vol: 0 };
 
-test('phOn changes results only when proMode is on', () => {
-  const proOff = simulate({ ...growth, proMode: false, phOn: true }, 4).series.map(x => x.p50);
-  const proOffBaseline = simulate({ ...growth, proMode: false, phOn: false }, 4).series.map(x => x.p50);
-  assert.deepEqual(proOff, proOffBaseline, 'phOn is inert while proMode is off');
-
-  const proOnOff = simulate({ ...growth, proMode: true, phOn: false }, 4).series.map(x => x.p50);
-  const proOnOn = simulate({ ...growth, proMode: true, phOn: true }, 4).series.map(x => x.p50);
-  assert.ok(anyDiffer(proOnOff, proOnOn), 'phOn changes the wealth trajectory once proMode is on');
+test('phOn changes results on its own, with no master switch involved', () => {
+  const off = simulate({ ...growth, phOn: false }, 4).series.map(x => x.p50);
+  const on = simulate({ ...growth, phOn: true }, 4).series.map(x => x.p50);
+  assert.ok(anyDiffer(off, on), 'phOn changes the wealth trajectory by itself');
 });
 
 test('phOn combines with every wdStrategy (0-5), never throwing or producing NaN', () => {
@@ -211,7 +207,7 @@ test('paintLabels lists all six wdStrategy names, and no position-dependent word
 console.log('withdrawal-strategies.test.js: all assertions passed');
 
 test('VPW plans to age 100 like Bogleheads, so it never empties the portfolio at the end age', () => {
-  const r = simulate({ ...DEFAULTS, seed: 9, proMode: true, wdStrategy: 3 }, 400);
+  const r = simulate({ ...DEFAULTS, seed: 9, wdStrategy: 3 }, 400);
   const ruined = [...r.ruinMonth].filter(m => m >= 0).length;
   assert.ok(ruined <= 4, `VPW should almost never run out, got ${ruined}/400 ruined paths`);
 });
@@ -292,7 +288,7 @@ test('E3: VPW weights vProv as risky money, consistent with the totalNow it is s
 
 test('Guyton-Klinger: capital preservation (cuts) stops in the last 15 years, as in the 2006 paper', () => {
   // Falling market so the withdrawal rate breaches the upper guardrail every review.
-  const falling = { ...flat, proMode: true, ret: -5, wdStrategy: 1, startEq: 1400000 };
+  const falling = { ...flat, ret: -5, wdStrategy: 1, startEq: 1400000 };
   const series = p => simulate(p, 1).series.map(x => Math.round(x.p50));
   const shortGK = series({ ...falling, horizonAge: flat.ageNow + 14 });
   const shortSWR = series({ ...falling, horizonAge: flat.ageNow + 14, wdStrategy: 0 });

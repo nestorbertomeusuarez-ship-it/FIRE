@@ -28,7 +28,7 @@ test('DEFAULTS still simulate without throwing once nur is removed', () => {
 
 test('consRet/consVol ("cartera conservadora") drive the bonds bucket even with PRO mode off', () => {
   const base = {
-    ...DEFAULTS, seed: 11, proMode: false, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0,
+    ...DEFAULTS, seed: 11, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0,
     startEq: 500000, startBtc: 0, allocCash: 0, allocBonds: 100, allocEquities: 0,
     vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, salFO: 0, salCA: 0, basicFO: 0, basicCA: 0,
     provOn: false, gasto: 1000000, swr: 4, consVol: 0,
@@ -40,11 +40,14 @@ test('consRet/consVol ("cartera conservadora") drive the bonds bucket even with 
 
 test('the mortgage balance amortizes linearly to 0 by hipEnd, derived from hipEnd itself', () => {
   const base = {
-    ...DEFAULTS, seed: 5, proMode: true, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
+    ...DEFAULTS, seed: 5, fiscalOn: true, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
     startEq: 2000000, startBtc: 0, allocCash: 0, allocBonds: 0, allocEquities: 100,
     vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
     gasto: 1, swr: 4, wealthTaxOn: true, wealthExempt: 0, wealthRate: 1, wealthBonusPct: 0,
     hipEnd: 2036, mortgageBalance: 300000, ageNow: 28, horizonAge: 40,
+    // feeEq/etc default to non-zero now (realistic TER assumptions); zero them here since this
+    // test isolates the wealth-tax saving from the amortizing mortgage, not portfolio-cost drag.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0,
   };
   const withDebt = simulate(base, 4).series;
   const withoutDebt = simulate({ ...base, mortgageBalance: 0 }, 4).series;

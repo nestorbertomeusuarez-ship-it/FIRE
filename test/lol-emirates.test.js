@@ -22,7 +22,7 @@ test('Emirates contract pays 36/24/12/0 months of basic salary by age band', () 
 test('an early LOL credits 36 months of first-officer basic salary to the portfolio', () => {
   // Certain LOL in the first career month, flat markets, no private policy: the only
   // difference between the two runs is the contractual Emirates benefit.
-  const base = { ...DEFAULTS, seed: 5, proMode: true, lolOn: true, lolAgeCurveOn: false, lolAnnualProb: 100, lolPayoutMode: 0, lolPayout: 0, lolPremiumMonthly: 0,
+  const base = { ...DEFAULTS, seed: 5, lolOn: true, lolAgeCurveOn: false, lolAnnualProb: 100, lolPayoutMode: 0, lolPayout: 0, lolPremiumMonthly: 0,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, startEq: 0, startBtc: 0,
     childAnnual: 0, vida: 0, hip: 0, gasto: 1, burr: 0, brOn: false, provOn: false, mandatoryRetireOn: false,
     // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
@@ -46,7 +46,7 @@ test('age-based LOL risk follows the bathtub curve', () => {
 });
 
 test('with the age curve on, the flat probability slider is ignored', () => {
-  const base = { ...DEFAULTS, seed: 11, proMode: true, lolOn: true, ret: 0, vol: 0, btcRet: 0, btcVol: 0 };
+  const base = { ...DEFAULTS, seed: 11, lolOn: true, ret: 0, vol: 0, btcRet: 0, btcVol: 0 };
   const lolCount = r => [...r.licenseLossOut].filter(Boolean).length;
   const curveA = lolCount(simulate({ ...base, lolAgeCurveOn: true, lolAnnualProb: 0 }, 400));
   const curveB = lolCount(simulate({ ...base, lolAgeCurveOn: true, lolAnnualProb: 3 }, 400));

@@ -12,13 +12,13 @@ const { simulate, DEFAULTS, readParams, controls } = context.__t;
 const plain = value => JSON.parse(JSON.stringify(value, (k, v) => ArrayBuffer.isView(v) ? Array.from(v) : v));
 
 // Fast-retiring profile with every state-gated random draw enabled (profit share, LOL).
-const gated = { ...DEFAULTS, proMode: true, seed: 5, startEq: 1200000, startBtc: 0, gasto: 30000, swr: 3.25, profitShareWeeks: 8, lolOn: true, lolAnnualProb: 4, horizonAge: 70 };
+const gated = { ...DEFAULTS, seed: 5, startEq: 1200000, startBtc: 0, gasto: 30000, swr: 3.25, profitShareWeeks: 8, lolOn: true, lolAnnualProb: 4, horizonAge: 70 };
 
 // 1) Path i sees the same random numbers whatever the path count is AND whatever OTHER paths consume.
 //    N-independence alone also holds for one shared sequential stream, so the real test is the second half:
 //    a shorter horizon makes every EARLIER path draw fewer numbers in total, which would shift all later paths
 //    under a shared stream. Wealth after the first year must not move at all.
-const tracked = { ...DEFAULTS, seed: 5, profitShareWeeks: 8, proMode: true, lolOn: true, lolAnnualProb: 4, debugTrackBuckets: true };
+const tracked = { ...DEFAULTS, seed: 5, profitShareWeeks: 8, lolOn: true, lolAnnualProb: 4, debugTrackBuckets: true };
 const early = (params, paths) => Array.from(simulate(params, paths).debug.earlyWealth);
 const earlyBase = early(tracked, 60);
 assert.equal(earlyBase.length, 60);
@@ -37,7 +37,7 @@ assert.deepEqual(Array.from(small.licenseLossOut), Array.from(large.licenseLossO
 const shared = { ...DEFAULTS, seed: 5, profitShareWeeks: 8 };
 // A Loss-of-License exit does not depend on swr, so only voluntary FIRE dates can make the runs diverge.
 const earliestFire = result => Math.min(...Array.from(result.fireMonthAll).filter((month, k) => month >= 0 && !result.licenseLossOut[k] && !result.forcedOut[k]));
-for (const overrides of [{}, { proMode: true, lolOn: true, lolAnnualProb: 4 }]) {
+for (const overrides of [{}, { lolOn: true, lolAnnualProb: 4 }]) {
   const swrLow = simulate({ ...shared, ...overrides, swr: 3.25 }, 300), swrHigh = simulate({ ...shared, ...overrides, swr: 3.5 }, 300);
   const quiet = Math.floor((Math.min(earliestFire(swrLow), earliestFire(swrHigh)) - 1) / 12); // whole years before anyone retires
   assert.ok(quiet >= 3, 'scenario has several pre-retirement years to compare (got ' + quiet + ')');
