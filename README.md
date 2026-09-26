@@ -32,15 +32,19 @@ file is retained as a historical comparison and is not the canonical app.
   or asset-specific tax lots beyond its simplified gain-basis buckets. Configurable
   annual costs apply to cash, bonds, equities, BTC, gold, and the Provident balance;
   their median cumulative effect is included as `fee50` in the CSV projection rows.
-- Tax modeling is intentionally approximate. Wealth tax is the larger of the regional tax (flat average rate after the regional bonus) and the state solidarity tax on large fortunes (ITSGF: 700 k€ exemption, 0 % on the first 3 M€ of base, then 1.7 / 2.1 / 3.5 %); the 60 % joint IRPF limit is not modeled. The savings-income bracket values
+- Tax modeling is intentionally approximate. Wealth tax is the larger of the regional tax (flat average rate after the regional bonus) and the state solidarity tax on large fortunes (ITSGF: 700 k€ exemption, 0 % on the first 3 M€ of base, then 1.7 / 2.1 / 3.5 %). The 60 % joint IRPF/wealth-tax limit (Ley 19/1991 art. 31, extended to the ITSGF by Ley 38/2022 art. 3) is modeled: each of the regional wealth tax and the state solidarity tax is capped so that it plus the IRPF actually charged that year (Provident ordinary-income withdrawals and realized capital gains) never exceeds 60 % of the IRPF taxable base, with the wealth-tax cuota reduction itself capped at 80 % (so at least 20 % of it is always paid). As a conservative simplification, the law excludes gains on assets held over a year from that base; this model has no per-lot holding-period tracking, so every realized gain counts regardless of how long it was held, which makes the limit bind less than it should (a possible overstatement of wealth tax paid). The savings-income bracket values
   embedded in `simulation-core.js` are labeled in `index.html` as
   illustrative 2024/2025 assumptions (documentation reviewed 2026-09-21); they
   are not automatically updated and have not been independently verified here.
   The general-IRPF brackets (state and regional, used for the Provident balance
-  in regional mode) are 2025 nominal amounts as well, and every bracket table is
-  applied unchanged, in real euros, across the whole simulated horizon — the
-  model implicitly assumes those thresholds are indexed to inflation over time,
-  which Spanish tax law does not guarantee.
+  in regional mode) are 2025 nominal amounts as well. Spanish law does not index
+  any of these nominal thresholds (IRPF savings/general brackets, the wealth-tax
+  exemption, and the solidarity-tax exemption/brackets) to inflation, so their
+  real value erodes every year; the `taxThresholdDrift` control (default 2 %/año,
+  configurable 0–5 %) models that erosion by shrinking every threshold in real
+  terms at a compounding annual rate, applied at the point each tax is computed
+  (0 % reproduces the previous assumption that thresholds are fully indexed to
+  inflation).
   Existing source comments attribute return-series inputs to Damodaran/NYU Stern
   and officialdata.org; these attributions were not independently audited in
   this work. The model does not implement complete

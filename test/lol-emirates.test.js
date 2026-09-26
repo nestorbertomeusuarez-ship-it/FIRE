@@ -24,7 +24,10 @@ test('an early LOL credits 36 months of first-officer basic salary to the portfo
   // difference between the two runs is the contractual Emirates benefit.
   const base = { ...DEFAULTS, seed: 5, proMode: true, lolOn: true, lolAgeCurveOn: false, lolAnnualProb: 100, lolPayoutMode: 0, lolPayout: 0, lolPremiumMonthly: 0,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, startEq: 0, startBtc: 0,
-    childAnnual: 0, vida: 0, hip: 0, gasto: 1, burr: 0, brOn: false, provOn: false, mandatoryRetireOn: false };
+    childAnnual: 0, vida: 0, hip: 0, gasto: 1, burr: 0, brOn: false, provOn: false, mandatoryRetireOn: false,
+    // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
+    // this test isolates the Emirates contractual LOL benefit, not portfolio costs.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0 };
   const at2027 = r => r.series.find(x => x.year === 2027).p50;
   const withContract = at2027(simulate({ ...base, lolEmiratesOn: true }, 4));
   const without = at2027(simulate({ ...base, lolEmiratesOn: false }, 4));

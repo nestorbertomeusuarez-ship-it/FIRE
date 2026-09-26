@@ -17,9 +17,20 @@
     catalonia: [{ upTo: 12500, rate: 0.095 }, { upTo: 22000, rate: 0.125 }, { upTo: 33000, rate: 0.16 }, { upTo: 53000, rate: 0.19 }, { upTo: 90000, rate: 0.215 }, { upTo: 120000, rate: 0.235 }, { upTo: 175000, rate: 0.245 }, { upTo: Infinity, rate: 0.255 }],
     'valencian-community': [{ upTo: 12000, rate: 0.09 }, { upTo: 22000, rate: 0.12 }, { upTo: 32000, rate: 0.15 }, { upTo: 42000, rate: 0.175 }, { upTo: 52000, rate: 0.20 }, { upTo: 62000, rate: 0.225 }, { upTo: 72000, rate: 0.25 }, { upTo: 100000, rate: 0.265 }, { upTo: 150000, rate: 0.275 }, { upTo: 200000, rate: 0.285 }, { upTo: Infinity, rate: 0.295 }]
   };
-  function progressiveTax(base, brackets) {
+  // `scale` shrinks/grows every bracket boundary in place (default 1 = unchanged), used to
+  // model nominal thresholds eroding in real terms under fiscal drag (taxThresholdDrift in
+  // index.html): scaling every boundary by s is exactly equivalent to s * tax(base/s) against
+  // the unscaled brackets, but scaling the boundaries directly avoids a second division and
+  // keeps Infinity boundaries Infinity (Infinity * s === Infinity for any finite s > 0).
+  function progressiveTax(base, brackets, scale = 1) {
+    const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
     let tax = 0, lower = 0;
-    for (const bracket of brackets) { tax += Math.max(0, Math.min(Math.max(0, Number(base) || 0), bracket.upTo) - lower) * bracket.rate; lower = bracket.upTo; if (base <= bracket.upTo) break; }
+    for (const bracket of brackets) {
+      const upTo = bracket.upTo * s;
+      tax += Math.max(0, Math.min(Math.max(0, Number(base) || 0), upTo) - lower) * bracket.rate;
+      lower = upTo;
+      if (base <= upTo) break;
+    }
     return tax;
   }
   // Impuesto Temporal de Solidaridad de las Grandes Fortunas (extended indefinitely by RDL 8/2023):
@@ -29,8 +40,9 @@
   const SOLIDARITY_BRACKETS = [
     { upTo: 3000000, rate: 0 }, { upTo: 5347998.03, rate: 0.017 }, { upTo: 10695996.06, rate: 0.021 }, { upTo: Infinity, rate: 0.035 }
   ];
-  function solidarityWealthTax(netWealth) {
-    return progressiveTax(Math.max(0, (Number(netWealth) || 0) - SOLIDARITY_EXEMPT), SOLIDARITY_BRACKETS);
+  function solidarityWealthTax(netWealth, scale = 1) {
+    const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    return progressiveTax(Math.max(0, (Number(netWealth) || 0) - SOLIDARITY_EXEMPT * s), SOLIDARITY_BRACKETS, s);
   }
   // Real value of a fixed nominal amount after cumulative mean-zero log inflation surprises.
   // exp(-x) is convex (E[exp(-x)] = exp(var/2) > 1), so subtract var/2 to keep the mean at 1;
@@ -43,19 +55,19 @@
     if (fee === 0) return grossMonthlyReturn;
     return (1 + grossMonthlyReturn) * Math.pow(1 - fee, 1 / 12) - 1;
   }
-  function generalIncomeTax(base, region) {
+  function generalIncomeTax(base, region, scale = 1) {
     const regional = GENERAL_REGIONAL_BRACKETS[region];
     if (!regional) throw new RangeError('Unsupported IRPF region');
-    return progressiveTax(base, GENERAL_STATE_BRACKETS) + progressiveTax(base, regional);
+    return progressiveTax(base, GENERAL_STATE_BRACKETS, scale) + progressiveTax(base, regional, scale);
   }
-  function netAfterGeneralIncomeTax(gross, ytdIncome, region) {
+  function netAfterGeneralIncomeTax(gross, ytdIncome, region, scale = 1) {
     const income = Math.max(0, Number(gross) || 0), ytd = Math.max(0, Number(ytdIncome) || 0);
-    return income - (generalIncomeTax(ytd + income, region) - generalIncomeTax(ytd, region));
+    return income - (generalIncomeTax(ytd + income, region, scale) - generalIncomeTax(ytd, region, scale));
   }
-  function grossForNetGeneralIncome(needNet, ytdIncome, region, maxGross) {
+  function grossForNetGeneralIncome(needNet, ytdIncome, region, maxGross, scale = 1) {
     if (needNet <= 0 || maxGross <= 0) return 0;
     let low = 0, high = maxGross;
-    for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (netAfterGeneralIncomeTax(mid, ytdIncome, region) >= needNet) high = mid; else low = mid; }
+    for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (netAfterGeneralIncomeTax(mid, ytdIncome, region, scale) >= needNet) high = mid; else low = mid; }
     return high;
   }
   // FIRE-target haircut for the Provident/company-scheme balance: what fraction of it
@@ -67,11 +79,11 @@
   // a representative 10 years (generalIncomeTax(vProv/10, region) / (vProv/10)) as a
   // reasonable, simple estimate — not exact, but conservative enough for a target
   // comparison, and it keeps the FIRE check independent of the actual withdrawal plan.
-  function providentFireTaxRate(vProv, taxActive, regionalGeneralActive, taxRateProv, region) {
+  function providentFireTaxRate(vProv, taxActive, regionalGeneralActive, taxRateProv, region, scale = 1) {
     if (!taxActive || !(vProv > 0)) return 0;
     if (!regionalGeneralActive) return Math.max(0, Math.min(1, (Number(taxRateProv) || 0) / 100));
     const annualTest = vProv / 10;
-    return Math.max(0, Math.min(1, generalIncomeTax(annualTest, region) / annualTest));
+    return Math.max(0, Math.min(1, generalIncomeTax(annualTest, region, scale) / annualTest));
   }
   // Single gate for every seed source (UI text, saved scenarios, sensitivity pairs).
   // Returns null (= random, not reproducible) for anything that is not an unsigned
@@ -136,24 +148,27 @@
     for (let i = 0; i < 15; i++) next(); // warm-up decorrelates similar seeds
     return function() { return next() / 4294967296; };
   }
-  function progressiveSavingsTax(totalGain) {
+  function progressiveSavingsTax(totalGain, scale = 1) {
+    const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
     let tax = 0, lower = 0;
     for (const bracket of SAVINGS_BRACKETS) {
-      const taxable = Math.max(0, Math.min(totalGain, bracket.upTo) - lower);
+      const upTo = bracket.upTo * s;
+      const taxable = Math.max(0, Math.min(totalGain, upTo) - lower);
       tax += taxable * bracket.rate;
-      lower = bracket.upTo;
-      if (totalGain <= bracket.upTo) break;
+      lower = upTo;
+      if (totalGain <= upTo) break;
     }
     return tax;
   }
-  function netAfterSavingsTax(gross, gainFraction, ytdGain) {
+  function netAfterSavingsTax(gross, gainFraction, ytdGain, scale = 1) {
     const gain = Math.max(0, gross * Math.max(0, Math.min(1, gainFraction)));
-    return gross - (progressiveSavingsTax(ytdGain + gain) - progressiveSavingsTax(ytdGain));
+    return gross - (progressiveSavingsTax(ytdGain + gain, scale) - progressiveSavingsTax(ytdGain, scale));
   }
-  function marginalSavingsTaxRate(gainFraction, ytdGain) {
+  function marginalSavingsTaxRate(gainFraction, ytdGain, scale = 1) {
+    const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
     const fraction = Math.max(0, Math.min(1, Number(gainFraction) || 0));
     const base = Math.max(0, Number(ytdGain) || 0);
-    const bracket = SAVINGS_BRACKETS.find(item => base < item.upTo) || SAVINGS_BRACKETS[SAVINGS_BRACKETS.length - 1];
+    const bracket = SAVINGS_BRACKETS.find(item => base < item.upTo * s) || SAVINGS_BRACKETS[SAVINGS_BRACKETS.length - 1];
     return bracket.rate * fraction * 100;
   }
   function historicalWithdrawalBacktest(realAnnualReturns, capital, annualSpend, years, annualFeePct = 0) {
@@ -193,10 +208,10 @@
     }
     return counts;
   }
-  function grossForNetSavings(needNet, gainFraction, ytdGain, maxGross) {
+  function grossForNetSavings(needNet, gainFraction, ytdGain, maxGross, scale = 1) {
     if (needNet <= 0 || maxGross <= 0) return 0;
     let low = 0, high = maxGross;
-    for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (netAfterSavingsTax(mid, gainFraction, ytdGain) >= needNet) high = mid; else low = mid; }
+    for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (netAfterSavingsTax(mid, gainFraction, ytdGain, scale) >= needNet) high = mid; else low = mid; }
     return high;
   }
   function boundedPair(value, delta, min, max) {
@@ -290,6 +305,21 @@
     if (typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonicalParameterFingerprint(value[key])).join(',') + '}';
     throw new TypeError('Unsupported parameter value');
   }
+  // Ley 19/1991 art. 31 (the same rule is extended to the solidarity tax by Ley 38/2022 art.
+  // 3): IRPF cuota + wealth-tax cuota may not exceed 60% of the IRPF taxable base (general +
+  // savings). If it does, the wealth-tax cuota is reduced by the excess, capped at 80% of the
+  // wealth-tax cuota itself, so at least 20% of it is always paid. Conservative simplification:
+  // the law excludes gains on assets held over a year from the base; this model has no
+  // per-lot holding-period tracking, so the caller passes every realized gain regardless of
+  // how long it was held, which makes the limit bind less often (a possible overstatement).
+  function wealthTaxAfterJointLimit(wealthTax, irpfBase, irpfTax) {
+    const wt = Number.isFinite(wealthTax) && wealthTax > 0 ? wealthTax : 0;
+    if (wt <= 0) return 0;
+    const base = Number.isFinite(irpfBase) && irpfBase > 0 ? irpfBase : 0;
+    const tax = Number.isFinite(irpfTax) && irpfTax > 0 ? irpfTax : 0;
+    const excess = Math.max(0, tax + wt - 0.6 * base);
+    return wt - Math.min(excess, 0.8 * wt);
+  }
   function wealthTaxBase(liquidWealth, propertyValue, propertyOwned) {
     return Math.max(0, Number(liquidWealth) || 0) + (propertyOwned ? Math.max(0, Number(propertyValue) || 0) : 0);
   }
@@ -358,10 +388,10 @@
     const ceiling = Math.max(0, Number(base) || 0) * (Number(ceilingPct) || 0) / 100;
     return Math.min(ceiling, Math.max(floor, raw));
   }
-  function providentFirst(providentRate, savingsBuckets, ytdGain) {
+  function providentFirst(providentRate, savingsBuckets, ytdGain, scale = 1) {
     const availableRates = (savingsBuckets || []).filter(bucket => bucket && bucket.balance > 0).map(bucket => {
       const gainFraction = Math.max(0, Math.min(1, 1 - bucket.basis / bucket.balance));
-      return NavlogCore.marginalSavingsTaxRate(gainFraction, ytdGain);
+      return NavlogCore.marginalSavingsTaxRate(gainFraction, ytdGain, scale);
     });
     return availableRates.length > 0 && providentRate < Math.min(...availableRates);
   }
@@ -405,5 +435,5 @@
     if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
 });

@@ -33,7 +33,10 @@ test('the Provident balance is haircut for the FIRE-target comparison when taxes
     captY: 2200, // never promoted to captain within the horizon
     taxRateProv: 50, useRegionalGeneralIrpf: false,
     gasto: 400000, swr: 4,
-    horizonAge: 90
+    horizonAge: 90,
+    // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
+    // this test isolates the Provident tax haircut, not portfolio costs.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0
   };
   const off = simulate({ ...base, taxOn: false }, 2);
   const on = simulate({ ...base, taxOn: true }, 2);
@@ -55,7 +58,12 @@ test('the Provident haircut uses the regional general-IRPF effective rate, not t
     captY: 2200,
     taxOn: true, taxRateProv: 50, useRegionalGeneralIrpf: true,
     gasto: 400000, swr: 4,
-    horizonAge: 90
+    horizonAge: 90,
+    // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
+    // this test isolates the regional general-IRPF Provident haircut, not portfolio costs.
+    // taxThresholdDrift also defaults to non-zero now (fiscal drag); zero it here too, since
+    // this test is about the difference between regions, not about eroding thresholds.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, taxThresholdDrift: 0
   };
   const catalonia = simulate({ ...base, taxRegion: 0 }, 2);
   const valencia = simulate({ ...base, taxRegion: 1 }, 2);
@@ -193,7 +201,10 @@ test('during the Beckham window, wealth tax still applies to the rental property
     taxOn: true, taxRepatDelay: 0,
     wealthTaxOn: true, wealthExempt: 100000, wealthRate: 2, wealthBonusPct: 0, mortgageBalance: 0,
     reOn: true, reValue: 1000000, reCountsFire: true, reYield: 0, reAppr: 0,
-    beckhamOn: true, beckhamYears: 6
+    beckhamOn: true, beckhamYears: 6,
+    // feeEq/etc and taxThresholdDrift default to non-zero now; zero them here since this test
+    // isolates the exact wealth-tax bite against a fixed exemption, not costs or fiscal drag.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, taxThresholdDrift: 0
   };
   const withBeckham = simulate(base, 2);
   const noWealthTax = simulate({ ...base, wealthTaxOn: false }, 2);
@@ -236,7 +247,12 @@ test('Guyton-Klinger cuts spending once the mortgage payment is counted in the w
     hip: 1000, hipEnd: 2100,
     // Default careerYear/CAREER_MONTH puts careerStart at absolute month 9 (Jun-2027),
     // so the mortgage/salary machinery stays inert before that, same as fireMonth=0.
-    startDelay: 0, careerYear: 2027, ageNow: 28
+    startDelay: 0, careerYear: 2027, ageNow: 28,
+    // feeEq/etc default to non-zero now (realistic TER assumptions); zero them here since this
+    // test isolates the Guyton-Klinger guardrail cut, and any drag at all pushes the balance
+    // just under the exactly-matching target, delaying (or preventing) the immediate FIRE this
+    // test relies on.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0
   };
   // Long horizon so the capital preservation rule is active (it is switched off in the last 15
   // years, as in Guyton & Klinger 2006). Compare a 10 % cut with no cut: the first review is at
@@ -303,7 +319,10 @@ test('during the Beckham window, wealth tax is fully suspended on everything exc
     // Property excluded from the FIRE target and left OUT of the series total, so a
     // change in its own wealth tax cannot show up here — isolates the ex-RE portfolio.
     reOn: true, reValue: 1000000, reCountsFire: false, reYield: 0, reAppr: 0,
-    beckhamOn: true, beckhamYears: 6
+    beckhamOn: true, beckhamYears: 6,
+    // feeEq/etc and taxThresholdDrift default to non-zero now; zero them here since this test
+    // isolates the wealth-tax suspension from the withdrawal, not costs or fiscal drag.
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, taxThresholdDrift: 0
   };
   const withBeckham = simulate(base, 2);
   const withoutBeckham = simulate({ ...base, beckhamOn: false }, 2);

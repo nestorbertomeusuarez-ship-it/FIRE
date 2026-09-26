@@ -829,12 +829,17 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Estimación individual sin mínimos ni deducciones; usa las escalas estatal y autonómica 2025. Al activarla sustituye el tipo manual del Provident.</p>
         <input type="range" id="taxRegion" min="0" max="1" step="1">
       </div>
-      <div class="ctrl"><div class="row"><label for="feeCash">TER efectivo</label><output id="feeCash_o" for="feeCash"></output></div><p class="hint">Comisión anual de la cuenta o fondo monetario donde tienes el efectivo, en % del saldo. Se descuenta mes a mes de su rentabilidad. Una cuenta remunerada normal cuesta 0 %; un fondo monetario, 0,1–0,3 %.</p><input type="range" id="feeCash" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeCons">TER bonos</label><output id="feeCons_o" for="feeCons"></output></div><p class="hint">Gastos anuales (TER) de tus fondos o ETF de bonos, en % del saldo, descontados mes a mes. Un ETF indexado de bonos suele costar 0,05–0,25 %; un fondo de gestión activa, 0,5–1 %.</p><input type="range" id="feeCons" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeEq">TER renta variable</label><output id="feeEq_o" for="feeEq"></output></div><p class="hint">Gastos anuales (TER) de tus fondos o ETF de acciones, en % del saldo, descontados mes a mes. Por ejemplo, con 500.000 € al 0,2 % pagas unos 1.000 € al año; al 1,5 % de un fondo activo, 7.500 €. Un indexado global suele costar 0,1–0,25 %. También se aplica al backtest histórico.</p><input type="range" id="feeEq" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeBtc">Coste BTC</label><output id="feeBtc_o" for="feeBtc"></output></div><p class="hint">Coste anual de mantener tu BTC, en % del saldo: comisión de un ETF de bitcoin (0,15–0,25 %) o custodia y diferenciales si lo compras directamente.</p><input type="range" id="feeBtc" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeGold">Coste oro</label><output id="feeGold_o" for="feeGold"></output></div><p class="hint">Coste anual de tu oro, en % del saldo: comisión de un ETC de oro (0,1–0,25 %) o almacenaje y seguro si es físico.</p><input type="range" id="feeGold" min="0" max="3" step="0.01"></div>
-      <div class="ctrl"><div class="row"><label for="feeProv">Coste Provident</label><output id="feeProv_o" for="feeProv"></output></div><p class="hint">Gastos anuales de los fondos donde está invertido tu Provident Scheme, en % del saldo, descontados mes a mes. Mira el TER de los fondos que hayas elegido dentro del plan.</p><input type="range" id="feeProv" min="0" max="3" step="0.01"></div>
+      <div class="ctrl">
+        <div class="row"><label for="taxThresholdDrift">Deriva fiscal: erosión anual de los tramos/mínimos (%)</label><output id="taxThresholdDrift_o" for="taxThresholdDrift"></output></div>
+        <p class="hint">La ley española congela en euros nominales los tramos del IRPF (ahorro y general), el mínimo exento de patrimonio y el mínimo/tramos del impuesto de solidaridad: no se actualizan solos con la inflación. Este control fija cuánto se encogen cada año en términos reales — en la práctica, la inflación esperada menos cualquier actualización legal de los tramos. Por defecto 2 %, aproximadamente el objetivo de inflación del BCE con tramos congelados; 0 % reproduce el supuesto anterior de que los tramos se indexan a la inflación. Afecta a los tramos del IRPF del ahorro y general, al mínimo exento de patrimonio y al mínimo exento/tramos del impuesto de solidaridad.</p>
+        <input type="range" id="taxThresholdDrift" min="0" max="5" step="0.25">
+      </div>
+      <div class="ctrl"><div class="row"><label for="feeCash">TER efectivo</label><output id="feeCash_o" for="feeCash"></output></div><p class="hint">Comisión anual de la cuenta o fondo monetario donde tienes el efectivo, en % del saldo. Se descuenta mes a mes de su rentabilidad. Una cuenta remunerada normal cuesta 0 %; un fondo monetario, 0,1–0,3 %. Por defecto 0,10 %, un fondo monetario barato.</p><input type="range" id="feeCash" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeCons">TER bonos</label><output id="feeCons_o" for="feeCons"></output></div><p class="hint">Gastos anuales (TER) de tus fondos o ETF de bonos, en % del saldo, descontados mes a mes. Un ETF indexado de bonos suele costar 0,05–0,25 %; un fondo de gestión activa, 0,5–1 %. Por defecto 0,15 %, un ETF de bonos indexado.</p><input type="range" id="feeCons" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeEq">TER renta variable</label><output id="feeEq_o" for="feeEq"></output></div><p class="hint">Gastos anuales (TER) de tus fondos o ETF de acciones, en % del saldo, descontados mes a mes. Por ejemplo, con 500.000 € al 0,2 % pagas unos 1.000 € al año; al 1,5 % de un fondo activo, 7.500 €. Un indexado global suele costar 0,1–0,25 %. También se aplica al backtest histórico. Por defecto 0,20 %, un fondo o ETF indexado global.</p><input type="range" id="feeEq" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeBtc">Coste BTC</label><output id="feeBtc_o" for="feeBtc"></output></div><p class="hint">Coste anual de mantener tu BTC, en % del saldo: comisión de un ETF de bitcoin (0,15–0,25 %) o custodia y diferenciales si lo compras directamente. Por defecto 0,20 %, un ETP de bitcoin.</p><input type="range" id="feeBtc" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeGold">Coste oro</label><output id="feeGold_o" for="feeGold"></output></div><p class="hint">Coste anual de tu oro, en % del saldo: comisión de un ETC de oro (0,1–0,25 %) o almacenaje y seguro si es físico. Por defecto 0,15 %, un ETC de oro físico.</p><input type="range" id="feeGold" min="0" max="3" step="0.01"></div>
+      <div class="ctrl"><div class="row"><label for="feeProv">Coste Provident</label><output id="feeProv_o" for="feeProv"></output></div><p class="hint">Gastos anuales de los fondos donde está invertido tu Provident Scheme, en % del saldo, descontados mes a mes. Mira el TER de los fondos que hayas elegido dentro del plan. Por defecto 0,75 %: es una ESTIMACIÓN, porque el Emirates Group Provident Scheme no publica el TER de sus fondos — comprueba el coste real de los fondos elegidos en tu extracto del plan.</p><input type="range" id="feeProv" min="0" max="3" step="0.01"></div>
       <div class="ctrl">
         <div class="row"><label for="burrTaxRate">Tipo sobre la venta de Burriana</label><output id="burrTaxRate_o" for="burrTaxRate"></output></div>
         <p class="hint">Burriana es un inmueble en España: Hacienda grava su venta aunque todavía no residas allí ni hayas activado la Ley Beckham — la exclusión de Beckham solo cubre renta y patrimonio de fuera de España, nunca un inmueble español. Por defecto 19 %, el tipo fijo para no residentes UE/EEE sobre plusvalías inmobiliarias (24 % fuera de la UE/EEE). Brasil no lleva este tratamiento: su cifra ya viene neta de impuestos.</p>
@@ -1325,7 +1330,7 @@ const DEFAULTS = {
   // ---- Modo PRO ----
   proMode:false,
   // fiscalidad España
-  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0, feeCons:0, feeEq:0, feeBtc:0, feeGold:0, feeProv:0, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19,
+  taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0.10, feeCons:0.15, feeEq:0.20, feeBtc:0.20, feeGold:0.15, feeProv:0.75, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19, taxThresholdDrift:2,
   lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
@@ -1651,6 +1656,7 @@ function paintLabels(p){
   set('taxRate',p.taxRate.toFixed(1)+' %');
   set('taxRateProv',p.taxRateProv.toFixed(1)+' %');
   set('taxRegion',['Cataluña','Comunitat Valenciana'][Math.round(p.taxRegion)]);
+  set('taxThresholdDrift',p.taxThresholdDrift.toFixed(2)+' %/año');
   for(const key of ['feeCash','feeCons','feeEq','feeBtc','feeGold','feeProv']) set(key,p[key].toFixed(2)+' %/año');
   set('burrTaxRate',p.burrTaxRate.toFixed(1)+' %');
   set('lolAnnualProb',p.lolAnnualProb.toFixed(1)+' %/año');
@@ -1793,6 +1799,14 @@ function simulate(p, paths){
   const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
   const fxVolActive=p.proMode && p.fxVolOn;
   const inflActive=p.proMode && p.inflOn;
+  // Fiscal drag: nominal IRPF/wealth-tax thresholds are not indexed to inflation in Spanish
+  // law, so their real value shrinks every year at (roughly) inflation minus indexation —
+  // taxThresholdDrift approximates that. scale (<=1 for any positive drift) is applied to
+  // every bracket boundary and exemption at the point of use: month 0 is always scale 1, and
+  // with stochastic inflation on, the same mean-preserving real-value factor used elsewhere
+  // (inflationRealFactor) compounds on top of the deterministic drift.
+  const thresholdDriftLog=Math.log(1+(Number.isFinite(p.taxThresholdDrift)?p.taxThresholdDrift:0)/100);
+  const thresholdScale=(month,cumInflNow,cumInflVarNow)=>Math.exp(-thresholdDriftLog*month/12)*(inflActive ? NavlogCore.inflationRealFactor(cumInflNow,cumInflVarNow) : 1);
   const lolFeatureActive=p.proMode && p.lolOn;
   const lolMonthlyProb=lolFeatureActive ? 1-Math.pow(1-p.lolAnnualProb/100, 1/12) : 0;
   // With the age curve on, each month uses the probability for the age reached that month
@@ -1866,11 +1880,11 @@ function simulate(p, paths){
     if(strat===5) return yearsSinceFireNow<p.ysYears ? Math.min(p.gasto, totalNow*p.ysYield/100) : p.gasto;
     return p.gasto; // strat 0/1/2 never call this for their own logic, only as the fallback
   }
-  function takeProvident(bal, needNet, ratePct, ytdIncome){
+  function takeProvident(bal, needNet, ratePct, ytdIncome, scale){
     if(needNet<=0 || bal<=0) return {bal,net:0,gross:0};
-    const grossWanted=regionalGeneralActive ? NavlogCore.grossForNetGeneralIncome(needNet,ytdIncome,taxRegion,bal) : (ratePct>0 ? needNet/(1-ratePct/100) : needNet);
+    const grossWanted=regionalGeneralActive ? NavlogCore.grossForNetGeneralIncome(needNet,ytdIncome,taxRegion,bal,scale) : (ratePct>0 ? needNet/(1-ratePct/100) : needNet);
     const gross=Math.min(bal,grossWanted);
-    return {bal:bal-gross, gross, net:regionalGeneralActive ? NavlogCore.netAfterGeneralIncomeTax(gross,ytdIncome,taxRegion) : (ratePct>0 ? gross*(1-ratePct/100) : gross)};
+    return {bal:bal-gross, gross, net:regionalGeneralActive ? NavlogCore.netAfterGeneralIncomeTax(gross,ytdIncome,taxRegion,scale) : (ratePct>0 ? gross*(1-ratePct/100) : gross)};
   }
   // Average-cost basis tracking for the capital-gains-taxed buckets (vEq/vBtc/
   // vGold/vCons/vRE): a withdrawal should only be taxed on its gain fraction, not
@@ -1881,13 +1895,13 @@ function simulate(p, paths){
     if(bal<=0 || removed<=0) return basis;
     return Math.max(0, basis - basis*(Math.min(removed,bal)/bal));
   }
-  function takeFromBucket(bal, basis, needNet, ratePct, ytdGain, progressive){
+  function takeFromBucket(bal, basis, needNet, ratePct, ytdGain, progressive, scale){
     if(needNet<=0 || bal<=0) return {bal, basis, net:0, gain:0};
     const gainFrac=Math.max(0, Math.min(1, 1-basis/bal));
     let g, netOut;
     if(progressive){
-      g=Math.min(bal, NavlogCore.grossForNetSavings(needNet, gainFrac, ytdGain, bal));
-      netOut=NavlogCore.netAfterSavingsTax(g, gainFrac, ytdGain);
+      g=Math.min(bal, NavlogCore.grossForNetSavings(needNet, gainFrac, ytdGain, bal, scale));
+      netOut=NavlogCore.netAfterSavingsTax(g, gainFrac, ytdGain, scale);
     } else if(ratePct<=0){
       g=Math.min(bal, needNet); netOut=g;
     } else {
@@ -1992,6 +2006,11 @@ function simulate(p, paths){
     // Running year-to-date realized gain on the capital-gains-taxed buckets, reset
     // every January — feeds irpfBracketRate() when useIrpfBrackets is on.
     let ytdGainCartera=0, ytdProvidentIncome=0;
+    // Total realized capital gain this calendar year, tracked regardless of bracketsActive
+    // (unlike ytdGainCartera, which only accumulates in progressive-bracket mode): feeds the
+    // IRPF savings base for the 60% joint IRPF/wealth-tax limit (Ley 19/1991 art. 31); its tax
+    // follows the configured mode (progressive brackets or flat rate) — see wealthTaxAfterJointLimit below.
+    let ytdGainForLimit=0;
     // Tracks pure market-driven growth (returns compounding on whatever balance
     // already existed), independent of contributions/withdrawals — so "aportado"
     // (net cash you put in) can be recovered as totalWealth-cumGrowth without
@@ -2017,7 +2036,7 @@ function simulate(p, paths){
       // Year-end gate for THIS run: December, or this run's own final month
       // (the last, partial year), never the global-horizon MONTH_DATES flag.
       const isSnap=d.m===12 || i===months-1;
-      if(d.m===1){ ytdGainCartera=0; ytdProvidentIncome=0; }
+      if(d.m===1){ ytdGainCartera=0; ytdProvidentIncome=0; ytdGainForLimit=0; }
       const totalBeforeReturns=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
       if(histActive && i>0 && d.m===1){
         histPos=(histPos+1)%HIST_EQ_REAL_RETURNS.length;
@@ -2254,7 +2273,7 @@ function simulate(p, paths){
         // target. NavlogCore.providentFireTaxRate applies a conservative haircut
         // whenever taxes are on (ignoring the Beckham window's possible temporary
         // exemption keeps this simple and on the safe side).
-        const fireTotal=vEq+vBtc+vProv*(1-NavlogCore.providentFireTaxRate(vProv,taxActive,regionalGeneralActive,p.taxRateProv,taxRegion))+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
+        const fireTotal=vEq+vBtc+vProv*(1-NavlogCore.providentFireTaxRate(vProv,taxActive,regionalGeneralActive,p.taxRateProv,taxRegion,thresholdScale(i,cumInfl,cumInflVar)))+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         // Gratuity is realized right when you leave the company, so it can count
         // toward crossing the target that same month — a real departure lump sum,
         // not money you already had.
@@ -2392,20 +2411,21 @@ function simulate(p, paths){
         const bracketsActive=taxNow && p.useIrpfBrackets;
         const gravRate=taxNow ? (bracketsActive ? 0 : p.taxRate) : 0;
         const provRate=taxNow ? p.taxRateProv : 0;
-        const provMarginal=regionalGeneralActive ? (NavlogCore.generalIncomeTax(ytdProvidentIncome+1,taxRegion)-NavlogCore.generalIncomeTax(ytdProvidentIncome,taxRegion))*100 : provRate;
+        const scaleNow=thresholdScale(i,cumInfl,cumInflVar);
+        const provMarginal=regionalGeneralActive ? (NavlogCore.generalIncomeTax(ytdProvidentIncome+1,taxRegion,scaleNow)-NavlogCore.generalIncomeTax(ytdProvidentIncome,taxRegion,scaleNow))*100 : provRate;
         const provFirst=taxNow && (bracketsActive
-          ? NavlogCore.providentFirst(provMarginal,[{balance:vCash,basis:basisCash},{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera)
+          ? NavlogCore.providentFirst(provMarginal,[{balance:vCash,basis:basisCash},{balance:vCons,basis:basisCons},{balance:vEq,basis:basisEq},{balance:vGold,basis:basisGold},{balance:vBtc,basis:basisBtc},{balance:reActive&&p.reCountsFire?vRE:0,basis:basisRE}],ytdGainCartera,scaleNow)
           : provMarginal<gravRate);
 
         let deficit=wd, nb, r;
-        if(provFirst){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
-        if(deficit>0){ const ob=vCash, obs=basisCash; r=takeFromBucket(vCash,basisCash,deficit,gravRate,ytdGainCartera,bracketsActive); vCash=r.bal; basisCash=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(deficit>0){ const ob=vCons, obs=basisCons; r=takeFromBucket(vCons,basisCons,deficit,gravRate,ytdGainCartera,bracketsActive); vCons=r.bal; basisCons=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(deficit>0){ const ob=vEq, obs=basisEq; r=takeFromBucket(vEq,basisEq,deficit,gravRate,ytdGainCartera,bracketsActive); vEq=r.bal; basisEq=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(deficit>0 && goldActive){ const ob=vGold, obs=basisGold; r=takeFromBucket(vGold,basisGold,deficit,gravRate,ytdGainCartera,bracketsActive); vGold=r.bal; basisGold=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(deficit>0){ const ob=vBtc, obs=basisBtc; r=takeFromBucket(vBtc,basisBtc,deficit,gravRate,ytdGainCartera,bracketsActive); vBtc=r.bal; basisBtc=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(deficit>0 && reActive && p.reCountsFire){ const ob=vRE, obs=basisRE; r=takeFromBucket(vRE,basisRE,deficit,gravRate,ytdGainCartera,bracketsActive); vRE=r.bal; basisRE=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; }
-        if(!provFirst && deficit>0){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
+        if(provFirst){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome,scaleNow); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
+        if(deficit>0){ const ob=vCash, obs=basisCash; r=takeFromBucket(vCash,basisCash,deficit,gravRate,ytdGainCartera,bracketsActive,scaleNow); vCash=r.bal; basisCash=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; ytdGainForLimit+=r.gain; }
+        if(deficit>0){ const ob=vCons, obs=basisCons; r=takeFromBucket(vCons,basisCons,deficit,gravRate,ytdGainCartera,bracketsActive,scaleNow); vCons=r.bal; basisCons=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; ytdGainForLimit+=r.gain; }
+        if(deficit>0){ const ob=vEq, obs=basisEq; r=takeFromBucket(vEq,basisEq,deficit,gravRate,ytdGainCartera,bracketsActive,scaleNow); vEq=r.bal; basisEq=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; ytdGainForLimit+=r.gain; }
+        if(deficit>0 && goldActive){ const ob=vGold, obs=basisGold; r=takeFromBucket(vGold,basisGold,deficit,gravRate,ytdGainCartera,bracketsActive,scaleNow); vGold=r.bal; basisGold=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; ytdGainForLimit+=r.gain; }
+        if(deficit>0){ const ob=vBtc, obs=basisBtc; r=takeFromBucket(vBtc,basisBtc,deficit,gravRate,ytdGainCartera,bracketsActive,scaleNow); vBtc=r.bal; basisBtc=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; ytdGainForLimit+=r.gain; }
+        if(deficit>0 && reActive && p.reCountsFire){ const ob=vRE, obs=basisRE; r=takeFromBucket(vRE,basisRE,deficit,gravRate,ytdGainCartera,bracketsActive,scaleNow); vRE=r.bal; basisRE=r.basis; deficit-=r.net; if(bracketsActive) ytdGainCartera+=r.gain; ytdGainForLimit+=r.gain; }
+        if(!provFirst && deficit>0){ r=takeProvident(vProv,deficit,provRate,ytdProvidentIncome,scaleNow); vProv=r.bal; deficit-=r.net; ytdProvidentIncome+=r.gross; }
         // ytdGainCartera is incremented per bucket above, so progressive brackets apply exactly across a cascade.
         // Each cascade step round-trips through a gross-up/net-back division and
         // multiplication, so a fully-covered deficit can land on a tiny positive
@@ -2416,6 +2436,7 @@ function simulate(p, paths){
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
       if(wealthTaxActive && !ruinedPath && spanishResident && isSnap && !inBeckham){
+        const wealthScale=thresholdScale(i,cumInfl,cumInflVar);
         // Property inclusion in the FIRE target is a liquidity/retirement choice;
         // it must not remove owned real estate from the wealth-tax base.
         const totalWealth=NavlogCore.wealthTaxBase(vEq+vBtc+vProv+vGold+vCons+vCash,vRE,reActive);
@@ -2423,11 +2444,23 @@ function simulate(p, paths){
         // mortgage balance amortizes in a straight line to 0 by hipEnd.
         const debtNow=p.mortgageBalance>0 ? p.mortgageBalance*Math.max(0,1-i/mortgageMonths) : 0;
         const netWealth=Math.max(0, totalWealth-debtNow);
-        const excess=Math.max(0,netWealth-p.wealthExempt);
+        const excess=Math.max(0,netWealth-p.wealthExempt*wealthScale);
         // Regional wealth tax after its bonus, or the state solidarity tax if higher (it deducts
         // the wealth tax paid, so together they cost the larger of the two).
         const regionalWealthTax=excess>0 ? excess*(p.wealthRate/100)*(1-p.wealthBonusPct/100) : 0;
-        let due=unpaidWealthTax+Math.max(regionalWealthTax, NavlogCore.solidarityWealthTax(netWealth));
+        const stateSolidarityTax=NavlogCore.solidarityWealthTax(netWealth,wealthScale);
+        // 60% joint IRPF/wealth-tax limit (Ley 19/1991 art. 31; ITSGF applies the same rule):
+        // the IRPF base is what the model actually taxed this calendar year (Provident
+        // ordinary-income withdrawals + realized capital gains, see ytdGainForLimit's own
+        // comment for the holding-period simplification); the tax is what was actually
+        // computed on them, using the same eroded thresholds. Applied separately to each
+        // candidate before taking the larger one, as both are subject to the same limit.
+        const irpfBaseForLimit=ytdProvidentIncome+ytdGainForLimit;
+        const irpfTaxForLimit=(taxActive ? (regionalGeneralActive ? NavlogCore.generalIncomeTax(ytdProvidentIncome,taxRegion,wealthScale) : ytdProvidentIncome*p.taxRateProv/100) : 0)
+          + (taxActive ? (p.useIrpfBrackets ? NavlogCore.progressiveSavingsTax(ytdGainForLimit,wealthScale) : ytdGainForLimit*p.taxRate/100) : 0);
+        const regionalWealthTaxLimited=NavlogCore.wealthTaxAfterJointLimit(regionalWealthTax,irpfBaseForLimit,irpfTaxForLimit);
+        const stateSolidarityTaxLimited=NavlogCore.wealthTaxAfterJointLimit(stateSolidarityTax,irpfBaseForLimit,irpfTaxForLimit);
+        let due=unpaidWealthTax+Math.max(regionalWealthTaxLimited, stateSolidarityTaxLimited);
         unpaidWealthTax=0;
         if(due>0){
           // vCash can be negative here (unrepaid pre-FIRE debt, see the deficit
@@ -2455,10 +2488,14 @@ function simulate(p, paths){
         // stays exempt for the whole Beckham window, same as the capital-gains
         // pause above. Same regional rate/bonus/exemption logic and the state
         // solidarity tax via max(), just against a vRE-only base.
+        const wealthScaleRE=thresholdScale(i,cumInfl,cumInflVar);
         const netWealthRE=Math.max(0,vRE);
-        const excessRE=Math.max(0,netWealthRE-p.wealthExempt);
+        const excessRE=Math.max(0,netWealthRE-p.wealthExempt*wealthScaleRE);
         const regionalWealthTaxRE=excessRE>0 ? excessRE*(p.wealthRate/100)*(1-p.wealthBonusPct/100) : 0;
-        let dueRE=unpaidWealthTax+Math.max(regionalWealthTaxRE, NavlogCore.solidarityWealthTax(netWealthRE));
+        // No 60% joint IRPF limit here: it is an IRPF-residency-linked benefit (Ley 19/1991
+        // art. 31 references the taxpayer's own IRPF declaration), and a Beckham-window
+        // non-resident under "obligación real" is not filing ordinary Spanish IRPF.
+        let dueRE=unpaidWealthTax+Math.max(regionalWealthTaxRE, NavlogCore.solidarityWealthTax(netWealthRE,wealthScaleRE));
         unpaidWealthTax=0;
         if(dueRE>0){
           const fromRE=Math.min(vRE,dueRE); basisRE=shrinkBasis(vRE,basisRE,fromRE); vRE-=fromRE; dueRE-=fromRE;
@@ -3118,7 +3155,7 @@ function buildWorkerSource(){
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
     'const SOLIDARITY_EXEMPT='+NavlogCore.SOLIDARITY_EXEMPT+', SOLIDARITY_BRACKETS='+literal(NavlogCore.SOLIDARITY_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     // Core helpers that call each other by bare name inside simulation-core.js need the same
     // top-level aliases here, or they throw ReferenceError only inside the worker.
@@ -3510,8 +3547,8 @@ const MODEL_LIMITS=[
   'La fiscalidad está simplificada: tipo medio o tramos del ahorro, Provident con un único tipo medio, Ley Beckham e impuesto de patrimonio esquematizados; no se modelan mínimos personales, deducciones ni compensación de pérdidas.',
   'Los impuestos sobre plusvalías solo se aplican a las retiradas y el de patrimonio al saldo anual, y ambos solo desde que repatrías el capital a España (tras los años de retraso desde el FIRE que configures); la venta de Burriana tributa aparte con su propio tipo. Las plusvalías mientras acumulas y los dividendos, intereses y alquileres del inmueble no tributan.',
   'El sueldo, las aportaciones al Provident y el ingreso barista se tratan como libres de impuestos y cotizaciones; el Provident solo tributa al retirarlo.',
-  'Los tramos del ahorro (cifras nominales 2024/2025, que no se actualizan solas) se aplican a plusvalías calculadas en euros reales, sin ajustar por inflación.',
-  'Lo mismo aplica a los tramos del IRPF general (estatal y autonómico, usados para el Provident en modo regional): son importes nominales de 2025 y se aplican tal cual, sin actualizar, durante todo el horizonte temporal en euros reales — el modelo asume implícitamente que esos tramos se indexarían con la inflación, algo que la ley no garantiza.',
+  'Los tramos del ahorro (cifras nominales 2024/2025, que no se actualizan solas), los tramos del IRPF general (estatal y autonómico, usados para el Provident en modo regional, importes nominales de 2025), el mínimo exento de patrimonio y el mínimo/tramos del impuesto de solidaridad son cifras nominales que la ley no actualiza con la inflación. El control "Deriva fiscal" (2 %/año por defecto) modela esa erosión real de esas cifras a lo largo del horizonte; con 0 % se reproduce el supuesto anterior de tramos totalmente indexados a la inflación.',
+  'El impuesto de patrimonio y el de solidaridad respetan el límite conjunto del 60 % (art. 31 Ley 19/1991, extendido al impuesto de solidaridad por la Ley 38/2022): si la cuota de patrimonio más el IRPF pagado ese año superan el 60 % de la base del IRPF, la cuota de patrimonio se reduce por el exceso, con un tope del 80 % de su propia cuota (siempre se paga al menos el 20 %). Como el modelo no rastrea el periodo de tenencia de cada activo, cuenta toda plusvalía realizada ese año en la base, aunque la ley excluye las de más de un año — una simplificación conservadora que puede sobrestimar el impuesto de patrimonio pagado.',
   'El hueco FS1 (10.400 €/año en 2029 y 2031) es un coste fijo del modelo, no configurable, y solo se carga mientras trabajas (desde el inicio de carrera hasta que dejas de trabajar). El gasto por hijo que configures (importe, edad inicial y edad final) se aplica en cambio según tu edad, sin relación con tu situación laboral.',
   'La pensión o ingreso recurrente, los pagos únicos y cualquier excedente de ingresos sobre el gasto se invierten sin IRPF ni cotizaciones.',
   'Con semilla, las ejecuciones completas usan '+SEEDED_PATHS_FULL+' rutas fijas ('+SEEDED_PATHS_SENSITIVITY+' rutas en sensibilidad y riesgo de secuencia) y son reproducibles en el mismo navegador y dispositivo; entre navegadores puede haber diferencias mínimas por el redondeo de las funciones matemáticas. Sin semilla, el número de rutas depende de la velocidad del dispositivo.',
