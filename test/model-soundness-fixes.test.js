@@ -270,14 +270,14 @@ test('cumulative fees never read negative even while a path is carrying debt (ne
 });
 
 // ---- Fix #4 (texts): outcome-dashboard wording, README test list, and the hip/hipEnd hint ----
-test('README documents the actual outcome-dashboard categories and lists the model-soundness test file', () => {
+test('README documents the actual outcome-dashboard categories and how to run every test file', () => {
   const readme = fs.readFileSync('README.md', 'utf8');
   assert.ok(/FIRE voluntario/.test(readme), 'README must name voluntary FIRE');
   assert.ok(/post-FIRE ruin/i.test(readme), 'README must name the post-FIRE ruin sub-rate');
   assert.ok(/salida forzosa/.test(readme), 'README must name forced retirement (salida forzosa)');
   assert.ok(/p[eé]rdida de licencia/.test(readme), 'README must name loss of licence');
   assert.ok(/nunca llega al FIRE/.test(readme) && /deuda/.test(readme), 'README must name the never-fires-and-ends-in-debt category');
-  assert.ok(readme.includes('model-soundness-fixes.test.js'), 'README test list must include model-soundness-fixes.test.js');
+  assert.ok(readme.includes('node --test test/*.test.js'), 'README must document the glob that runs every test file (no hand-kept list to go stale)');
 });
 
 test('the hip/hipEnd controls explain the mortgage continues after FIRE and is separate from retirement spend', () => {

@@ -8,30 +8,11 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
 - Canonical entry point: `index.html` (loads `simulation-core.js`).
 - Open `index.html` directly in a current browser, or serve this directory with
   any static HTTP server. No build step or package installation is required.
-- Regression tests: each file under `test/` is a standalone `node --test` entry
-  point (no shared fixtures across files). `node --test test/` runs the whole
-  directory on Linux/macOS, but fails on Windows in this repo (Node resolves
-  the bare directory as a module path, not a test glob), so on Windows run
-  each file individually instead, e.g. from PowerShell:
+- Regression tests: every `test/*.test.js` file is a standalone `node --test`
+  entry point (shared helpers live in `test/helpers/` and are not tests).
+  Run them all with `node --test test/*.test.js` (this is what CI runs on
+  Linux). On Windows PowerShell, run each file individually:
   `Get-ChildItem test/*.test.js | ForEach-Object { node --test $_.FullName }`.
-  Current files: `calendar-final-year.test.js`, `end-of-service.test.js`,
-  `engine-audit-fixes.test.js`,
-  `feature-audit.test.js`, `index-publico-gratuity.test.js`,
-  `index-publico-sensitivity.test.js`,
-  `index-sensitivity-bounds.test.js`, `input-validation.test.js`,
-  `label-painting.test.js`, `lol-emirates.test.js`, `manual-calc.test.js`,
-  `model-soundness-fixes.test.js`,
-  `page-structure.test.js`, `pagenav-fade.test.js`, `param-unification.test.js`,
-  `paths-full-max-memory.test.js`, `portfolio-costs.test.js`,
-  `post-fix-regressions.test.js`, `print-css.test.js`,
-  `remaining-audit-fixes.test.js`,
-  `reproducibility.test.js`, `sensitivity-progress.test.js`,
-  `simulation-core.test.js`,
-  `simulation-integration.test.js`, `simulation-jobs.test.js`,
-  `slider-ranges.test.js`, `solidarity-tax.test.js`, `small-buttons-min-height.test.js`,
-  `tax-accumulation.test.js`, `ui-behaviour.test.js`,
-  `wd-strategy-visibility.test.js`, `withdrawal-strategies.test.js`,
-  `worker-parity.test.js`.
 
 ## Deploy
 
