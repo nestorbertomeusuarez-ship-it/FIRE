@@ -25,9 +25,13 @@ const EXPECTED_IDS = [
   'zoomResetModal', 'closeChartModal', 'chartModalCanvas', 'chartTipModal', 'legendModal', 'historicalBacktest', 'btCapitalValue', 'btCapital',
   'btSpendValue', 'btSpend', 'btYearsValue', 'btYears', 'btResults', 'ageNow_o', 'ageNow', 'horizonAge_o',
   'horizonAge', 'careerYear_o', 'careerYear', 'allocCash_o', 'allocCash', 'allocBonds_o', 'allocBonds', 'allocEquities_o',
-  'allocEquities', 'cashRet_o', 'cashRet', 'cashVol_o', 'cashVol', 'childAnnual_o', 'childAnnual', 'childStartAge_o',
-  'childStartAge', 'childEndAge_o', 'childEndAge', 'pensionAnnual_o', 'pensionAnnual', 'pensionStartAge_o', 'pensionStartAge', 'healthcareAnnual_o',
-  'healthcareAnnual', 'healthcareStartAge_o', 'healthcareStartAge', 'lumpSums', 'lumpSumHelp', 'assumptionError', 'outcomesDashboard', 'outcomeSummary',
+  'allocEquities', 'cashRet_o', 'cashRet', 'cashVol_o', 'cashVol',
+  'childCount_o', 'childCount', 'child1BirthYear_o', 'child1BirthYear', 'child1BirthMonth_o', 'child1BirthMonth',
+  'child2BirthYear_o', 'child2BirthYear', 'child3BirthYear_o', 'child3BirthYear',
+  'childCost0to2_o', 'childCost0to2', 'childCost3to17_o', 'childCost3to17', 'childCost18to22_o', 'childCost18to22',
+  'childFS1Cost_o', 'childFS1Cost', 'childSchoolCost_o', 'childSchoolCost', 'childInsuranceAED_o', 'childInsuranceAED',
+  'pensionAnnual_o', 'pensionAnnual', 'pensionStartAge_o', 'pensionStartAge', 'healthcareAnnual_o',
+  'healthcareAnnual', 'lumpSums', 'lumpSumHelp', 'assumptionError', 'outcomesDashboard', 'outcomeSummary',
   'scenarioName', 'saveScenario', 'deleteAllScenarios', 'exportScenarios', 'importScenariosFile', 'scenarioMsg', 'scenarioList', 'reports',
   'exportCsv', 'printReport', 'printAssumptions', 'printAssumptionsList', 'printLimitsList', 'assumptionsLimits', 'limitsList', 'runSensitivity',
   'sensLoading', 'sensList', 'srrShockPct_o', 'srrShockPct', 'srrShockMonths_o', 'srrShockMonths', 'runSrrStress', 'srrLoading',
@@ -159,10 +163,12 @@ test('Parametros is one section with the groups in the agreed order', () => {
   expectGroup('Objetivo', ['gasto', 'swr']);
   expectGroup('Tú y el horizonte', ['ageNow', 'horizonAge', 'careerYear']);
   expectGroup('Carrera', ['fx', 'salFO', 'salCA', 'captY', 'mandatoryRetireAge']);
-  expectGroup('Gastos', ['vida', 'vidaG', 'hip', 'hipEnd', 'mortgageBalance', 'childAnnual', 'childStartAge', 'childEndAge', 'healthcareAnnual', 'healthcareStartAge']);
+  expectGroup('Gastos', ['vida', 'vidaG', 'hip', 'hipEnd', 'mortgageBalance',
+    'childCount', 'child1BirthYear', 'child1BirthMonth', 'child2BirthYear', 'child3BirthYear',
+    'childCost0to2', 'childCost3to17', 'childCost18to22', 'childFS1Cost', 'childSchoolCost', 'childInsuranceAED', 'healthcareAnnual']);
   assertAscending([
     ['hipEnd', section.indexOf('id="hipEnd"')], ['mortgageBalance', section.indexOf('id="mortgageBalance"')],
-    ['childAnnual', section.indexOf('id="childAnnual"')], ['healthcareAnnual', section.indexOf('id="healthcareAnnual"')],
+    ['childCount', section.indexOf('id="childCount"')], ['healthcareAnnual', section.indexOf('id="healthcareAnnual"')],
   ], 'mortgage and family controls follow the existing Gastos controls');
   expectGroup('Ingresos en jubilación', ['pensionAnnual', 'pensionStartAge', 'lumpSums', 'lumpSumHelp']);
   expectGroup('Reparto de la cartera básica', ['allocCash', 'allocBonds', 'consRet', 'consVol', 'allocEquities', 'cashRet', 'cashVol']);

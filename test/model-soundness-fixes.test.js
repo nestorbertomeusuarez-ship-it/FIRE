@@ -27,7 +27,7 @@ test('the Provident balance is haircut for the FIRE-target comparison when taxes
     startEq: 0, startBtc: 0, startGold: 0,
     allocCash: 0, allocBonds: 0, allocEquities: 100,
     vida: 0, hip: 0, burr: 0, brOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     fx: 1, salG: 0,
     salFO: 120000, salCA: 120000, basicFO: 120000, basicCA: 120000, provCo: 12, provOn: true,
     captY: 2200, // never promoted to captain within the horizon
@@ -40,8 +40,8 @@ test('the Provident balance is haircut for the FIRE-target comparison when taxes
   };
   const off = simulate({ ...base, taxOn: false }, 2);
   const on = simulate({ ...base, taxOn: true }, 2);
-  assert.equal(off.fireMonthAll[0], 385, 'sanity: locked-in untaxed FIRE month for this deterministic scenario');
-  assert.equal(on.fireMonthAll[0], 650, 'taxOn delays FIRE because the Provident now counts net of its 50% haircut');
+  assert.equal(off.fireMonthAll[0], 384, 'sanity: locked-in untaxed FIRE month for this deterministic scenario');
+  assert.equal(on.fireMonthAll[0], 649, 'taxOn delays FIRE because the Provident now counts net of its 50% haircut');
   assert.ok(on.fireMonthAll[0] > off.fireMonthAll[0], 'taxes on can only delay (never advance) crossing the target');
 });
 
@@ -52,7 +52,7 @@ test('the Provident haircut uses the regional general-IRPF effective rate, not t
     startEq: 0, startBtc: 0, startGold: 0,
     allocCash: 0, allocBonds: 0, allocEquities: 100,
     vida: 0, hip: 0, burr: 0, brOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     fx: 1, salG: 0,
     salFO: 120000, salCA: 120000, basicFO: 120000, basicCA: 120000, provCo: 12, provOn: true,
     captY: 2200,
@@ -68,8 +68,8 @@ test('the Provident haircut uses the regional general-IRPF effective rate, not t
   const catalonia = simulate({ ...base, taxRegion: 0 }, 2);
   const valencia = simulate({ ...base, taxRegion: 1 }, 2);
   const flat = simulate({ ...base, useRegionalGeneralIrpf: false }, 2);
-  assert.equal(catalonia.fireMonthAll[0], 638);
-  assert.equal(valencia.fireMonthAll[0], 675);
+  assert.equal(catalonia.fireMonthAll[0], 637);
+  assert.equal(valencia.fireMonthAll[0], 673);
   assert.notEqual(catalonia.fireMonthAll[0], valencia.fireMonthAll[0], 'the two regions have different general-IRPF scales, so their haircut differs');
   assert.notEqual(catalonia.fireMonthAll[0], flat.fireMonthAll[0], 'regional mode does not fall back to the flat taxRateProv figure');
 });
@@ -84,7 +84,7 @@ test('providentFireTaxRate never changes the actual balances, only the FIRE-targ
     startEq: 0, startBtc: 0, startGold: 0,
     allocCash: 0, allocBonds: 0, allocEquities: 100,
     vida: 0, hip: 0, burr: 0, brOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     fx: 1, salG: 0,
     salFO: 120000, salCA: 120000, basicFO: 120000, basicCA: 120000, provCo: 12, provOn: true,
     captY: 2200, taxRateProv: 50, useRegionalGeneralIrpf: false,
@@ -106,7 +106,7 @@ test('the mortgage payment keeps being deducted every month after FIRE, until hi
     allocEquities: 100, allocBonds: 0, allocCash: 0,
     vida: 0, burr: 0, brOn: false,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 40000, swr: 4, // target exactly matches startEq: immediate FIRE
     horizonAge: 35, wdStrategy: 0,
     hipEnd: 2100,
@@ -137,7 +137,7 @@ test('a temporary pre-FIRE cash-flow crunch becomes debt and the path can still 
     allocEquities: 100, allocBonds: 0, allocCash: 0,
     vida: 0, hip: 0, burr: 0, brOn: false,
     salFO: 100000, salCA: 100000, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 60000, swr: 4, horizonAge: 90, careerYear: 2026,
     lumpSums: JSON.stringify([{ year: 2027, month: 1, amount: -150000 }, { year: 2029, month: 1, amount: 2000000 }])
   };
@@ -155,7 +155,7 @@ test('a household that never earns enough and never recovers ends the horizon in
     startEq: 0, startBtc: 0,
     vida: 5000, hip: 1000, burr: 0, brOn: false,
     salFO: 20000, salCA: 20000, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 130000, swr: 4, horizonAge: 90, careerYear: 2026, hipEnd: 2100
   };
   const r = simulate(permanentDebt, 2);
@@ -174,7 +174,7 @@ test('a deficit that empties every bucket becomes debt of exactly the remaining 
     allocEquities: 50, allocBonds: 0, allocCash: 50,
     vida: 0, hip: 0, burr: 0, brOn: false,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 1000000, swr: 4, horizonAge: 30, careerYear: 2026,
     lumpSums: JSON.stringify([{ year: 2026, month: 9, amount: -50000 }])
   };
@@ -199,7 +199,7 @@ test('during the Beckham window, wealth tax still applies to the rental property
     allocEquities: 100, allocBonds: 0, allocCash: 0,
     vida: 0, hip: 0, burr: 0, brOn: false,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 40000, swr: 4, horizonAge: 35,
     taxOn: true, taxRepatDelay: 0,
     wealthTaxOn: true, wealthExempt: 100000, wealthRate: 2, wealthBonusPct: 0, mortgageBalance: 0,
@@ -244,7 +244,7 @@ test('Guyton-Klinger cuts spending once the mortgage payment is counted in the w
     allocEquities: 100, allocBonds: 0, allocCash: 0,
     vida: 0, burr: 0, brOn: false,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 40000, swr: 4, // target exactly matches startEq: immediate FIRE at month 0
     wdStrategy: 1, gkGuard: 20, gkCut: 10, gkRaise: 10, gkFreq: 12,
     hip: 1000, hipEnd: 2100,
@@ -280,7 +280,7 @@ test('cumulative fees never read negative even while a path is carrying debt (ne
     allocEquities: 50, allocBonds: 0, allocCash: 50,
     vida: 0, hip: 0, burr: 0, brOn: false,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 1000000, swr: 4, horizonAge: 30, careerYear: 2026,
     lumpSums: [{ year: 2026, month: 9, amount: -50000 }]
   };
@@ -315,7 +315,7 @@ test('during the Beckham window, wealth tax is fully suspended on everything exc
     allocEquities: 100, allocBonds: 0, allocCash: 0,
     vida: 0, hip: 0, burr: 0, brOn: false,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
-    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 40000, swr: 4, horizonAge: 35,
     taxOn: true, taxRepatDelay: 0,
     wealthTaxOn: true, wealthExempt: 100000, wealthRate: 2, wealthBonusPct: 0, mortgageBalance: 0,

@@ -46,7 +46,20 @@ function createEnvironment(html) {
       id: attrs.id || '', tagName: String(tagName).toUpperCase(), attrs, listeners, children: [], style: { setProperty() {}, removeProperty() {} }, dataset: {},
       className: attrs.class || '', disabled: false, open: false, hidden: false, checked: attrs.checked !== undefined, value: attrs.value !== undefined ? attrs.value : '',
       min: attrs.min !== undefined ? attrs.min : '', max: attrs.max !== undefined ? attrs.max : '', step: attrs.step || '', validity: { badInput: false },
-      classList: { add() {}, remove() {}, toggle() {}, contains: name => (attrs.class || '').split(/\s+/).includes(name) },
+      // Backed by element.className (not the static `attrs.class`), so toggle/add/remove
+      // actually mutate visible state, same as the real DOM keeps classList and className in sync.
+      classList: {
+        contains: name => String(element.className || '').split(/\s+/).filter(Boolean).includes(name),
+        add(name) { const set = new Set(String(element.className || '').split(/\s+/).filter(Boolean)); set.add(name); element.className = [...set].join(' '); },
+        remove(name) { const set = new Set(String(element.className || '').split(/\s+/).filter(Boolean)); set.delete(name); element.className = [...set].join(' '); },
+        toggle(name, force) {
+          const set = new Set(String(element.className || '').split(/\s+/).filter(Boolean));
+          const on = force === undefined ? !set.has(name) : !!force;
+          if (on) set.add(name); else set.delete(name);
+          element.className = [...set].join(' ');
+          return on;
+        }
+      },
       get type() { return attrs.type || (tagName === 'textarea' ? 'textarea' : tagName === 'select' ? 'select-one' : tagName === 'input' ? 'text' : ''); },
       get textContent() { return text; },
       set textContent(value) { text = String(value); history.push(text); },

@@ -50,12 +50,12 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.equal(el('saveScenario').disabled, true, 'saving is disabled while stale');
 
   // ---- an invalid combination is still surfaced immediately (no run needed to validate) ----
-  // Set both ages directly (bypassing childEndAge/childStartAge's own syncChildAges self-clamp,
-  // same technique test/label-painting.test.js uses) and fire an unrelated control's 'input'.
-  setValue('childStartAge', '50'); setValue('childEndAge', '40');
+  // Set ageNow/horizonAge directly (bypassing syncHorizonControl's own self-clamp, same
+  // technique test/label-painting.test.js uses) and fire an unrelated control's 'input'.
+  setValue('ageNow', '70'); setValue('horizonAge', '70');
   el('cashRet').fire('input');
-  assert.match(el('assumptionError').textContent, /hijo/i, 'cross-field errors surface without pressing Calcular');
-  setValue('childStartAge', app.run('DEFAULTS.childStartAge')); setValue('childEndAge', app.run('DEFAULTS.childEndAge'));
+  assert.match(el('assumptionError').textContent, /horizonte/i, 'cross-field errors surface without pressing Calcular');
+  setValue('ageNow', app.run('DEFAULTS.ageNow')); setValue('horizonAge', app.run('DEFAULTS.horizonAge'));
   el('cashRet').fire('input');
   assert.equal(el('assumptionError').textContent, '', 'the error clears once the combination is valid again');
 

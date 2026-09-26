@@ -14,7 +14,7 @@ const { loadApp } = require('./helpers/fake-app.js');
 
   await quiesce(); // the page's own start-up run leaves a pending announcement
 
-  // ---- the 15 controls this candidate converted from <input type="number"> to
+  // ---- 12 of the 15 controls this candidate converted from <input type="number"> to
   // <input type="range"> lost their static HTML `value="..."` attribute as part
   // of that conversion (matching how every other slider in this file works: the
   // value comes from DEFAULTS via the page's own top-level init loop, not a
@@ -25,12 +25,13 @@ const { loadApp } = require('./helpers/fake-app.js');
   // loadApp()/fake-app.js, not stubbed) actually assigns the correct DEFAULTS
   // value to each of them, closing the gap a native review flagged: that no
   // assertion here distinguished "the harness fabricated this value" from "the
-  // real page set it".
+  // real page set it". (The other 3 of the original 15 — childAnnual, childStartAge,
+  // childEndAge — were later replaced by the per-band child-cost model; see
+  // test/children-costs.test.js for their controls' own coverage.)
   const CONVERTED_DEFAULTS = {
     ageNow: 28, horizonAge: 90, careerYear: 2027,
     allocCash: 10, allocBonds: 20, allocEquities: 70, cashRet: 1, cashVol: 1.5,
-    pensionAnnual: 0, pensionStartAge: 67, healthcareAnnual: 0, healthcareStartAge: 65,
-    childAnnual: 10000, childStartAge: 29, childEndAge: 32,
+    pensionAnnual: 0, pensionStartAge: 67, healthcareAnnual: 3000,
   };
   for (const [id, expected] of Object.entries(CONVERTED_DEFAULTS)) {
     const input = el(id);
@@ -49,14 +50,14 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.equal(el('allocEquities_o').textContent, '40 %', 'the computed Acciones label follows (100 - 40 - 20)');
   assert.equal(Number(el('allocEquities').value), 40, 'the disabled Acciones control holds the computed value');
 
-  // ---- a label must still update when the run is refused (cross-field child-age check, bypassing the UI sync) ----
-  const childStart = String(app.run('DEFAULTS.childStartAge')), childEnd = String(app.run('DEFAULTS.childEndAge'));
-  setValue('childStartAge', '50'); setValue('childEndAge', '40'); setValue('cashRet', '2');
+  // ---- a label must still update when the run is refused (cross-field horizon check, bypassing syncHorizonControl) ----
+  const ageNowDefault = String(app.run('DEFAULTS.ageNow')), horizonDefault = String(app.run('DEFAULTS.horizonAge'));
+  setValue('ageNow', '70'); setValue('horizonAge', '70'); setValue('cashRet', '2');
   el('cashRet').fire('input');
   await quiesce();
-  assert.match(el('assumptionError').textContent, /hijo/, 'the invalid child ages are still refused with a Spanish error');
+  assert.match(el('assumptionError').textContent, /horizonte/, 'the invalid age/horizon combination is still refused with a Spanish error');
   assert.equal(el('cashRet_o').textContent, '2.0 %', 'the dragged label reflects the new value immediately, even though the run was refused');
-  setValue('childStartAge', childStart); setValue('childEndAge', childEnd); setValue('cashRet', String(app.run('DEFAULTS.cashRet')));
+  setValue('ageNow', ageNowDefault); setValue('horizonAge', horizonDefault); setValue('cashRet', String(app.run('DEFAULTS.cashRet')));
 
   // ---- a genuinely valid drag (no cross-field constraint) still paints, but no longer computes on
   // its own: it only marks the result stale. Pressing "Calcular" (#runCalc) is what computes. ----

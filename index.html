@@ -309,6 +309,9 @@ button.runCalc:disabled{opacity:.6;cursor:default}
 
 /* ---------- fiscalidad española ---------- */
 body:not(.fiscal) .fiscal-only{display:none}
+/* ---------- hijos: child2/child3 controls only show once childCount selects them ---------- */
+body:not(.child2) .child2-only{display:none}
+body:not(.child3) .child3-only{display:none}
 .subhead{
   font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.06em;
   color:var(--ink-2);margin:0 0 10px;text-transform:none;
@@ -637,14 +640,21 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Se usa solo para el cálculo del impuesto de patrimonio (patrimonio neto = bienes menos deudas): se amortiza en línea recta hasta 0 en el año de "Fin de hipoteca" que hayas fijado.</p>
         <input type="range" id="mortgageBalance" min="0" max="500000" step="5000">
       </div>
-      <p class="subhead">Hijos (guardería, colegio y otros gastos)</p>
-      <div class="ctrl"><div class="row"><label for="childAnnual">Gasto anual por hijo (€)</label><output id="childAnnual_o" for="childAnnual"></output></div><p class="hint">Gasto anual por hijo, en euros: se reparte a partes iguales entre los 12 meses y se resta del flujo de caja solo durante el tramo de edad que definen Edad inicial del gasto por hijo y Edad final del gasto por hijo (exclusiva).</p><input type="range" id="childAnnual" min="0" max="30000" step="500"></div>
-      <div class="ctrl"><div class="row"><label for="childStartAge">Edad inicial del gasto por hijo</label><output id="childStartAge_o" for="childStartAge"></output></div><p class="hint">Tu edad (no la del hijo) a partir de la cual empieza a restarse el Gasto anual por hijo cada mes.</p><input type="range" id="childStartAge" min="18" max="80" step="1"></div>
-      <div class="ctrl"><div class="row"><label for="childEndAge">Edad final del gasto por hijo (exclusiva)</label><output id="childEndAge_o" for="childEndAge"></output></div><p class="hint">Tu edad (no la del hijo) a partir de la cual deja de restarse el Gasto anual por hijo; es exclusiva, así que el último mes que cuenta es el mes previo a cumplir esta edad.</p><input type="range" id="childEndAge" min="19" max="100" step="1"></div>
+      <p class="subhead">Hijos</p>
+      <div class="ctrl"><div class="row"><label for="childCount">Número de hijos</label><output id="childCount_o" for="childCount"></output></div><p class="hint">Cuántos hijos incluye la simulación (0 = sin hijos). Cada hijo suma su propio coste mensual según su edad, calculado a partir de su fecha de nacimiento.</p><input type="range" id="childCount" min="0" max="3" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="child1BirthYear">Año de nacimiento, hijo 1</label><output id="child1BirthYear_o" for="child1BirthYear"></output></div><p class="hint">Año de nacimiento del primer hijo; junto con el mes siguiente fija su edad cada mes de la simulación.</p><input type="range" id="child1BirthYear" min="2020" max="2045" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="child1BirthMonth">Mes de nacimiento, hijo 1</label><output id="child1BirthMonth_o" for="child1BirthMonth"></output></div><p class="hint">Mes de nacimiento del primer hijo (1-12).</p><input type="range" id="child1BirthMonth" min="1" max="12" step="1"></div>
+      <div class="ctrl child2-only"><div class="row"><label for="child2BirthYear">Año de nacimiento, hijo 2</label><output id="child2BirthYear_o" for="child2BirthYear"></output></div><p class="hint">Año de nacimiento del segundo hijo (se asume junio: el mes exacto apenas cambia el resultado, ajústalo si lo conoces). Solo se usa si "Número de hijos" es 2 o más.</p><input type="range" id="child2BirthYear" min="2026" max="2050" step="1"></div>
+      <div class="ctrl child3-only"><div class="row"><label for="child3BirthYear">Año de nacimiento, hijo 3</label><output id="child3BirthYear_o" for="child3BirthYear"></output></div><p class="hint">Año de nacimiento del tercer hijo (se asume junio: el mes exacto apenas cambia el resultado, ajústalo si lo conoces). Solo se usa si "Número de hijos" es 3.</p><input type="range" id="child3BirthYear" min="2026" max="2050" step="1"></div>
+      <div class="ctrl"><div class="row"><label for="childCost0to2">Coste anual por hijo, 0-2 años (€)</label><output id="childCost0to2_o" for="childCost0to2"></output></div><p class="hint">Coste anual medio por hijo de 0 a 2 años (antes del colegio), mientras trabajas en Dubái. El estudio de Save the Children "El coste de la crianza en España" (609 €/mes = 7.300 €/año) incluye guardería casi a tiempo completo; aquí se sustituye por una guardería a tiempo parcial en Dubái: Numbeo (preescolar privado a jornada completa, 754 €/mes, sep-2026, 1.738 datos) a 2-3 días/semana ≈377 €/mes ≈4.500 €/año, más el resto de la crianza (≈4.900 €/año) ≈9.400 €/año en total. Los precios a tiempo parcial suelen ser más caros por día que la parte proporcional, y si la guardería empieza después del nacimiento el primer año queda algo sobrestimado; ajústalo si tienes un presupuesto real.</p><input type="range" id="childCost0to2" min="0" max="30000" step="100"></div>
+      <div class="ctrl"><div class="row"><label for="childCost3to17">Coste anual por hijo, 3-17 años (€)</label><output id="childCost3to17_o" for="childCost3to17"></output></div><p class="hint">Coste anual medio por hijo de 3 a 17 años, sin el colegio (va aparte), media española (Save the Children, "El coste de la crianza en España": 692-812 €/mes según la edad). Súbelo si tu coste de vida real es mayor (p. ej. Dubái).</p><input type="range" id="childCost3to17" min="0" max="30000" step="100"></div>
+      <div class="ctrl"><div class="row"><label for="childCost18to22">Coste anual por hijo, 18-22 años (€)</label><output id="childCost18to22_o" for="childCost18to22"></output></div><p class="hint">Estimación propia (no procede del estudio anterior) de gasto universitario: matrícula más manutención. Ajústalo a tu caso.</p><input type="range" id="childCost18to22" min="0" max="30000" step="100"></div>
+      <div class="ctrl"><div class="row"><label for="childFS1Cost">Colegio por hijo a los 3 años (FS1), en Emirates (€)</label><output id="childFS1Cost_o" for="childFS1Cost"></output></div><p class="hint">Colegio del año en que cada hijo tiene 3 años (FS1) mientras trabajas en Emirates: la ayuda de educación de la compañía cubre de los 4 años hasta cumplir 19. Por defecto 10.400 €/año.</p><input type="range" id="childFS1Cost" min="0" max="30000" step="100"></div>
+      <div class="ctrl"><div class="row"><label for="childSchoolCost">Colegio por hijo, 3-17 años, fuera de Emirates (€)</label><output id="childSchoolCost_o" for="childSchoolCost"></output></div><p class="hint">Colegio por hijo de 3 a 17 años, solo cuando ya no trabajas en Emirates (mientras trabajas allí lo paga la compañía). Referencias: público, 0 €; concertado español, unos pocos cientos de euros al año (cuotas voluntarias y extras); privado o internacional, ~9.000 €/año (Numbeo Valencia, colegio internacional de primaria, 9.001 € de media, rango 7.550-20.000, sep-2026). Por defecto 9.000 €.</p><input type="range" id="childSchoolCost" min="0" max="20000" step="50"></div>
+      <div class="ctrl"><div class="row"><label for="childInsuranceAED">Seguro médico Emirates por hijo (AED/año)</label><output id="childInsuranceAED_o" for="childInsuranceAED"></output></div><p class="hint">Prima anual del seguro médico de Emirates por hijo (1.º a 3.º: 1.260 AED + 5 % de IVA), descontada mientras trabajas en Emirates; tras dejar Emirates la sanidad de los hijos se incluye en los tramos de coste por edad.</p><input type="range" id="childInsuranceAED" min="0" max="5000" step="1"></div>
       <p class="subhead">Sanidad</p>
-      <div class="ctrl"><div class="row"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><output id="healthcareAnnual_o" for="healthcareAnnual"></output></div><p class="hint">Coste sanitario anual supuesto, en euros: se reparte por meses y se resta del flujo de caja, trabajando o ya jubilado, desde la edad que fijes en Edad de inicio del coste sanitario.</p><input type="range" id="healthcareAnnual" min="0" max="30000" step="500"></div>
-      <div class="ctrl"><div class="row"><label for="healthcareStartAge">Edad de inicio del coste sanitario</label><output id="healthcareStartAge_o" for="healthcareStartAge"></output></div><p class="hint">Edad a partir de la cual empieza a restarse el Coste sanitario anual supuesto cada mes; antes de esa edad no se descuenta nada por este concepto.</p><input type="range" id="healthcareStartAge" min="40" max="90" step="1"></div>
-      <p class="note">La simulación es mensual y el gasto se aplica durante los meses reales de carrera. Revisa manualmente la cronología de colegio/guardería: sin fechas de nacimiento exactas no conviene fingir precisión.</p>
+      <div class="ctrl"><div class="row"><label for="healthcareAnnual">Coste sanitario anual supuesto (€)</label><output id="healthcareAnnual_o" for="healthcareAnnual"></output></div><p class="hint">Coste anual de la sanidad familiar (seguro privado o convenio especial) desde que dejas Emirates: mientras trabajas allí, el seguro médico de la compañía te cubre a ti y a tu familia. Por defecto 3.000 €/año: Sanitas 2026 ronda 85 €/mes por adulto de ~40 años y ~35 €/mes por hijo (≈2.500 €/año para 2 adultos y 1 hijo), y la prima de un adulto se multiplica por ~3 entre los 25 y los 65 años, así que el importe fijo va algo por encima. Una tarifa de colectivo (asociaciones profesionales) puede abaratarlo; la retribución flexible solo aplica si vuelves a tener un empleador en España.</p><input type="range" id="healthcareAnnual" min="0" max="30000" step="500"></div>
+      <p class="note">La simulación es mensual. Revisa manualmente la cronología de colegio/guardería y sanidad: sin fechas exactas no conviene fingir precisión.</p>
     </div>
 
     <div class="group">
@@ -1320,8 +1330,9 @@ const DEFAULTS = {
   seed:null,
   ageNow:28, horizonAge:90, careerYear:2027,
   allocCash:10, allocBonds:20, allocEquities:70, cashRet:1, cashVol:1.5,
-  pensionAnnual:0, pensionStartAge:67, healthcareAnnual:0, healthcareStartAge:65,
-  childAnnual:10000, childStartAge:29, childEndAge:32, lumpSums:'[]',
+  pensionAnnual:0, pensionStartAge:67, healthcareAnnual:3000,
+  childCount:1, child1BirthYear:2026, child1BirthMonth:8, child2BirthYear:2029, child3BirthYear:2032,
+  childCost0to2:9400, childCost3to17:9400, childCost18to22:10000, childSchoolCost:9000, childFS1Cost:10400, childInsuranceAED:1323, lumpSums:'[]',
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:18, profitShareSkipPct:50, profitSharePersistPct:35,
   mandatoryRetireOn:false, mandatoryRetireAge:65,
   ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
@@ -1407,7 +1418,6 @@ function selectedTimeBudgetMs(){
 const START_YEAR = 2026, START_MONTH = 9;       // Sep-2026
 const CAREER_YEAR = 2027, CAREER_MONTH = 6;     // Jun-2027
 const END_YEAR = 2107, END_MONTH = 12;          // maximum supported simulation date
-const FS1_GAP = 10400;
 // Shared by paintLabels' calc summary and renderPrintAssumptions' printed row.
 const STRAT_NAMES = ['SWR fijo','Guyton-Klinger','Fases go-go/slow-go/no-go','VPW (Bogleheads)','Suelo y techo (Bengen)','Yield Shield'];
 const MONTHS = (END_YEAR-START_YEAR)*12+(END_MONTH-START_MONTH)+1;
@@ -1447,11 +1457,13 @@ const NUMERIC_PARAM_KEYS=Object.keys(DEFAULTS).filter(key=>typeof DEFAULTS[key]=
 // produce NaN/Infinity downstream (e.g. ret:-100 -> NaN, swr:0 -> Infinity target). A few keys
 // are intentionally excluded because they already have dedicated, wider or dynamic validation
 // elsewhere: ageNow/horizonAge (validateHorizon), allocCash/allocBonds/allocEquities
-// (validateAllocation), careerYear (its own horizon-aware check below), and the four extra
-// ages (childStartAge/childEndAge/pensionStartAge/healthcareStartAge), which are deliberately
-// allowed beyond their slider range up to the full 0-110 control range (an interval that
-// starts after the horizon simply never applies — see the loop below).
-const PARAM_BOUNDS_EXCLUDED=['ageNow','horizonAge','allocCash','allocBonds','allocEquities','careerYear','childStartAge','childEndAge','pensionStartAge','healthcareStartAge'];
+// (validateAllocation), careerYear (its own horizon-aware check below), and the remaining
+// extra age (pensionStartAge), which is deliberately allowed beyond its slider range up to
+// the full 0-110 control range (an interval that starts after the horizon simply never
+// applies — see the loop below). healthcareStartAge is gone: healthcare now starts the
+// month you stop working at Emirates (see the `healthCost` computation in simulate()),
+// not at a configured age.
+const PARAM_BOUNDS_EXCLUDED=['ageNow','horizonAge','allocCash','allocBonds','allocEquities','careerYear','pensionStartAge'];
 const PARAM_BOUNDS={};
 NUMERIC_PARAM_KEYS.forEach(key=>{
   if(PARAM_BOUNDS_EXCLUDED.includes(key)) return;
@@ -1502,10 +1514,9 @@ function validateSimulationParams(raw){
   }catch(e){ throw new RangeError(translateValidation(e)); }
   const lastCareerYear=START_YEAR+(p.horizonAge-p.ageNow);
   if(!Number.isInteger(p.careerYear)||p.careerYear<2026||p.careerYear>Math.min(CAREER_YEAR_MAX,lastCareerYear)) throw new RangeError('El año de inicio debe ser un entero dentro del horizonte.');
-  // An interval that starts after the horizon simply never applies, so ages are only
+  // An interval that starts after the horizon simply never applies, so this age is only
   // bounded by the control range (0-110), not by the horizon.
-  for(const key of ['childStartAge','childEndAge','pensionStartAge','healthcareStartAge']) if(!Number.isInteger(p[key])||p[key]<0||p[key]>110) throw new RangeError('Las edades adicionales deben ser enteros entre 0 y 110.');
-  if(p.childEndAge<p.childStartAge) throw new RangeError('La edad final del gasto por hijo debe ser posterior a la inicial.');
+  if(!Number.isInteger(p.pensionStartAge)||p.pensionStartAge<0||p.pensionStartAge>110) throw new RangeError('Las edades adicionales deben ser enteros entre 0 y 110.');
   return p;
 }
 // Latest career start offered by the careerYear slider (keep in sync with its max in the markup).
@@ -1551,14 +1562,12 @@ function syncWdStrategy(){
     phase.hidden = phase.getAttribute('data-wd')!==selected;
   });
 }
-// Keeps the child spending interval non-empty: the end age is always above the start age.
-function syncChildAges(){
-  const start=el.childStartAge, end=el.childEndAge;
-  if(!start || !end) return;
-  const min=Number(start.value)+1;
-  if(!Number.isFinite(min)) return;
-  end.min=String(min);
-  if(Number(end.value)<min) end.value=String(min);
+// Hides the 2nd/3rd child's birth-year controls unless "Número de hijos" selects that many
+// children; their values are kept even while hidden, so re-selecting a hidden child restores it.
+function syncChildVisibility(){
+  const count=el.childCount ? Math.round(Number(el.childCount.value)) : 0;
+  document.body.classList.toggle('child2', count>=2);
+  document.body.classList.toggle('child3', count>=3);
 }
 // Names the controls whose final value differs from the requested one (the browser silently
 // snaps/clamps range inputs). intended: {id:number}; actual: {id:value as shown by the control}.
@@ -1615,13 +1624,19 @@ function paintLabels(p){
   set('allocEquities', p.allocEquities.toFixed(0)+' %');
   set('cashRet', p.cashRet.toFixed(1)+' %');
   set('cashVol', p.cashVol.toFixed(1)+' %');
-  set('childAnnual', eur(p.childAnnual)+'/año');
-  set('childStartAge', p.childStartAge+' años');
-  set('childEndAge', p.childEndAge+' años');
+  set('childCount', p.childCount+(p.childCount===1?' hijo':' hijos'));
+  set('child1BirthYear', String(p.child1BirthYear));
+  set('child1BirthMonth', String(p.child1BirthMonth));
+  set('child2BirthYear', String(p.child2BirthYear));
+  set('child3BirthYear', String(p.child3BirthYear));
+  set('childCost0to2', eur(p.childCost0to2)+'/año');
+  set('childCost3to17', eur(p.childCost3to17)+'/año');
+  set('childCost18to22', eur(p.childCost18to22)+'/año');
+  set('childSchoolCost', eur(p.childSchoolCost)+'/año');
+  set('childInsuranceAED', p.childInsuranceAED+' AED/año');
   set('pensionAnnual', eur(p.pensionAnnual)+'/año');
   set('pensionStartAge', p.pensionStartAge+' años');
   set('healthcareAnnual', eur(p.healthcareAnnual)+'/año');
-  set('healthcareStartAge', p.healthcareStartAge+' años');
   set('fx',p.fx.toFixed(3));
   set('salFO','AED '+(p.salFO/1000).toFixed(0)+'k · '+eur(p.salFO*p.fx));
   set('salCA','AED '+(p.salCA/1000).toFixed(0)+'k · '+eur(p.salCA*p.fx));
@@ -1855,6 +1870,12 @@ function simulate(p, paths){
   // End-of-service gratuity (UAE labour law) vs Provident: Emirates pays whichever is higher,
   // so on leaving only the shortfall of the gratuity over the Provident balance is added.
   const endOfServiceEUR=(i,careerStart,captMonth,vProv,fx)=>NavlogCore.endOfServiceTopUp({years:(i-careerStart)/12, basicAED:i>=captMonth?p.basicCA:p.basicFO, fx, provBalance:vProv, provOn:p.provOn});
+
+  // Children: birth-month indices and the shared per-band cost table are deterministic (not
+  // randomized), so both are computed once per simulate() call instead of once per path-month.
+  const childCount=Math.max(0,Math.min(3,Math.round(p.childCount)));
+  const childBirthIdx=[monthIndex(p.child1BirthYear,p.child1BirthMonth), monthIndex(p.child2BirthYear,6), monthIndex(p.child3BirthYear,6)];
+  const childCosts={cost0to2:p.childCost0to2, cost3to17:p.childCost3to17, cost18to22:p.childCost18to22, schoolCost:p.childSchoolCost, fs1Cost:p.childFS1Cost};
 
   // Tax-aware withdrawal helpers (used by the retirement drawdown cascade below).
   // Plain functions with no closure over path/month state, so they stay cheap to
@@ -2179,10 +2200,6 @@ function simulate(p, paths){
         const living=p.vida*spendGrowthPow[Math.max(0,monthsSinceCareer)];
         net-=living;
         if(hipActive) net-=hipReal;
-
-        // FS1 gap: a fixed, non-configurable cost, unrelated to the child-cost sliders below.
-        if(d.y===2029) net-=FS1_GAP/12;
-        if(d.y===2031) net-=FS1_GAP/12;
       }
 
       // Burriana: midpoint timing instead of giving a full 2027 return before entry.
@@ -2196,7 +2213,23 @@ function simulate(p, paths){
       if(p.brOn && d.y>=p.brStart && d.y<p.brStart+p.brYears) net+=p.brNet/(p.brYears*12);
 
       const ageNow=p.ageNow+i/12;
-      const childNet=ageNow>=p.childStartAge && ageNow<p.childEndAge ? -p.childAnnual/12 : 0;
+      // Per-child cost: age-banded (0-2/3-17/18-22/23+) plus a school-fee add-on (ages 3-17,
+      // only while NOT working at Emirates: the airline pays schooling while employed) and an
+      // Emirates medical-insurance premium (only while working at Emirates). Like the living
+      // costs above, nothing is invented before the career actually starts. childBirthIdx/
+      // childCosts are precomputed once per simulate() call, not reallocated every month.
+      let childNet=0;
+      if(i>=careerStart){
+        const childInsuranceMonthlyEUR=isWorking ? p.childInsuranceAED*fxEff/12 : 0;
+        for(let n=0;n<childCount;n++){
+          const ageMonths=i-childBirthIdx[n];
+          if(ageMonths>=0) childNet-=NavlogCore.childMonthlyCost(ageMonths,childCosts,isWorking,childInsuranceMonthlyEUR);
+        }
+      }
+      // Healthcare starts the month you stop working at Emirates (voluntary FIRE, LOL,
+      // mandatory retirement, or the barista/partial-FIRE phase all count as "not working"):
+      // while employed there, Emirates' own medical cover applies instead.
+      const healthCost=(i>=careerStart && !isWorking) ? p.healthcareAnnual/12 : 0;
       const lumpNet=p.lumpSums.reduce((sum,event)=>sum+(event.year===d.y&&event.month===d.m?event.amount:0),0);
       // Computed here (not just inside the retirement branch below) so the wealth
       // tax check further down — which runs regardless of the retired/working
@@ -2204,12 +2237,10 @@ function simulate(p, paths){
       // the Ley Beckham window is still open.
         let inBeckham=NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,i,p.beckhamYears);
 
-      // Pension income and healthcare cost apply once the person's age passes the
-      // configured start age, whether still working or already retired (real euros,
-      // monthly) — consistent with the same computation in the retired branch below.
+      // Pension income applies once the person's age passes the configured start age,
+      // whether still working or already retired (real euros, monthly).
       const preRetireRetirementIncome=ageNow>=p.pensionStartAge?p.pensionAnnual/12:0;
-      const preRetireHealthCost=ageNow>=p.healthcareStartAge?p.healthcareAnnual/12:0;
-      if(!retired){ net+=childNet+lumpNet+preRetireRetirementIncome-preRetireHealthCost; }
+      if(!retired){ net+=childNet+lumpNet+preRetireRetirementIncome-healthCost; }
 
       if(!retired){
         if(net>=0){
@@ -2374,7 +2405,8 @@ function simulate(p, paths){
           wd=wd-p.baristaIncome/12; // may go negative: the surplus branch below invests the excess
         }
         const retirementIncome=ageNow>=p.pensionStartAge?p.pensionAnnual/12:0;
-        const healthCost=ageNow>=p.healthcareStartAge?p.healthcareAnnual/12:0;
+        // healthCost is already computed above (shared with the pre-retirement branch): once
+        // retired, isWorking is always false, so it is always applied here.
         // The mortgage payment is not part of the configured retirement spend
         // ("Gasto anual al jubilarte"); it is a separate real obligation that keeps
         // running until hipEnd, same as healthcare/children above.
@@ -3145,7 +3177,6 @@ function buildWorkerSource(){
     'const START_YEAR='+START_YEAR+', START_MONTH='+START_MONTH+';',
     'const CAREER_YEAR='+CAREER_YEAR+', CAREER_MONTH='+CAREER_MONTH+';',
     'const CAREER_YEAR_MAX='+CAREER_YEAR_MAX+';',
-    'const FS1_GAP='+FS1_GAP+';',
     'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
     'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
     'const IRPF_SAVINGS_BRACKETS='+literal(IRPF_SAVINGS_BRACKETS)+';',
@@ -3156,7 +3187,7 @@ function buildWorkerSource(){
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
     'const SOLIDARITY_EXEMPT='+NavlogCore.SOLIDARITY_EXEMPT+', SOLIDARITY_BRACKETS='+literal(NavlogCore.SOLIDARITY_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+',childMonthlyCost:'+NavlogCore.childMonthlyCost.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     // Core helpers that call each other by bare name inside simulation-core.js need the same
     // top-level aliases here, or they throw ReferenceError only inside the worker.
@@ -3547,7 +3578,7 @@ const MODEL_LIMITS=[
   'El sueldo, las aportaciones al Provident y el ingreso barista se tratan como libres de impuestos y cotizaciones; el Provident solo tributa al retirarlo.',
   'Los tramos del ahorro (cifras nominales 2024/2025, que no se actualizan solas), los tramos del IRPF general (estatal y autonómico, usados para el Provident en modo regional, importes nominales de 2025), el mínimo exento de patrimonio y el mínimo/tramos del impuesto de solidaridad son cifras nominales que la ley no actualiza con la inflación. El control "Deriva fiscal" (2 %/año por defecto) modela esa erosión real de esas cifras a lo largo del horizonte; con 0 % se reproduce el supuesto anterior de tramos totalmente indexados a la inflación.',
   'El impuesto de patrimonio y el de solidaridad respetan el límite conjunto del 60 % (art. 31 Ley 19/1991, extendido al impuesto de solidaridad por la Ley 38/2022): si la cuota de patrimonio más el IRPF pagado ese año superan el 60 % de la base del IRPF, la cuota de patrimonio se reduce por el exceso, con un tope del 80 % de su propia cuota (siempre se paga al menos el 20 %). Como el modelo no rastrea el periodo de tenencia de cada activo, cuenta toda plusvalía realizada ese año en la base, aunque la ley excluye las de más de un año — una simplificación conservadora que puede sobrestimar el impuesto de patrimonio pagado.',
-  'El hueco FS1 (10.400 €/año en 2029 y 2031) es un coste fijo del modelo, no configurable, y solo se carga mientras trabajas (desde el inicio de carrera hasta que dejas de trabajar). El gasto por hijo que configures (importe, edad inicial y edad final) se aplica en cambio según tu edad, sin relación con tu situación laboral.',
+  'El hueco FS1 (colegio a los 3 años, que la ayuda de educación de Emirates no cubre) se carga por cada hijo configurado, solo durante su año de vida en que tiene 3 años y solo mientras trabajas en Emirates; el resto del coste por hijo (bandas de edad, colegio tras dejar Emirates y seguro médico) se explica junto a cada control en "Hijos".',
   'La pensión o ingreso recurrente, los pagos únicos y cualquier excedente de ingresos sobre el gasto se invierten sin IRPF ni cotizaciones.',
   'Con semilla, las ejecuciones completas usan '+SEEDED_PATHS_FULL+' rutas fijas ('+SEEDED_PATHS_SENSITIVITY+' rutas en sensibilidad y riesgo de secuencia) y son reproducibles en el mismo navegador y dispositivo; entre navegadores puede haber diferencias mínimas por el redondeo de las funciones matemáticas. Sin semilla, el número de rutas depende de la velocidad del dispositivo.',
   'No se modelan cambios legislativos, gastos sanitarios no declarados, longevidad superior al horizonte ni riesgo de contraparte.'
@@ -3561,6 +3592,14 @@ function renderModelLimits(){
 
 // Print/PDF report: the sidebar controls are hidden when printing, so list the key
 // assumptions of the last calculation in a print-only block.
+// "Hijos: N (nacidos 08/2026, 2029…)": the first child's birth month is shown (it is an
+// exact, user-set date), later children only by year (their month is a fixed June estimate).
+function describeChildBirths(p){
+  const parts=[String(p.child1BirthMonth).padStart(2,'0')+'/'+p.child1BirthYear];
+  if(p.childCount>=2) parts.push(String(p.child2BirthYear));
+  if(p.childCount>=3) parts.push(String(p.child3BirthYear));
+  return 'nacidos '+parts.join(', ');
+}
 function renderPrintAssumptions(p, pathsUsed){
   const host=document.getElementById('printAssumptionsList');
   if(!host) return;
@@ -3571,6 +3610,7 @@ function renderPrintAssumptions(p, pathsUsed){
     ['Rentabilidad / volatilidad de la bolsa',p.ret.toFixed(1)+' % / '+p.vol.toFixed(1)+' %'],
     ['Asignación efectivo / bonos / acciones',p.allocCash+' % / '+p.allocBonds+' % / '+p.allocEquities+' %'],
     ['Estrategia de retirada',STRAT_NAMES[Math.round(p.wdStrategy)]+(p.phOn?' + Prime Harvesting':'')],
+    ['Hijos',p.childCount>0 ? p.childCount+' ('+describeChildBirths(p)+')' : 'no'],
     ['Fiscalidad española',p.fiscalOn?'sí':'no'],
     ['Plusvalías al repatriar',p.fiscalOn?yesNo(p.taxOn)+(p.taxOn&&p.useIrpfBrackets?' (tramos)':''):'no'],
     ['Ley Beckham',p.fiscalOn?yesNo(p.beckhamOn):'no'],['Impuesto de patrimonio',p.fiscalOn?yesNo(p.wealthTaxOn):'no']
@@ -3635,7 +3675,7 @@ function updateSaveButtonState(){
   saveButton.disabled = !(current && lastSeries && lastFullParams && NavlogCore.sameParameterSnapshot(current,lastFullParams));
 }
 // Every slider/checkbox/text/seed control change: repaint its label and any dynamic constraint
-// (syncHorizonControl/syncAllocation/syncChildAges are wired separately, above, and run first),
+// (syncHorizonControl/syncAllocation/syncChildVisibility are wired separately, above, and run first),
 // surface validation errors immediately (cheap: no simulation runs), and mark the result stale.
 // No preview or full run is scheduled here any more — pressing "Calcular" (#runCalc) is the only
 // way to recompute; see run()/runFullPrecision() and the #runCalc listener below.
@@ -3800,7 +3840,7 @@ function safeRun(mode){
 
 // Dragging a slider or flipping a checkbox never runs a preview or a full simulation any more:
 // it only repaints its own label/output and any dynamic constraint (the syncHorizonControl/
-// syncAllocation/syncChildAges listeners just below run first, so onParamInput reads already
+// syncAllocation/syncChildVisibility listeners just below run first, so onParamInput reads already
 // -adjusted values), surfaces validation errors, and marks the result stale. The actual
 // calculation only happens by pressing "Calcular" (#runCalc below) or via reset/loadScenario/
 // the initial page load, all of which call safeRun('full') directly.
@@ -3808,8 +3848,7 @@ if(el.ageNow) el.ageNow.addEventListener('input',syncHorizonControl);
 if(el.horizonAge) el.horizonAge.addEventListener('input',syncHorizonControl);
 if(el.allocCash) el.allocCash.addEventListener('input',syncAllocation);
 if(el.allocBonds) el.allocBonds.addEventListener('input',syncAllocation);
-if(el.childStartAge) el.childStartAge.addEventListener('input',syncChildAges);
-if(el.childEndAge) el.childEndAge.addEventListener('input',syncChildAges);
+if(el.childCount) el.childCount.addEventListener('input',syncChildVisibility);
 if(el.wdStrategy) el.wdStrategy.addEventListener('input',syncWdStrategy);
 
 ids.forEach(k=>{
@@ -3860,7 +3899,7 @@ document.getElementById('reset').addEventListener('click',()=>{
   document.body.classList.toggle('fiscal',DEFAULTS.fiscalOn);
   syncHorizonControl();
   syncAllocation();
-  syncChildAges();
+  syncChildVisibility();
   syncWdStrategy();
   safeRun('full');
 });
@@ -4040,12 +4079,11 @@ function loadScenario(id){
   // applied (a bad value would otherwise surface as NaN or an unrelated control state).
   // Drop the dynamic bounds first so they cannot clamp values that are valid together.
   if(el.allocBonds) el.allocBonds.max='100';
-  if(el.childEndAge) el.childEndAge.min='19';
   // horizonAge.min/max (and careerYear.max, derived from it) are recomputed from ageNow by
   // syncHorizonControl() below, but ageNow is set earlier in this same forEach: until that
   // recompute runs, stale bounds left over from the previously-displayed ageNow could clamp
   // an incoming horizonAge/careerYear that is valid for the *new* ageNow. Reset to the widest
-  // possible range first, same as allocBonds/childEndAge above.
+  // possible range first, same as allocBonds above.
   if(el.horizonAge){ el.horizonAge.min='19'; el.horizonAge.max='108'; }
   if(el.careerYear) el.careerYear.max=String(CAREER_YEAR_MAX);
   const intended={};
@@ -4060,7 +4098,7 @@ function loadScenario(id){
   document.body.classList.toggle('fiscal', sc.params.fiscalOn===true);
   syncHorizonControl();
   syncAllocation();
-  syncChildAges();
+  syncChildVisibility();
   syncWdStrategy();
   const finalValues={}; Object.keys(intended).forEach(k=>{ finalValues[k]=el[k].value; });
   showScenarioMsg(describeAdjustedValues(intended,finalValues));
@@ -4152,7 +4190,7 @@ ids.forEach(k=>{const n=el[k];if(!n)return;if(n.type==='checkbox')n.checked=DEFA
 document.body.classList.toggle('fiscal',DEFAULTS.fiscalOn);
 syncHorizonControl();
 syncAllocation();
-syncChildAges();
+syncChildVisibility();
 syncWdStrategy();
 initVisibleLabels();
 safeRun('full').catch(e=>{

@@ -7,43 +7,48 @@ const vm = require('node:vm');
 const core = require('../simulation-core.js');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
-const source = inline.slice(0, inline.indexOf('// The simulation runs off the main thread')) + '\nglobalThis.__t={simulate,DEFAULTS,buildRuinCurve,readParams,controls:el,MONTHS};';
+const source = inline.slice(0, inline.indexOf('// The simulation runs off the main thread')) + '\nglobalThis.__t={simulate,DEFAULTS,buildRuinCurve,readParams,controls:el,MONTHS,monthIndex,CAREER_MONTH};';
 const context = { console, Math, Float64Array, Int32Array, Uint8Array, Date, Infinity, NavlogCore: core, document: { getElementById: () => null }, globalThis: null };
 context.globalThis = context; vm.createContext(context); vm.runInContext(source, context, { timeout: 5000 });
-const { simulate, DEFAULTS, buildRuinCurve, readParams, controls, MONTHS } = context.__t;
+const { simulate, DEFAULTS, buildRuinCurve, readParams, controls, MONTHS, monthIndex, CAREER_MONTH } = context.__t;
 
 // Deterministic retired profile: no returns, no volatility, retires in month 0 with far more than the target.
 // feeEq/feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
 // the hand-rolled model() below does not account for portfolio costs.
 const flat = { ...DEFAULTS, seed: 3, startEq: 10000000, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
-  gasto: 100000, swr: 4, vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, horizonAge: 60,
+  gasto: 100000, swr: 4, vida: 0, hip: 0, childCount: 0, healthcareAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, horizonAge: 60,
   allocCash: 0, allocBonds: 0, allocEquities: 100,
   feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0 };
 // The engine now snapshots every December PLUS its own final month (a partial
 // year for an integer-age horizon, since the model starts in September), so
 // the LAST series point is the run's final month, not necessarily a December.
 const lastSnapshot = (params) => { const s = simulate(params, 3).series; return s[s.length - 1]; };
-const model = ({ start, spend, pension = 0, pensionAge = 999, health = 0, healthAge = 999, lumps = [], childAnnual = 0, childStart = 0, childEnd = 0, barista = 0, baristaYears = 0 }, params) => {
+// healthCost (see index.html's simulate()) now starts the month the household stops working at
+// Emirates, guarded by `i>=careerStart` (nothing is invented before the career actually starts).
+// This fixture retires with far more than the target from month 0, so it is never "working at
+// Emirates" from i=0 on; the only gate left to replicate here is that same careerStart guard.
+const model = ({ start, spend, pension = 0, pensionAge = 999, health = 0, lumps = [], barista = 0, baristaYears = 0 }, params, careerStart = 0) => {
   let balance = start; const months = Math.floor((params.horizonAge - params.ageNow) * 12) + 1;
   for (let i = 0; i < months; i++) {
     const d = new Date(2026, 8 + i, 1), year = d.getFullYear(), month = d.getMonth() + 1, age = params.ageNow + i / 12;
     if (i > 0) {
       const lump = lumps.reduce((sum, e) => sum + (e.year === year && e.month === month ? e.amount : 0), 0);
-      const child = age >= childStart && age < childEnd ? -childAnnual / 12 : 0;
+      const healthNow = i >= careerStart ? health / 12 : 0;
       let wd = spend / 12;
       if (i / 12 < baristaYears) wd -= barista / 12; // part-time income may exceed spending; the excess is surplus
-      wd = wd - (age >= pensionAge ? pension / 12 : 0) + (age >= healthAge ? health / 12 : 0) - child - lump;
+      wd = wd - (age >= pensionAge ? pension / 12 : 0) + healthNow - lump;
       balance -= wd; // a negative withdrawal is surplus income that is added to the portfolio
     }
   }
   return balance; // balance at the run's own final month, matching the engine's last snapshot
 };
+const flatCareerStart = monthIndex(flat.careerYear, CAREER_MONTH) + flat.startDelay;
 
 // Baseline: pure spending.
 assert.ok(Math.abs(lastSnapshot(flat).p50 - model({ start: 10000000, spend: 100000 }, flat)) < 1, 'baseline drawdown matches the model');
 // Health costs and recurring retirement income (below spending) change the drawdown exactly.
-const withRetirementFlows = { ...flat, healthcareAnnual: 6000, healthcareStartAge: 40, pensionAnnual: 30000, pensionStartAge: 50 };
-assert.ok(Math.abs(lastSnapshot(withRetirementFlows).p50 - model({ start: 10000000, spend: 100000, health: 6000, healthAge: 40, pension: 30000, pensionAge: 50 }, flat)) < 1, 'pension + health costs are applied from their start ages');
+const withRetirementFlows = { ...flat, healthcareAnnual: 6000, pensionAnnual: 30000, pensionStartAge: 50 };
+assert.ok(Math.abs(lastSnapshot(withRetirementFlows).p50 - model({ start: 10000000, spend: 100000, health: 6000, pension: 30000, pensionAge: 50 }, flat, flatCareerStart)) < 1, 'pension income and healthcare cost are applied correctly (pension from its start age, healthcare from careerStart since this household is never "working at Emirates")');
 // Income above spending is surplus, not lost money.
 const richPension = { ...flat, gasto: 40000, swr: 4, pensionAnnual: 90000, pensionStartAge: 45 };
 assert.ok(Math.abs(lastSnapshot(richPension).p50 - model({ start: 10000000, spend: 40000, pension: 90000, pensionAge: 45 }, richPension)) < 1, 'pension surplus above spending is added to the portfolio');
@@ -52,9 +57,9 @@ const inflow = { ...flat, lumpSums: '[{"year":2032,"month":3,"amount":2000000}]'
 assert.ok(Math.abs(lastSnapshot(inflow).p50 - model({ start: 10000000, spend: 100000, lumps: [{ year: 2032, month: 3, amount: 2000000 }] }, flat)) < 1, 'a EUR 2M inflow while retired increases wealth by EUR 2M');
 const outflow = { ...flat, lumpSums: '[{"year":2032,"month":3,"amount":-500000}]' };
 assert.ok(Math.abs(lastSnapshot(outflow).p50 - model({ start: 10000000, spend: 100000, lumps: [{ year: 2032, month: 3, amount: -500000 }] }, flat)) < 1, 'a one-off expense while retired is deducted');
-// Child costs: exact interval [start, end).
-const kid = { ...flat, childAnnual: 12000, childStartAge: 30, childEndAge: 34 };
-assert.ok(Math.abs(lastSnapshot(kid).p50 - model({ start: 10000000, spend: 100000, childAnnual: 12000, childStart: 30, childEnd: 34 }, flat)) < 1, 'child cost is charged for ages [30, 34) only');
+// Child costs: covered in dedicated depth by test/children-costs.test.js (age bands, school
+// cost, Emirates insurance, and engine-level FIRE-date/contribution effects), since the old
+// single childAnnual/childStartAge/childEndAge interval this test used to check here is gone.
 
 // Barista income above spending is surplus too (it used to be clamped away).
 // feeEq/feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since

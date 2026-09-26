@@ -69,25 +69,25 @@ test('the worker source embeds PARAM_BOUNDS so direct worker calls are bounded t
 });
 
 // ---------------------------------------------------------------------------
-// 2) Pension/healthcare apply pre-retirement too
+// 2) Pension applies pre-retirement too; healthcare does NOT while still working at Emirates
 // ---------------------------------------------------------------------------
-test('pension income and healthcare cost also apply while still working, once past the start age', () => {
+test('pension income applies while still working, once past the start age; healthcare does not (Emirates covers it while employed)', () => {
   // Flat market, no growth, huge gasto/swr so the household never voluntarily FIREs
   // within the short horizon: stays in the "still working" branch the whole time.
   const flat = {
     ...DEFAULTS, seed: 7, ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
-    startEq: 2000000, startBtc: 0, allocCash: 0, allocBonds: 100, allocEquities: 0, vida: 0, hip: 0, nur: 0, brOn: false, burr: 0,
+    startEq: 2000000, startBtc: 0, allocCash: 0, allocBonds: 100, allocEquities: 0, vida: 0, hip: 0, childCount: 0, brOn: false, burr: 0,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false, gasto: 1e7, swr: 4, ageNow: 66, horizonAge: 70,
   };
   const finalTotal = r => { const s = r.series[r.series.length - 1]; return s.p50; };
 
   const withoutPension = simulate({ ...flat, pensionAnnual: 0, healthcareAnnual: 0 }, 4);
   const withPension = simulate({ ...flat, pensionAnnual: 24000, pensionStartAge: 67, healthcareAnnual: 0 }, 4);
-  const withHealthcare = simulate({ ...flat, pensionAnnual: 0, healthcareAnnual: 24000, healthcareStartAge: 67 }, 4);
+  const withHealthcare = simulate({ ...flat, pensionAnnual: 0, healthcareAnnual: 24000 }, 4);
 
   assert.ok(!withoutPension.fireMonthAll.some(m => m >= 0), 'baseline never voluntarily FIREs (still in the working branch throughout)');
   assert.ok(finalTotal(withPension) > finalTotal(withoutPension), 'pension income adds to net cash flow while still working');
-  assert.ok(finalTotal(withHealthcare) < finalTotal(withoutPension), 'healthcare cost subtracts from net cash flow while still working');
+  assert.equal(finalTotal(withHealthcare), finalTotal(withoutPension), 'healthcareAnnual is inert while still working at Emirates: the airline covers it, healthcare only starts once you leave');
 });
 
 // ---------------------------------------------------------------------------

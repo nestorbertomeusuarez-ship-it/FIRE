@@ -24,12 +24,12 @@ test('legacy gratuityYears is dropped from saved scenarios', () => {
 });
 
 test('normalizeScenarios migrates legacy keys itself, whatever the caller', () => {
-  const allowed = { gasto: 'number', childAnnual: 'number', childStartAge: 'number', childEndAge: 'number' };
+  const allowed = { gasto: 'number', childCost0to2: 'number' };
   const legacy = [{ id: 'a', name: 'Viejo', color: '#1F7A4D', visible: true, params: { gasto: 50000, gratuityYears: 5, nur: 8000 },
     series: [{ year: 2030, p10: 1, p50: 2, p90: 3 }], target: 1000000, ageMed: '45', successRate: 0.8 }];
   const out = core.normalizeScenarios(legacy, allowed, ['#1F7A4D'], 4);
   assert.equal(out.length, 1, 'legacy scenario is kept, not rejected');
-  assert.equal(out[0].params.childAnnual, 8000, 'nursery cost carried over');
+  assert.equal('nur' in out[0].params, false, 'the legacy nur key is dropped, not carried over into a new child param');
   assert.equal('gratuityYears' in out[0].params, false, 'obsolete key dropped');
 });
 

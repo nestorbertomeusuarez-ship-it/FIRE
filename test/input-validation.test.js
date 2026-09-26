@@ -24,11 +24,14 @@ for (const horizonAge of [40, 60, 66]) {
   assert.equal(result.series.length > 0, true);
 }
 // An interval that starts after the horizon simply never applies.
-const beyond = simulate({ ...DEFAULTS, seed: 1, horizonAge: 50, pensionAnnual: 50000, pensionStartAge: 67, healthcareAnnual: 9000, healthcareStartAge: 80, childAnnual: 5000, childStartAge: 60, childEndAge: 70 }, 8);
-const without = simulate({ ...DEFAULTS, seed: 1, horizonAge: 50, childAnnual: 0 }, 8);
+const beyond = simulate({ ...DEFAULTS, seed: 1, horizonAge: 50, pensionAnnual: 50000, pensionStartAge: 67, childCount: 0 }, 8);
+const without = simulate({ ...DEFAULTS, seed: 1, horizonAge: 50, childCount: 0 }, 8);
 assert.deepEqual(beyond.series.map(x => x.p50), without.series.map(x => x.p50), 'income/costs that start after the horizon change nothing');
+// A child born after the horizon ends never contributes any cost.
+const childBeyond = simulate({ ...DEFAULTS, seed: 1, horizonAge: 30, childCount: 1, child1BirthYear: 2030, child1BirthMonth: 1 }, 8);
+const childNone = simulate({ ...DEFAULTS, seed: 1, horizonAge: 30, childCount: 0 }, 8);
+assert.deepEqual(childBeyond.series.map(x => x.p50), childNone.series.map(x => x.p50), 'a child born after the horizon ends changes nothing');
 // Genuinely invalid ages are still rejected.
-assert.throws(() => simulate({ ...DEFAULTS, childStartAge: 50, childEndAge: 40 }, 2), /hijo/, 'child end before start');
 assert.throws(() => simulate({ ...DEFAULTS, pensionStartAge: 111 }, 2), /edades/, 'age above 110');
 assert.throws(() => simulate({ ...DEFAULTS, pensionStartAge: -1 }, 2), /edades/, 'negative age');
 assert.throws(() => simulate({ ...DEFAULTS, pensionStartAge: 67.5 }, 2), /edades/, 'fractional age');
@@ -85,7 +88,6 @@ heavy.debugTrackBuckets = true;
 const EXPECTED_REJECTIONS = {
   'ageNow@max': /horizonte/, 'horizonAge@min': /horizonte/,
   'allocCash@min': /100 %/, 'allocCash@max': /100 %/, 'allocBonds@min': /100 %/, 'allocBonds@max': /100 %/, 'allocEquities@min': /100 %/, 'allocEquities@max': /100 %/,
-  'childStartAge@max': /hijo/, 'childEndAge@min': /hijo/
 };
 const seen = new Set(); let checked = 0, rejected = 0;
 for (const key of Object.keys(DEFAULTS)) {

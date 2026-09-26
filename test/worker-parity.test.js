@@ -69,8 +69,9 @@ const rich = {
   wealthTaxOn: true, wealthExempt: 300000, mortgageBalance: 50000, reOn: true, reValue: 300000, reCountsFire: true,
   lolOn: true, lolAnnualProb: 3, glideOn: true, glideTargetYear: 2040, fxVolOn: true, inflOn: true, histMarketOn: false,
   baristaOn: true, wdStrategy: 1, srrShockOn: true, profitShareWeeks: 6,
-  mandatoryRetireOn: true, mandatoryRetireAge: 50, pensionAnnual: 6000, pensionStartAge: 40, healthcareAnnual: 1500, healthcareStartAge: 40,
-  childAnnual: 3000, childStartAge: 30, childEndAge: 35, lumpSums: '[{"year":2032,"month":3,"amount":-20000},{"year":2034,"month":8,"amount":15000}]',
+  mandatoryRetireOn: true, mandatoryRetireAge: 50, pensionAnnual: 6000, pensionStartAge: 40, healthcareAnnual: 1500,
+  childCount: 2, child1BirthYear: 2024, child1BirthMonth: 5, child2BirthYear: 2030, childCost0to2: 8000, childCost3to17: 9500,
+  childCost18to22: 11000, childFS1Cost: 9000, childSchoolCost: 7000, childInsuranceAED: 1323, lumpSums: '[{"year":2032,"month":3,"amount":-20000},{"year":2034,"month":8,"amount":15000}]',
   horizonAge: 80
 };
 const variants = [
