@@ -285,3 +285,15 @@ test('E3: VPW weights vProv as risky money, consistent with the totalNow it is s
   const dec2029 = result.series.find(x => x.year === 2029).p50;
   assert.ok(Math.abs(dec2029 - expected) < 5, `expected ~${expected}, got ${dec2029}`);
 });
+
+test('Guyton-Klinger: capital preservation (cuts) stops in the last 15 years, as in the 2006 paper', () => {
+  // Falling market so the withdrawal rate breaches the upper guardrail every review.
+  const falling = { ...flat, proMode: true, ret: -5, wdStrategy: 1, startEq: 1400000 };
+  const series = p => simulate(p, 1).series.map(x => Math.round(x.p50));
+  const shortGK = series({ ...falling, horizonAge: flat.ageNow + 14 });
+  const shortSWR = series({ ...falling, horizonAge: flat.ageNow + 14, wdStrategy: 0 });
+  assert.deepEqual(shortGK, shortSWR, 'with ≤15 years left, no cuts: same path as fixed SWR');
+  const longGK = series({ ...falling, horizonAge: flat.ageNow + 40 });
+  const longSWR = series({ ...falling, horizonAge: flat.ageNow + 40, wdStrategy: 0 });
+  assert.notDeepEqual(longGK, longSWR, 'with a long horizon the guardrail does cut');
+});
