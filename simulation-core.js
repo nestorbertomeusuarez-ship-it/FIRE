@@ -382,14 +382,20 @@
   // Floor & ceiling (Bengen): a percentage-of-portfolio withdrawal clamped to a band
   // around a fixed real base (the initial retirement spend), so a market crash cannot
   // force spending below the floor and a boom cannot inflate it past the ceiling.
-  // Emirates profit sharing for one year, in weeks of basic pay. u1 decides whether the year
-  // pays at all (skipPct % of years pay nothing, as in the 2020-2021 COVID years); u2 places a
-  // paying year uniformly within +/-10 % of the mean, which covers the real 2023-2026 payouts
-  // (24, 20, 22, 20 weeks) around their 21.5-week average.
-  function profitShareWeeksDraw(u1, u2, meanWeeks, skipPct) {
+  // Emirates profit sharing for one year, in weeks of basic pay. Paying and non-paying years
+  // form a two-state Markov chain whose long-run non-paying share is skipPct and whose lag-1
+  // correlation is persistencePct: P(paid | prev) = pi + rho*(1-pi) after a paying year and
+  // pi*(1-rho) after a non-paying one (pi = 1 - skip). Last 10 Mays paid 5 times, in clusters
+  // (2019-2022 none, 2023-2026 every year), which independent draws almost never produce.
+  // u1 decides the state; u2 places a paying year uniformly within +/-10 % of the mean.
+  function profitShareWeeksDraw(u1, u2, meanWeeks, skipPct, persistencePct = 0, prevPaid = true) {
     const mean = Number.isFinite(meanWeeks) && meanWeeks > 0 ? meanWeeks : 0;
     const skip = Number.isFinite(skipPct) ? Math.max(0, Math.min(100, skipPct)) / 100 : 0;
-    if (mean === 0 || !Number.isFinite(u1) || !Number.isFinite(u2) || u1 < skip) return 0;
+    const rho = Number.isFinite(persistencePct) ? Math.max(0, Math.min(100, persistencePct)) / 100 : 0;
+    if (mean === 0 || skip >= 1 || !Number.isFinite(u1) || !Number.isFinite(u2)) return 0;
+    const pi = 1 - skip;
+    const pPaid = skip <= 0 ? 1 : prevPaid ? pi + rho * (1 - pi) : pi * (1 - rho);
+    if (u1 < 1 - pPaid) return 0;
     return mean * (0.9 + 0.2 * Math.max(0, Math.min(1, u2)));
   }
   function floorCeilingWithdrawal(portfolio, ratePct, base, floorPct, ceilingPct) {

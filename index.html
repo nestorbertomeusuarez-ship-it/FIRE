@@ -583,14 +583,19 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="salG" min="-1" max="2.5" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="profitShareWeeks">Profit sharing medio (semanas de básico/año)</label><output id="profitShareWeeks_o" for="profitShareWeeks"></output></div>
-        <p class="hint">Emirates paga el profit sharing en mayo, en semanas de salario básico, y lo decide cada año según resultados. Pagos reales: mayo 2023, 24 semanas; mayo 2024, 20; mayo 2025, 22; mayo 2026, 20 (media 21,5, por defecto). Cada año con reparto se sortea un valor entre el 90 % y el 110 % de esta media. Con 0 semanas no se tiene en cuenta.</p>
+        <div class="row"><label for="profitShareWeeks">Profit sharing medio en los años que se paga (semanas de básico)</label><output id="profitShareWeeks_o" for="profitShareWeeks"></output></div>
+        <p class="hint">Emirates lo paga en mayo, en semanas de salario básico, y lo decide cada año según resultados. Últimos 10 años: 2017, 0 (no confirmado); 2018, 5; 2019-2022, 0; 2023, 24; 2024, 20; 2025, 22; 2026, 20. Por defecto 18 semanas, la media de los años que pagó; cada año con reparto se sortea entre el 90 % y el 110 % de esta cifra. Con 0 semanas no se tiene en cuenta.</p>
         <input type="range" id="profitShareWeeks" min="0" max="30" step="0.5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="profitShareSkipPct">Probabilidad de año sin profit sharing</label><output id="profitShareSkipPct_o" for="profitShareSkipPct"></output></div>
-        <p class="hint">El reparto es discrecional: en 2020 y 2021 (COVID) Emirates no pagó. Cada mayo se sortea si ese año hay reparto. El 10 % por defecto es una estimación, no un dato publicado.</p>
+        <p class="hint">Porcentaje de años sin reparto a largo plazo. Es discrecional: de 2019 a 2022 no se pagó (márgenes bajos y COVID). Por defecto 50 %, lo ocurrido en los últimos 10 años (5 de 10 sin reparto).</p>
         <input type="range" id="profitShareSkipPct" min="0" max="100" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="profitSharePersistPct">Persistencia del ciclo de profit sharing</label><output id="profitSharePersistPct_o" for="profitSharePersistPct"></output></div>
+        <p class="hint">Los años buenos y malos vienen en rachas: tras un año con reparto se repitió 3 de 4 veces; tras uno sin reparto, solo 2 de 5. Cuanto más alto, más largas son las rachas con y sin profit sharing; con 0 % cada año se sortea por separado. Por defecto 35 %, la diferencia entre esas dos frecuencias. La simulación empieza en ciclo bueno, porque mayo 2026 pagó. Son solo 10 años de datos: tómalo como orientativo.</p>
+        <input type="range" id="profitSharePersistPct" min="0" max="90" step="5">
       </div>
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="mandatoryRetireOn">
@@ -1317,7 +1322,7 @@ const DEFAULTS = {
   allocCash:10, allocBonds:20, allocEquities:70, cashRet:1, cashVol:1.5,
   pensionAnnual:0, pensionStartAge:67, healthcareAnnual:0, healthcareStartAge:65,
   childAnnual:10000, childStartAge:29, childEndAge:32, lumpSums:'[]',
-  fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:21.5, profitShareSkipPct:10,
+  fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:18, profitShareSkipPct:50, profitSharePersistPct:35,
   mandatoryRetireOn:false, mandatoryRetireAge:65,
   ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
@@ -1626,6 +1631,7 @@ function paintLabels(p){
   set('salG',p.salG.toFixed(1)+' %');
   set('profitShareWeeks',p.profitShareWeeks.toFixed(1)+' semanas · '+(p.profitShareWeeks/52*100).toFixed(0)+' % del básico anual');
   set('profitShareSkipPct',p.profitShareSkipPct.toFixed(0)+' %');
+  set('profitSharePersistPct',p.profitSharePersistPct.toFixed(0)+' %');
   set('mandatoryRetireAge',p.mandatoryRetireAge+' años');
   set('ret',p.ret.toFixed(1)+' %');
   set('vol',p.vol.toFixed(1)+' %');
@@ -2002,6 +2008,8 @@ function simulate(p, paths){
     // Running year-to-date realized gain on the capital-gains-taxed buckets, reset
     // every January — feeds irpfBracketRate() when useIrpfBrackets is on.
     let ytdGainCartera=0, ytdProvidentIncome=0;
+    // Profit-sharing cycle state: the last known payout (May 2026) was paid.
+    let profitSharePaidLast=true;
     // Total realized capital gain this calendar year, tracked regardless of bracketsActive
     // (unlike ytdGainCartera, which only accumulates in progressive-bracket mode): feeds the
     // IRPF savings base for the 60% joint IRPF/wealth-tax limit (Ley 19/1991 art. 31); its tax
@@ -2081,7 +2089,8 @@ function simulate(p, paths){
       // (whether or not the path is still eligible) so the event stream never depends
       // on path state; profit sharing draws twice every May for the same reason.
       const lolDraw=lolFeatureActive ? eventRandom() : 1;
-      const profitShareWeeksNow=profitShareActive && d.m===5 ? NavlogCore.profitShareWeeksDraw(eventRandom(),eventRandom(),p.profitShareWeeks,p.profitShareSkipPct) : 0;
+      const profitShareWeeksNow=profitShareActive && d.m===5 ? NavlogCore.profitShareWeeksDraw(eventRandom(),eventRandom(),p.profitShareWeeks,p.profitShareSkipPct,p.profitSharePersistPct,profitSharePaidLast) : 0;
+      if(profitShareActive && d.m===5) profitSharePaidLast=profitShareWeeksNow>0;
       if(lolFeatureActive && !retired && !lolTriggered && i>=careerStart && i<mandatoryRetireMonth
          && lolDraw<(lolMonthlyProbByMonth ? lolMonthlyProbByMonth[i] : lolMonthlyProb)){
         lolTriggered=true; lolMonthIdx=i;
@@ -3726,7 +3735,7 @@ async function run(mode){
   let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(p.horizonAge-p.ageNow)+' años de horizonte · '+
     Math.round(successRate*100)+' % rutas FIRE voluntario exitosas · ruina en esa cohorte '+Math.round(ruinRate*100)+' % (n='+voluntaryCount.toLocaleString('es-ES')+') · salidas forzosas '+Math.round(forcedOutRate*100)+' % · LOL '+Math.round(licenseLossRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
-  if(p.profitShareWeeks>0) calcTxt+=' · profit sharing medio '+p.profitShareWeeks.toFixed(1)+' semanas/año en mayo ('+p.profitShareSkipPct.toFixed(0)+' % de años sin reparto)';
+  if(p.profitShareWeeks>0) calcTxt+=' · profit sharing '+p.profitShareWeeks.toFixed(1)+' semanas/año en mayo ('+p.profitShareSkipPct.toFixed(0)+' % de años sin reparto, persistencia '+p.profitSharePersistPct.toFixed(0)+' %)';
   if(p.histMarketOn) calcTxt+=' · bolsa: bootstrap histórico real 1928-2025 (no teórico)';
   if(p.mandatoryRetireOn) calcTxt+=' · jubilación forzosa a los '+p.mandatoryRetireAge+' sin objetivo: '+Math.round(forcedOutRate*100)+' %';
   calcTxt+=' · estrategia '+STRAT_NAMES[Math.round(p.wdStrategy)];
