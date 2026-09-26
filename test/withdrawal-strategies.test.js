@@ -257,17 +257,22 @@ test('E2: a Loss-of-License forced exit computes its first-year spend the same w
 test('E3: VPW weights vProv as risky money, consistent with the totalNow it is spent from', () => {
   const fx = DEFAULTS.fx, basicFO = DEFAULTS.basicFO, salFO = DEFAULTS.salFO, provCo = DEFAULTS.provCo;
   const basicEUR = basicFO * fx, salaryEUR = salFO / 12 * fx;
-  let vEq = 0, vCons = 0, vCash = 0, vProv = 0;
+  let vEq = 0, vCons = 0, vCash = 0, vProv = 0, vProvMember = 0;
   // baseFlat (below) sets childCount:0, so the FS1/child-cost gap the engine models per
   // child never applies here; this hand-rolled career has no such cost either.
   for (let m = 0; m < 24; m++) { // monthsSinceCareer 0..23 (i = careerStart(9) + m); captMonth (88) is never reached here
     let net = salaryEUR;
     if (m >= 6) { // 6-month Provident waiting period; 12% company + 5% employee
       vProv += basicEUR * (provCo / 100 + 0.05);
+      vProvMember += basicEUR * 0.05;
       net -= basicEUR * 0.05;
     }
     vEq += net * 0.70; vCons += net * 0.20; vCash += net * 0.10;
   }
+  // Leaving after 23 months (< 3 years): the company contributions are forfeited and the EOSB
+  // (21 days of basic per year of service) is paid instead; the member 5 % stays in vProv.
+  vEq += core.gratuityDays(23 / 12) * (basicFO / 30) * fx;
+  vProv = vProvMember;
   const totalAtFire = vEq + vCons + vCash + vProv;
   const safeNow = vCons + vCash;
   const rWeighted = ((totalAtFire - safeNow) * 0.05 + safeNow * 0.018) / totalAtFire;
