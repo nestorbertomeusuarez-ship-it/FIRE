@@ -1866,15 +1866,6 @@ function simulate(p, paths){
     if(strat===5) return yearsSinceFireNow<p.ysYears ? Math.min(p.gasto, totalNow*p.ysYield/100) : p.gasto;
     return p.gasto; // strat 0/1/2 never call this for their own logic, only as the fallback
   }
-  function takeGross(bal, needNet, ratePct){
-    if(needNet<=0 || bal<=0) return bal;
-    const grossWanted = ratePct>0 ? needNet/(1-ratePct/100) : needNet;
-    return bal - Math.min(bal, grossWanted);
-  }
-  function netTaken(oldBal, newBal, ratePct){
-    const gross=oldBal-newBal;
-    return ratePct>0 ? gross*(1-ratePct/100) : gross;
-  }
   function takeProvident(bal, needNet, ratePct, ytdIncome){
     if(needNet<=0 || bal<=0) return {bal,net:0,gross:0};
     const grossWanted=regionalGeneralActive ? NavlogCore.grossForNetGeneralIncome(needNet,ytdIncome,taxRegion,bal) : (ratePct>0 ? needNet/(1-ratePct/100) : needNet);
@@ -1885,7 +1876,7 @@ function simulate(p, paths){
   // vGold/vCons/vRE): a withdrawal should only be taxed on its gain fraction, not
   // on the whole amount. vProv is deliberately excluded — Spain taxes it as
   // ordinary income (rendimiento del trabajo) on the full withdrawal, not as a
-  // capital gain, so it keeps using takeGross/netTaken above unchanged.
+  // capital gain, so it keeps using takeProvident above unchanged.
   function shrinkBasis(bal, basis, removed){
     if(bal<=0 || removed<=0) return basis;
     return Math.max(0, basis - basis*(Math.min(removed,bal)/bal));
@@ -1969,11 +1960,13 @@ function simulate(p, paths){
   // so this is written at most once per path.
   const ruinMonth=new Int32Array(paths); ruinMonth.fill(-1);
   const finalVal=new Float64Array(paths);
+  // Constant for the whole call (validateSimulationParams already checked it above),
+  // so it's validated/allocated once here instead of once per path in the hot loop below.
+  const alloc=NavlogCore.validateAllocation({cash:p.allocCash,bonds:p.allocBonds,equities:p.allocEquities});
 
   for(let k=0;k<paths;k++){
     if(p.seed!=null){ activeRandom=NavlogCore.pathRandom(p.seed,k,0); eventRandom=NavlogCore.pathRandom(p.seed,k,1); }
     spare=null;
-    const alloc=NavlogCore.validateAllocation({cash:p.allocCash,bonds:p.allocBonds,equities:p.allocEquities});
     let vEq=p.startEq*alloc.equities/100, vBtc=p.startBtc, vProv=0;
     let vGold=goldActive?p.startGold:0, vCons=p.startEq*alloc.bonds/100, vCash=p.startEq*alloc.cash/100, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false, forcedOutPath=false, licenseLossPath=false;
@@ -4005,6 +3998,13 @@ function loadScenario(id){
   // Drop the dynamic bounds first so they cannot clamp values that are valid together.
   if(el.allocBonds) el.allocBonds.max='100';
   if(el.childEndAge) el.childEndAge.min='19';
+  // horizonAge.min/max (and careerYear.max, derived from it) are recomputed from ageNow by
+  // syncHorizonControl() below, but ageNow is set earlier in this same forEach: until that
+  // recompute runs, stale bounds left over from the previously-displayed ageNow could clamp
+  // an incoming horizonAge/careerYear that is valid for the *new* ageNow. Reset to the widest
+  // possible range first, same as allocBonds/childEndAge above.
+  if(el.horizonAge){ el.horizonAge.min='19'; el.horizonAge.max='108'; }
+  if(el.careerYear) el.careerYear.max=String(CAREER_YEAR_MAX);
   const intended={};
   ids.forEach(k=>{
     const n=el[k]; if(!n) return;
