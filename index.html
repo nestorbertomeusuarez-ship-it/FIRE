@@ -683,7 +683,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="ctrl">
         <div class="row"><label for="btcVol">Volatilidad de BTC</label><output id="btcVol_o" for="btcVol"></output></div>
         <input type="range" id="btcVol" min="20" max="110" step="1">
-        <p class="hint">La rentabilidad es una media: con mucha volatilidad, la ruta típica (mediana) crece bastante menos (aproximación rápida: media − volatilidad²/2). En el modelo, con 10 % de media y 55 % de volatilidad la mediana queda cerca de −5 % al año; con 70 % de volatilidad, cerca de −13 % (la aproximación rápida da −14,5 %).</p>
+        <p class="hint">La rentabilidad es una media: con mucha volatilidad, la ruta típica (mediana) crece bastante menos (en el modelo, mediana = (1 + media) ÷ √(1 + volatilidad² ÷ (1 + media)²) − 1). Con 10 % de media y 55 % de volatilidad la mediana queda en −1,6 % al año; con 70 % de volatilidad, en −7,2 %. La regla rápida «media − volatilidad²/2» exagera el efecto con volatilidades tan altas (daría −5 % y −14,5 %).</p>
       </div>
       <div class="ctrl">
         <div class="row"><label for="btcRho">Correlación BTC ↔ bolsa</label><output id="btcRho_o" for="btcRho"></output></div>
@@ -1688,6 +1688,13 @@ function logParams(mean,vol){
   const s2=Math.log(1+(vol*vol)/(m*m));
   return {mu:Math.log(m)-s2/2,sd:Math.sqrt(s2)};
 }
+// Monthly lognormal parameters whose 12-month compound is lognormal with exactly the ANNUAL mean
+// and volatility of the sliders. (Scaling annual vol by 1/sqrt(12) before converting overshoots:
+// 55 % BTC vol became ~65 %.)
+function annualLogParams(mean,vol){
+  const a=logParams(mean,vol);
+  return {mu:a.mu/12, sd:a.sd/Math.sqrt(12)};
+}
 function ymdLabel(i){
   const d=dateFromIndex(i);
   return d.m===12?String(d.y):String(d.y)+'-'+String(d.m).padStart(2,'0');
@@ -1712,8 +1719,8 @@ function simulate(p, paths){
   let eventRandom=Math.random;
   activeRandom=Math.random; spare=null;
   const months=Math.min(MONTHS,Math.max(1,Math.floor((p.horizonAge-p.ageNow)*12)+1));
-  const eq=logParams(Math.pow(1+p.ret/100,1/12)-1, p.vol/100/Math.sqrt(12));
-  const btc=logParams(Math.pow(1+p.btcRet/100,1/12)-1, p.btcVol/100/Math.sqrt(12));
+  const eq=annualLogParams(p.ret/100, p.vol/100);
+  const btc=annualLogParams(p.btcRet/100, p.btcVol/100);
   const rho=p.btcRho/100, rhoC=Math.sqrt(Math.max(0,1-rho*rho));
   const annualRetGrowth=Math.pow(1+p.salG/100,1/12)-1;
   const annualSpendGrowth=Math.pow(1+p.vidaG/100,1/12)-1;
@@ -1885,7 +1892,7 @@ function simulate(p, paths){
   }
   // Progressive savings tax is calculated against year-to-date realised gains; principal is never taxed.
 
-  const gold=goldActive ? logParams(Math.pow(1+p.goldRet/100,1/12)-1, p.goldVol/100/Math.sqrt(12)) : null;
+  const gold=goldActive ? annualLogParams(p.goldRet/100, p.goldVol/100) : null;
   const goldRho=p.goldRho/100, goldRhoC=Math.sqrt(Math.max(0,1-goldRho*goldRho));
   const consMonthlyRet=Math.pow(1+p.consRet/100,1/12)-1;
   const consVolM=p.consVol/100/Math.sqrt(12);
@@ -3088,6 +3095,7 @@ function buildWorkerSource(){
     'const lolEmiratesMonths='+lolEmiratesMonths.toString()+';',
     'const lolAnnualPctAtAge='+lolAnnualPctAtAge.toString()+';',
     'const logParams='+logParams.toString()+';',
+    'const annualLogParams='+annualLogParams.toString()+';',
     'const translateValidation='+translateValidation.toString()+';',
     'const validateSimulationParams='+validateSimulationParams.toString()+';',
     'const simulate='+simulate.toString()+';',
