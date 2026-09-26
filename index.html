@@ -407,7 +407,7 @@ section[id],#notas{scroll-margin-top:88px}
     <div class="cell">
       <div class="lbl">Capital objetivo</div>
       <div class="big dim" id="targetCap" style="font-size:34px">—</div>
-      <div class="unit" id="targetNote">gasto ÷ tasa de retiro</div>
+      <div class="unit" id="targetNote">gasto ÷ tasa de retiro (con fiscalidad activa, el Provident cuenta neto de impuestos)</div>
     </div>
   </div>
 
@@ -821,7 +821,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="beckhamYears">Duración del régimen (años)</label><output id="beckhamYears_o" for="beckhamYears"></output></div>
-        <p class="hint">Mientras dura (el año del cambio de residencia y los cinco siguientes, 6 en total), tributas como no residente: solo se gravan rentas y bienes situados en España. Como este simulador asume que tu cartera está fuera de España, mientras el régimen esté activo se suspenden tanto el IRPF sobre plusvalías como el impuesto de patrimonio.</p>
+        <p class="hint">Mientras dura (el año del cambio de residencia y los cinco siguientes, 6 en total), tributas como no residente: solo se gravan rentas y bienes situados en España. Como este simulador asume que tu cartera está fuera de España, mientras el régimen esté activo se suspende el IRPF sobre plusvalías de toda la cartera; el impuesto de patrimonio se suspende también, salvo sobre el inmueble en alquiler si lo cuentas (se asume situado en España, ver su propio hint).</p>
         <input type="range" id="beckhamYears" min="1" max="6" step="1">
       </div>
       <div class="toggle" style="margin-top:14px">
@@ -1066,6 +1066,7 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="checkbox" id="reOn">
         <label for="reOn">Contar un inmueble en alquiler</label>
       </div>
+      <p class="hint">Se asume que este inmueble está situado en España. La Ley Beckham tributa como no residente por "obligación real": solo los bienes situados en España quedan sujetos al impuesto de patrimonio durante esa ventana (el resto de la cartera, de fuente extranjera, queda exento), así que mientras el régimen esté activo el impuesto de patrimonio se sigue aplicando a este inmueble (con la misma lógica de tipo autonómico/bonificación/mínimo exento e ITSGF), aunque se pause para el resto del patrimonio.</p>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="reValue">Valor del inmueble (€)</label><output id="reValue_o" for="reValue"></output></div>
         <p class="hint">Valor de mercado del inmueble en alquiler al empezar la simulación (por defecto 0 €, es decir sin efecto salvo que actives "Contar un inmueble en alquiler" y pongas aquí un importe). Este valor no se suma directamente a tu capital FIRE salvo que marques "Contar el inmueble como capital FIRE".</p>
@@ -1273,7 +1274,7 @@ const DEFAULTS = {
   pensionAnnual:0, pensionStartAge:67, healthcareAnnual:0, healthcareStartAge:65,
   childAnnual:10000, childStartAge:29, childEndAge:32, lumpSums:'[]',
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
-  mandatoryRetireOn:false, mandatoryRetireAge:60,
+  mandatoryRetireOn:false, mandatoryRetireAge:65,
   ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
   gasto:60000, swr:3.25,
@@ -1757,7 +1758,7 @@ function simulate(p, paths){
   // path's own VOLUNTARY FIRE date, so it answers "what if the market crashes right
   // when I choose to retire" without overstating the scenario across every asset.
   // Test hook: track the smallest unclamped bucket/basis value (published snapshots are clamped at 0).
-  const trackBuckets=!!p.debugTrackBuckets; let minBucket=Infinity;
+  const trackBuckets=!!p.debugTrackBuckets; let minBucket=Infinity, minBucketExCash=Infinity, minCash=Infinity;
   const earlyWealth=trackBuckets ? new Float64Array(paths) : null; // wealth after the first year, per path
   const srrShockActive=!!p.srrShockOn;
   const srrShockMonths=Number.isFinite(p.srrShockMonths)&&p.srrShockMonths>0?p.srrShockMonths:12;
@@ -2066,14 +2067,22 @@ function simulate(p, paths){
       // Real estate: net rental income enters cash flow every month it's held.
       if(reActive) net+=vRE*(p.reYield/100)/12;
 
+      // Esparreguera mortgage payment: a real obligation that keeps being owed after
+      // FIRE too (wealth tax already amortizes mortgageBalance to hipEnd regardless of
+      // employment status) — computed once here so both the working branch below and
+      // the retired branch further down apply the exact same monthly figure until the
+      // mortgage's own end year, instead of the payment silently vanishing the month
+      // you retire.
+      const hipReal=inflActive ? p.hip*Math.exp(-cumInfl) : p.hip;
+      const hipActive=i>=careerStart && (d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12));
+
       // Living costs only begin with the Dubai career phase in this model.
       // Pre-career Spanish cash flow is intentionally NOT invented.
       if(i>=careerStart && !retired){
         const monthsSinceCareer=i-careerStart;
         const living=p.vida*spendGrowthPow[Math.max(0,monthsSinceCareer)];
         net-=living;
-        const hipReal=inflActive ? p.hip*Math.exp(-cumInfl) : p.hip;
-        if(d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12)) net-=hipReal;
+        if(hipActive) net-=hipReal;
 
         // FS1 gap: a fixed, non-configurable cost, unrelated to the child-cost sliders below.
         if(d.y===2029) net-=FS1_GAP/12;
@@ -2108,29 +2117,39 @@ function simulate(p, paths){
 
       if(!retired){
         if(net>=0){
-          let wBtc=p.btcAporte/100;
-          let wGold=goldActive?p.goldAporte/100:0;
-          // Slider caps (40%/30%) can't sum past 100% today, but derive wEq
-          // defensively anyway: if they ever did, wEq would floor at 0 while
-          // wBtc+wGold still summed past 1, investing more than the net cash
-          // actually coming in that month.
-          const totalW=wBtc+wGold;
-          if(totalW>1){ wBtc/=totalW; wGold/=totalW; }
-          const investable=Math.max(0,1-wBtc-wGold);
-          const wEq=investable*alloc.equities/100, wCons=investable*alloc.bonds/100, wCash=investable*alloc.cash/100;
-          vEq+=net*wEq; basisEq+=net*wEq;
-          vCons+=net*wCons; basisCons+=net*wCons;
-          vCash+=net*wCash; basisCash+=net*wCash;
-          vBtc+=net*wBtc; basisBtc+=net*wBtc;
-          if(goldActive){ vGold+=net*wGold; basisGold+=net*wGold; }
+          let investable=net;
+          // A month's surplus repays any outstanding pre-FIRE debt (see the deficit
+          // branch below) before anything is invested — same idea as a real person
+          // clearing an overdraft before buying more assets.
+          if(vCash<0){ const repay=Math.min(investable,-vCash); vCash+=repay; investable-=repay; }
+          if(investable>0){
+            let wBtc=p.btcAporte/100;
+            let wGold=goldActive?p.goldAporte/100:0;
+            // Slider caps (40%/30%) can't sum past 100% today, but derive wEq
+            // defensively anyway: if they ever did, wEq would floor at 0 while
+            // wBtc+wGold still summed past 1, investing more than the net cash
+            // actually coming in that month.
+            const totalW=wBtc+wGold;
+            if(totalW>1){ wBtc/=totalW; wGold/=totalW; }
+            const investShare=Math.max(0,1-wBtc-wGold);
+            const wEq=investShare*alloc.equities/100, wCons=investShare*alloc.bonds/100, wCash=investShare*alloc.cash/100;
+            vEq+=investable*wEq; basisEq+=investable*wEq;
+            vCons+=investable*wCons; basisCons+=investable*wCons;
+            vCash+=investable*wCash; basisCash+=investable*wCash;
+            vBtc+=investable*wBtc; basisBtc+=investable*wBtc;
+            if(goldActive){ vGold+=investable*wGold; basisGold+=investable*wGold; }
+          }
         } else {
           // Deficits use liquid assets; never create negative ETF wealth. Drains
-          // the same buckets the FIRE-target `total` below counts (vProv excluded:
+          // the same buckets the FIRE-target `fireTotal` below counts (vProv excluded:
           // a DEWS-style employer scheme is realistically locked while still
           // employed, unlike a temporary cash-flow crunch). Basis shrinks pro-rata
           // with every removal so later gain-fraction math stays correct.
           let deficit=-net;
-          const fromCash=Math.min(vCash,deficit); basisCash=shrinkBasis(vCash,basisCash,fromCash); vCash-=fromCash; deficit-=fromCash;
+          // vCash may already be negative (unrepaid debt from an earlier month): only
+          // an actually-positive balance can be drained here, or this would ADD to
+          // vCash instead of subtracting from it.
+          const fromCash=Math.max(0,Math.min(vCash,deficit)); basisCash=shrinkBasis(vCash,basisCash,fromCash); vCash-=fromCash; deficit-=fromCash;
           if(deficit>0){ const fromCons=Math.min(vCons,deficit); basisCons=shrinkBasis(vCons,basisCons,fromCons); vCons-=fromCons; deficit-=fromCons; }
           if(deficit>0){ const fromEq=Math.min(vEq,deficit); basisEq=shrinkBasis(vEq,basisEq,fromEq); vEq-=fromEq; deficit-=fromEq; }
           const fromBtc=Math.min(vBtc,deficit); basisBtc=shrinkBasis(vBtc,basisBtc,fromBtc); vBtc-=fromBtc; deficit-=fromBtc;
@@ -2140,10 +2159,26 @@ function simulate(p, paths){
           // above), but a LOL'd path has genuinely left the company already — same
           // access the post-departure withdrawal cascade already grants.
           if(deficit>0 && lolFeatureActive && lolTriggered){ const fromProv=Math.min(vProv,deficit); vProv-=fromProv; deficit-=fromProv; }
-          if(deficit>0) ruinedPath=true;
+          // Any shortfall still left once every liquid bucket is at 0 is financed as
+          // debt (negative vCash) instead of permanent ruin: this is a temporary
+          // cash-flow crunch while still working, not the end of the path. Debt
+          // accrues at the ordinary cash return, like any other cash position (see
+          // the return-application block above: vCash*=1+rCashNet applies to a
+          // negative balance exactly the same way, so it compounds automatically —
+          // no special-cased interest rate needed). The FIRE check below includes
+          // vCash, so this debt must be repaid or offset by other buckets before the
+          // target counts as reached; ruin stays a retirement-phase concept.
+          if(deficit>0) vCash-=deficit;
         }
 
-        const total=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
+        // FIRE-target comparison only (never the actual balances below): when Spanish
+        // taxation is on, the Provident/company-scheme balance will be taxed as
+        // ordinary income on the way out (see takeProvident/provRate further down), so
+        // counting it at its full pre-tax value overstates how close the path is to the
+        // target. NavlogCore.providentFireTaxRate applies a conservative haircut
+        // whenever taxes are on (ignoring the Beckham window's possible temporary
+        // exemption keeps this simple and on the safe side).
+        const fireTotal=vEq+vBtc+vProv*(1-NavlogCore.providentFireTaxRate(vProv,taxActive,regionalGeneralActive,p.taxRateProv,taxRegion))+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         // Gratuity is realized right when you leave the company, so it can count
         // toward crossing the target that same month — a real departure lump sum,
         // not money you already had.
@@ -2152,9 +2187,9 @@ function simulate(p, paths){
         // mandatory exit. With the Provident already above that ceiling the top-up is always 0.
         const gratuityCeilingEUR=i>=careerStart ? 730*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
         const gratuityMatters=gratuityCeilingEUR>0 && !(p.provOn && vProv>=gratuityCeilingEUR)
-          && (total+gratuityCeilingEUR>=target || (mandatoryRetireActive && i>=mandatoryRetireMonth));
+          && (fireTotal+gratuityCeilingEUR>=target || (mandatoryRetireActive && i>=mandatoryRetireMonth));
         const gratuityEUR=gratuityMatters ? endOfServiceEUR(i,careerStart,captMonth,vProv,fxEff) : 0;
-        if(!licenseLossPath && total+gratuityEUR>=target && !ruinedPath){
+        if(!licenseLossPath && fireTotal+gratuityEUR>=target && !ruinedPath){
           retired=true;
           fireMonth[k]=i;
           if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
@@ -2225,7 +2260,10 @@ function simulate(p, paths){
         }
         const retirementIncome=ageNow>=p.pensionStartAge?p.pensionAnnual/12:0;
         const healthCost=ageNow>=p.healthcareStartAge?p.healthcareAnnual/12:0;
-        wd=wd-retirementIncome+healthCost-childNet-lumpNet;
+        // The mortgage payment is not part of the configured retirement spend
+        // ("Gasto anual al jubilarte"); it is a separate real obligation that keeps
+        // running until hipEnd, same as healthcare/children above.
+        wd=wd-retirementIncome+healthCost-childNet-lumpNet+(hipActive?hipReal:0);
         // Income above this month's spending (a large pension, an inheritance) is surplus
         // to be invested like any other inflow, not silently discarded.
         if(wd<0){
@@ -2282,7 +2320,7 @@ function simulate(p, paths){
       }
 
       // Impuesto de patrimonio: liquidación anual, contra los buckets en orden líquido→ilíquido.
-      if(wealthTaxActive && !ruinedPath && spanishResident && !inBeckham && isSnap){
+      if(wealthTaxActive && !ruinedPath && spanishResident && isSnap && !inBeckham){
         // Property inclusion in the FIRE target is a liquidity/retirement choice;
         // it must not remove owned real estate from the wealth-tax base.
         const totalWealth=NavlogCore.wealthTaxBase(vEq+vBtc+vProv+vGold+vCons+vCash,vRE,reActive);
@@ -2297,7 +2335,9 @@ function simulate(p, paths){
         let due=unpaidWealthTax+Math.max(regionalWealthTax, NavlogCore.solidarityWealthTax(netWealth));
         unpaidWealthTax=0;
         if(due>0){
-          const fromCash=Math.min(vCash,due); basisCash=shrinkBasis(vCash,basisCash,fromCash); vCash-=fromCash; due-=fromCash;
+          // vCash can be negative here (unrepaid pre-FIRE debt, see the deficit
+          // branch above): only its positive part can actually be drained.
+          const fromCash=Math.max(0,Math.min(vCash,due)); basisCash=shrinkBasis(vCash,basisCash,fromCash); vCash-=fromCash; due-=fromCash;
           if(due>0){ const fromCons=Math.min(vCons,due); basisCons=shrinkBasis(vCons,basisCons,fromCons); vCons-=fromCons; due-=fromCons; }
           const fromEq=Math.min(vEq,due); basisEq=shrinkBasis(vEq,basisEq,fromEq); vEq-=fromEq; due-=fromEq;
           const fromGold=Math.min(vGold,due); basisGold=shrinkBasis(vGold,basisGold,fromGold); vGold-=fromGold; due-=fromGold;
@@ -2310,6 +2350,24 @@ function simulate(p, paths){
           if(due>0){ const fromProv=Math.min(vProv,due); vProv-=fromProv; due-=fromProv; }
           if(due>0 && reActive && p.reCountsFire){ const fromRE=Math.min(vRE,due); basisRE=shrinkBasis(vRE,basisRE,fromRE); vRE-=fromRE; due-=fromRE; }
           if(due>0) unpaidWealthTax+=due;
+        }
+      } else if(wealthTaxActive && !ruinedPath && spanishResident && isSnap && inBeckham && reActive){
+        // Ley Beckham taxes as a non-resident under "obligación real": only
+        // Spanish-situated assets are taxed, not the worldwide portfolio. The
+        // rental property (vRE) is assumed Spanish-situated (Esparreguera is a
+        // separate asset — its mortgageBalance is intentionally NOT netted
+        // against vRE here); the rest of the portfolio is foreign-sourced and
+        // stays exempt for the whole Beckham window, same as the capital-gains
+        // pause above. Same regional rate/bonus/exemption logic and the state
+        // solidarity tax via max(), just against a vRE-only base.
+        const netWealthRE=Math.max(0,vRE);
+        const excessRE=Math.max(0,netWealthRE-p.wealthExempt);
+        const regionalWealthTaxRE=excessRE>0 ? excessRE*(p.wealthRate/100)*(1-p.wealthBonusPct/100) : 0;
+        let dueRE=unpaidWealthTax+Math.max(regionalWealthTaxRE, NavlogCore.solidarityWealthTax(netWealthRE));
+        unpaidWealthTax=0;
+        if(dueRE>0){
+          const fromRE=Math.min(vRE,dueRE); basisRE=shrinkBasis(vRE,basisRE,fromRE); vRE-=fromRE; dueRE-=fromRE;
+          if(dueRE>0) unpaidWealthTax+=dueRE;
         }
       }
 
@@ -2360,7 +2418,15 @@ function simulate(p, paths){
       }
 
       if(trackBuckets && i===11) earlyWealth[k]=vEq+vBtc+vProv+vGold+vCons+vCash;
-      if(trackBuckets){ minBucket=Math.min(minBucket,vEq,vBtc,vProv,vGold,vCons,vCash,vRE,basisEq,basisBtc,basisGold,basisCons,basisCash,basisRE); }
+      if(trackBuckets){
+        // vCash may legitimately go negative pre-FIRE (debt, see the deficit branch
+        // above); every other balance/cost-basis must never go negative, so this is
+        // tracked separately from vCash's own minimum for the tests to tell the two
+        // apart.
+        minBucket=Math.min(minBucket,vEq,vBtc,vProv,vGold,vCons,vCash,vRE,basisEq,basisBtc,basisGold,basisCons,basisCash,basisRE);
+        minBucketExCash=Math.min(minBucketExCash,vEq,vBtc,vProv,vGold,vCons,vRE,basisEq,basisBtc,basisGold,basisCons,basisCash,basisRE);
+        minCash=Math.min(minCash,vCash);
+      }
       if(isSnap){
         const totalNow=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         snapVals[snap][k]=Math.max(0,totalNow);
@@ -2369,10 +2435,17 @@ function simulate(p, paths){
         snap++;
       }
     }
-    ruined[k]=ruinedPath?1:0;
+    // A path that never fired can still end the horizon owing pre-FIRE debt that was
+    // never repaid or offset (see the deficit branch above) — that is the only way
+    // "ruin" can now happen before FIRE, so it reuses the same `ruined` flag/category
+    // (retirementCohortCounts' preFireRuin) instead of a separate one. A path that did
+    // fire is unaffected: its ruin flag still means the original post-retirement
+    // ruin (see `deficit>1e-6` above).
+    const rawFinal=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
+    ruined[k]=(ruinedPath || (fireMonth[k]<0 && rawFinal<0))?1:0;
     forcedOut[k]=forcedOutPath?1:0;
     licenseLossOut[k]=licenseLossPath?1:0;
-    finalVal[k]=Math.max(0,vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0));
+    finalVal[k]=Math.max(0,rawFinal);
   }
 
   const series=annualSnapshots.map((idx,j)=>{
@@ -2404,7 +2477,7 @@ function simulate(p, paths){
   const successful=successBuf.subarray(0,successCount);
 
   const result={series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots,forcedOut,licenseLossOut};
-  if(trackBuckets) result.debug={minBucket,earlyWealth};
+  if(trackBuckets) result.debug={minBucket,minBucketExCash,minCash,earlyWealth};
   return result;
 }
 
@@ -2947,7 +3020,7 @@ function buildWorkerSource(){
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
     'const SOLIDARITY_EXEMPT='+NavlogCore.SOLIDARITY_EXEMPT+', SOLIDARITY_BRACKETS='+literal(NavlogCore.SOLIDARITY_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     // Core helpers that call each other by bare name inside simulation-core.js need the same
     // top-level aliases here, or they throw ReferenceError only inside the worker.
@@ -3300,6 +3373,7 @@ const MODEL_LIMITS=[
   'Los impuestos sobre plusvalías solo se aplican a las retiradas y el de patrimonio al saldo anual, y ambos solo desde que repatrías el capital a España (tras los años de retraso desde el FIRE que configures); la venta de Burriana tributa aparte con su propio tipo. Las plusvalías mientras acumulas y los dividendos, intereses y alquileres del inmueble no tributan.',
   'El sueldo, las aportaciones al Provident y el ingreso barista se tratan como libres de impuestos y cotizaciones; el Provident solo tributa al retirarlo.',
   'Los tramos del ahorro (cifras nominales 2024/2025, que no se actualizan solas) se aplican a plusvalías calculadas en euros reales, sin ajustar por inflación.',
+  'Lo mismo aplica a los tramos del IRPF general (estatal y autonómico, usados para el Provident en modo regional): son importes nominales de 2025 y se aplican tal cual, sin actualizar, durante todo el horizonte temporal en euros reales — el modelo asume implícitamente que esos tramos se indexarían con la inflación, algo que la ley no garantiza.',
   'El hueco FS1 (10.400 €/año en 2029 y 2031) es un coste fijo del modelo, no configurable, y solo se carga mientras trabajas (desde el inicio de carrera hasta que dejas de trabajar). El gasto por hijo que configures (importe, edad inicial y edad final) se aplica en cambio según tu edad, sin relación con tu situación laboral.',
   'La pensión o ingreso recurrente, los pagos únicos y cualquier excedente de ingresos sobre el gasto se invierten sin IRPF ni cotizaciones.',
   'Con semilla, las ejecuciones completas usan '+SEEDED_PATHS_FULL+' rutas fijas ('+SEEDED_PATHS_SENSITIVITY+' rutas en sensibilidad y riesgo de secuencia) y son reproducibles en el mismo navegador y dispositivo; entre navegadores puede haber diferencias mínimas por el redondeo de las funciones matemáticas. Sin semilla, el número de rutas depende de la velocidad del dispositivo.',
@@ -3352,8 +3426,8 @@ function renderOutcomeDashboard(counts, pathsUsed){
     ['de ellos, ruina después del FIRE (incluida en el total de FIRE voluntario)',counts.voluntaryRuined,counts.voluntary ? Math.round(counts.voluntaryRuined/counts.voluntary*100)+' % de FIRE voluntario' : 'sin cohorte'],
     ['Salida forzosa',counts.forced,pct(counts.forced)],
     ['Pérdida de licencia',counts.licenseLoss,pct(counts.licenseLoss)],
-    ['Ruina antes de llegar al FIRE',counts.preFireRuin,pct(counts.preFireRuin)],
-    ['Sin jubilación en el horizonte (sin ruina)',counts.noRetirement,pct(counts.noRetirement)],
+    ['Nunca llega al FIRE y termina el horizonte en deuda',counts.preFireRuin,pct(counts.preFireRuin)],
+    ['Sin jubilación en el horizonte (sin deuda pendiente)',counts.noRetirement,pct(counts.noRetirement)],
     ['Total de rutas (suma de las categorías excluyentes)',counts.voluntary+counts.forced+counts.licenseLoss+counts.preFireRuin+counts.noRetirement,pct(pathsUsed)]
   ];
   const list=document.createElement('dl'); list.className='outcomeList';
@@ -3393,7 +3467,7 @@ function updateSaveButtonState(){
 // No preview or full run is scheduled here any more — pressing "Calcular" (#runCalc) is the only
 // way to recompute; see run()/runFullPrecision() and the #runCalc listener below.
 function onParamInput(){
-  try { paintLabels(collectRawParams()); } catch(e) {}
+  try { paintLabels(collectRawParams()); } catch(e){ console.error(e); }
   const error=document.getElementById('assumptionError');
   try { readParams(); if(error) error.textContent=''; }
   catch(e){ if(error) error.textContent = e && e.message ? e.message : 'No se pudo calcular este escenario.'; }

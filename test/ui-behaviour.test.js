@@ -119,23 +119,33 @@ const { loadApp } = require('./helpers/fake-app.js');
   for (let i = 0; i < list.length; i += 2) rows.push({ label: list[i].textContent, count: Number(list[i + 1].textContent.split(' rutas')[0].replace(/\./g, '')) });
   assert.equal(rows.length, 7);
   assert.match(rows[1].label, /incluida en el total de FIRE voluntario/, 'voluntary ruin is shown as a subset');
-  assert.match(rows[4].label, /Ruina antes de llegar al FIRE/);
-  assert.match(rows[5].label, /sin ruina/, 'the no-retirement row excludes ruined paths');
+  assert.match(rows[4].label, /Nunca llega al FIRE y termina el horizonte en deuda/);
+  assert.match(rows[5].label, /sin deuda pendiente/, 'the no-retirement row excludes paths that end in unrepaid debt');
   const paths = Number(/muestra ([\d.]+) rutas/.exec(el('simulationContext').textContent)[1].replace(/\./g, ''));
   const exclusive = [0, 2, 3, 4, 5].reduce((sum, index) => sum + rows[index].count, 0);
   assert.equal(exclusive, paths, 'the five exclusive categories add up to the number of paths');
   assert.equal(rows[6].count, paths, 'the total row equals N');
 
-  // A household that cannot cover its costs goes broke BEFORE reaching FIRE: that is its own category, not "no retirement".
-  for (const [id, value] of [['startEq', '0'], ['vida', '7000'], ['hip', '1400'], ['salFO', '280000'], ['salCA', '420000'], ['gasto', '130000']]) setValue(id, value);
+  // A household that can never cover its costs, with no market growth to ever bail it out, runs into
+  // debt it never repays and never reaches FIRE: that is its own category, not "no retirement" (a
+  // merely large but still reachable target could now eventually be crossed by decades of stochastic
+  // equity compounding on top of pre-FIRE debt, since a temporary cash-flow crunch is financed as debt
+  // instead of permanent ruin — see index.html's deficit branch — so growth is zeroed out here to keep
+  // the target genuinely unreachable).
+  for (const [id, value] of [
+    ['startEq', '0'], ['vida', '7000'], ['hip', '1400'], ['salFO', '280000'], ['salCA', '420000'], ['gasto', '130000'],
+    ['ret', '2'], ['vol', '0'], ['btcRet', '0'], ['btcVol', '20'], ['consRet', '0'], ['consVol', '0'], ['cashRet', '0'], ['cashVol', '0']
+  ]) setValue(id, value); // ret=2 and btcVol=20 are each control's own minimum (0 is out of range for both)
+  el('provOn').checked = false; // no Provident contributions to mask the household's own cash-flow debt
   setValue('seed', '1'); el('proMode').checked = false;
   await call("safeRun('preview')");
   const brokeRows = []; const brokeList = el('outcomeSummary').children[0].children;
   for (let i = 0; i < brokeList.length; i += 2) brokeRows.push(Number(brokeList[i + 1].textContent.split(' rutas')[0].replace(/\./g, '')));
   assert.equal(brokeRows[6], 250, 'preview sample size');
-  assert.ok(brokeRows[4] > 200, 'nearly every path is ruined before FIRE (got ' + brokeRows[4] + ')');
+  assert.ok(brokeRows[4] > 200, 'nearly every path never reaches FIRE and ends the horizon in debt (got ' + brokeRows[4] + ')');
   assert.equal(brokeRows[5], 0, 'and none is mislabelled as "no retirement"');
   assert.equal(brokeRows[0] + brokeRows[2] + brokeRows[3] + brokeRows[4] + brokeRows[5], 250);
+  el('provOn').checked = true; // restore: later sections rely on the default Provident setup
 
   // ---- print / PDF report ----
   assert.ok(el('printAssumptions').classList.contains('printOnly'), 'the print block is print-only');
