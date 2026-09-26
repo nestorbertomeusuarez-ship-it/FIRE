@@ -774,7 +774,7 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="provCo" min="0" max="20" step="0.5">
       </div>
       <p class="note">Emirates aporta el 12 % del básico (15 % a partir de 10 años de servicio) y tú el 5 %, que sale de tu nómina. Solo se cobra al dejar la compañía — y como dejarla es justo lo que significa jubilarse, cuenta para el objetivo. Antes de 5 años solo te llevas parte de lo que puso Emirates; el simulador no aplica ese recorte y asume que cobras el saldo completo, así que una salida muy temprana sale algo mejor de lo real.</p>
-      <p class="note">Indemnización de fin de servicio (gratuity, ley laboral de EAU): 21 días de básico por año de servicio los 5 primeros años y 30 días por año a partir del sexto, con un mínimo de 1 año de servicio y un tope de 2 años de básico. Emirates paga la gratuity <b>o</b> el Provident, el que sea mayor, nunca los dos. El simulador lo calcula solo con tus años de servicio al dejar la compañía (FIRE, jubilación obligatoria o LOL): como el Provident casi siempre es mayor, normalmente no añade nada; si desactivas el Provident, se cobra la gratuity entera.</p>
+      <p class="note">Indemnización de fin de servicio (gratuity, ley laboral de EAU): 21 días de básico por año de servicio los 5 primeros años y 30 días por año a partir del sexto, con un mínimo de 1 año de servicio y un tope de 2 años de básico. Según el contrato, al dejar la compañía (FIRE, jubilación obligatoria o LOL) cobras siempre tus aportaciones al Provident (tu 5 %) y, además, la gratuity <b>o</b> la parte que aportó Emirates, la mayor de las dos. La parte de Emirates se consolida según los años de servicio: con menos de 3 años se pierde entera (solo cobras la gratuity), de 3 a 5 años cobras el 75 % y desde 5 años el 100 %. A partir de ahí, como la parte de Emirates casi siempre supera a la gratuity, normalmente no se añade nada más. Si desactivas el Provident, se cobra la gratuity entera.</p>
     </div>
 
     <div class="group">
@@ -1869,7 +1869,8 @@ function simulate(p, paths){
   const profitShareActive=p.profitShareWeeks>0;
   // End-of-service gratuity (UAE labour law) vs Provident: Emirates pays whichever is higher,
   // so on leaving only the shortfall of the gratuity over the Provident balance is added.
-  const endOfServiceEUR=(i,careerStart,captMonth,vProv,fx)=>NavlogCore.endOfServiceTopUp({years:(i-careerStart)/12, basicAED:i>=captMonth?p.basicCA:p.basicFO, fx, provBalance:vProv, provOn:p.provOn});
+  // Leaving Emirates: {cash, forfeit} per the contract's vesting table (see endOfServiceSettlement).
+  const endOfService=(i,careerStart,captMonth,vProv,vProvMember,fx)=>NavlogCore.endOfServiceSettlement({years:(i-careerStart)/12, basicAED:i>=captMonth?p.basicCA:p.basicFO, fx, provCompany:Math.max(0,vProv-vProvMember), provOn:p.provOn});
 
   // Children: birth-month indices and the shared per-band cost table are deterministic (not
   // randomized), so both are computed once per simulate() call instead of once per path-month.
@@ -2005,6 +2006,8 @@ function simulate(p, paths){
     if(p.seed!=null){ activeRandom=NavlogCore.pathRandom(p.seed,k,0); eventRandom=NavlogCore.pathRandom(p.seed,k,1); }
     spare=null;
     let vEq=p.startEq*alloc.equities/100, vBtc=p.startBtc, vProv=0;
+    // Member (5 %) part of vProv, grown at the same return: the company part is what vests.
+    let vProvMember=0;
     let vGold=goldActive?p.startGold:0, vCons=p.startEq*alloc.bonds/100, vCash=p.startEq*alloc.cash/100, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false, forcedOutPath=false, licenseLossPath=false;
     // Loss-of-License: absorbing once triggered (never reset), same discipline as
@@ -2083,7 +2086,7 @@ function simulate(p, paths){
 
       const rEqNet=NavlogCore.netMonthlyReturn(rEqEff,fee.eq), rBtcNet=NavlogCore.netMonthlyReturn(rBtcEff,fee.btc), rProvNet=NavlogCore.netMonthlyReturn(rEqEff,fee.prov);
       cumFees+=vEq*(rEqEff-rEqNet)+vBtc*(rBtcEff-rBtcNet)+vProv*(rEqEff-rProvNet);
-      vEq*=1+rEqNet; vBtc*=1+rBtcNet; vProv*=1+rProvNet;
+      vEq*=1+rEqNet; vBtc*=1+rBtcNet; vProv*=1+rProvNet; vProvMember*=1+rProvNet;
       if(goldActive){
         const z3=gauss();
         const rGold=Math.exp(gold.mu+gold.sd*(histActive ? z3 : (goldRho*z1+goldRhoC*z3)))-1;
@@ -2134,6 +2137,7 @@ function simulate(p, paths){
           const basicEUR=basicAED*fxEff;
           aporProv=basicEUR*(coRate+0.05);
           vProv+=aporProv;
+          vProvMember+=basicEUR*0.05;
           net-=basicEUR*0.05;
         }
         net+=salaryEUR;
@@ -2149,8 +2153,9 @@ function simulate(p, paths){
       // is paid same as any other departure (LOL means genuinely leaving the company,
       // even though `retired` itself stays false until FIRE/mandatory age).
       if(lolTriggered && lolMonthIdx===i){
-        const lolGratuityEUR=endOfServiceEUR(i,careerStart,captMonth,vProv,fxEff);
-        if(lolGratuityEUR>0){ vEq+=lolGratuityEUR; basisEq+=lolGratuityEUR; }
+        const lolSettlement=endOfService(i,careerStart,captMonth,vProv,vProvMember,fxEff);
+        vProv-=lolSettlement.forfeit;
+        if(lolSettlement.cash>0){ vEq+=lolSettlement.cash; basisEq+=lolSettlement.cash; }
         if(p.lolEmiratesOn){
           const lolContractEUR=lolEmiratesMonths(p.ageNow+i/12)*(i>=captMonth?p.basicCA:p.basicFO)*fxEff;
           vEq+=lolContractEUR; basisEq+=lolContractEUR;
@@ -2305,7 +2310,8 @@ function simulate(p, paths){
         // target. NavlogCore.providentFireTaxRate applies a conservative haircut
         // whenever taxes are on (ignoring the Beckham window's possible temporary
         // exemption keeps this simple and on the safe side).
-        const fireTotal=vEq+vBtc+vProv*(1-NavlogCore.providentFireTaxRate(vProv,taxActive,regionalGeneralActive,p.taxRateProv,taxRegion,thresholdScale(i,cumInfl,cumInflVar)))+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
+        const provFireRate=NavlogCore.providentFireTaxRate(vProv,taxActive,regionalGeneralActive,p.taxRateProv,taxRegion,thresholdScale(i,cumInfl,cumInflVar));
+        const fireTotal=vEq+vBtc+vProv*(1-provFireRate)+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
         // Gratuity is realized right when you leave the company, so it can count
         // toward crossing the target that same month — a real departure lump sum,
         // not money you already had.
@@ -2313,12 +2319,18 @@ function simulate(p, paths){
         // months where it could change the outcome: the target is within reach or this is the
         // mandatory exit. With the Provident already above that ceiling the top-up is always 0.
         const gratuityCeilingEUR=i>=careerStart ? 730*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
-        const gratuityMatters=gratuityCeilingEUR>0 && !(p.provOn && vProv>=gratuityCeilingEUR)
-          && (fireTotal+gratuityCeilingEUR>=target || (mandatoryRetireActive && i>=mandatoryRetireMonth));
-        const gratuityEUR=gratuityMatters ? endOfServiceEUR(i,careerStart,captMonth,vProv,fxEff) : 0;
-        if(!licenseLossPath && fireTotal+gratuityEUR>=target && !ruinedPath){
+        // Under 5 years of service part of the company money is forfeited, so the settlement
+        // always matters then; after that only an EOSB shortfall can, as before.
+        const provCompanyNow=Math.max(0,vProv-vProvMember);
+        const unvested=p.provOn && provCompanyNow>0 && (i-careerStart)/12<5;
+        const gratuityMatters=gratuityCeilingEUR>0 && (unvested || (!(p.provOn && provCompanyNow>=gratuityCeilingEUR)
+          && (fireTotal+gratuityCeilingEUR>=target || (mandatoryRetireActive && i>=mandatoryRetireMonth))));
+        const settlement=gratuityMatters ? endOfService(i,careerStart,captMonth,vProv,vProvMember,fxEff) : {cash:0, forfeit:0};
+        const gratuityEUR=settlement.cash;
+        if(!licenseLossPath && fireTotal-settlement.forfeit*(1-provFireRate)+gratuityEUR>=target && !ruinedPath){
           retired=true;
           fireMonth[k]=i;
+          vProv-=settlement.forfeit;
           if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           if(vCash<0){
             const sd=settleFireDebt(vCash,vCons,basisCons,vEq,basisEq,goldActive,vGold,basisGold,vBtc,basisBtc,reActive,p.reCountsFire,vRE,basisRE,vProv,ytdProvidentIncome);
@@ -2341,6 +2353,7 @@ function simulate(p, paths){
           retired=true;
           forcedOutPath=true;
           fireMonth[k]=i;
+          vProv-=settlement.forfeit;
           if(gratuityEUR>0){ vEq+=gratuityEUR; basisEq+=gratuityEUR; }
           if(vCash<0){
             const sd=settleFireDebt(vCash,vCons,basisCons,vEq,basisEq,goldActive,vGold,basisGold,vBtc,basisBtc,reActive,p.reCountsFire,vRE,basisRE,vProv,ytdProvidentIncome);
@@ -3187,7 +3200,7 @@ function buildWorkerSource(){
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
     'const SOLIDARITY_EXEMPT='+NavlogCore.SOLIDARITY_EXEMPT+', SOLIDARITY_BRACKETS='+literal(NavlogCore.SOLIDARITY_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+',childMonthlyCost:'+NavlogCore.childMonthlyCost.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceSettlement:'+NavlogCore.endOfServiceSettlement.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+',childMonthlyCost:'+NavlogCore.childMonthlyCost.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     // Core helpers that call each other by bare name inside simulation-core.js need the same
     // top-level aliases here, or they throw ReferenceError only inside the worker.

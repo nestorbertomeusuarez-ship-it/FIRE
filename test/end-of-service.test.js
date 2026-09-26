@@ -10,12 +10,12 @@ test('UAE gratuity days: 21/year for 5 years, 30/year after, nothing before 1 ye
   assert.equal(core.gratuityDays(40), 730);
 });
 
-test('Emirates pays the higher of gratuity and Provident, never both', () => {
+test('Emirates pays the higher of gratuity and the vested company Provident part, never both', () => {
   // 10 years, basic 30,000 AED/month, fx 0.25: gratuity = 255 days * 1,000 AED * 0.25 = 63,750 EUR.
   const base = { years: 10, basicAED: 30000, fx: 0.25 };
-  assert.equal(core.endOfServiceTopUp({ ...base, provBalance: 200000, provOn: true }), 0, 'Provident higher: no extra payment');
-  assert.equal(core.endOfServiceTopUp({ ...base, provBalance: 50000, provOn: true }), 13750, 'gratuity higher: only the difference is added');
-  assert.equal(core.endOfServiceTopUp({ ...base, provBalance: 0, provOn: false }), 63750, 'Provident not modelled: full gratuity');
+  assert.deepEqual(core.endOfServiceSettlement({ ...base, provCompany: 200000, provOn: true }), { cash: 0, forfeit: 0 }, 'company part higher: no extra payment');
+  assert.deepEqual(core.endOfServiceSettlement({ ...base, provCompany: 50000, provOn: true }), { cash: 13750, forfeit: 0 }, 'gratuity higher: only the difference is added');
+  assert.deepEqual(core.endOfServiceSettlement({ ...base, provCompany: 0, provOn: false }), { cash: 63750, forfeit: 0 }, 'Provident not modelled: full gratuity');
 });
 
 test('legacy gratuityYears is dropped from saved scenarios', () => {

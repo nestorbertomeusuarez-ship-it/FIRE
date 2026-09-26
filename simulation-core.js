@@ -452,11 +452,19 @@
     if (!(years >= 1)) return 0;
     return Math.min(Math.min(years, 5) * 21 + Math.max(0, years - 5) * 30, 730);
   }
-  // Emirates pays the end-of-service gratuity OR the Provident Scheme balance, whichever is
-  // higher. The Provident balance is already in the portfolio, so only the shortfall is added.
-  function endOfServiceTopUp({ years, basicAED, fx, provBalance, provOn }) {
+  // Emirates contract (Candidate Information - Pilots, 6.1): on leaving you receive EITHER the
+  // Provident company contributions OR the end-of-service gratuity, whichever is higher, PLUS
+  // your own member contributions, with the company part vesting by length of service:
+  // under 3 years nothing (EOSB only, and no EOSB under 1 year), 3-5 years 75 %, 5+ years 100 %.
+  // The Provident balance is already in the portfolio, so the result is what to change there:
+  // `forfeit` leaves the Provident (unvested company money) and `cash` is the EOSB shortfall paid
+  // on top of the vested company part.
+  function endOfServiceSettlement({ years, basicAED, fx, provCompany, provOn }) {
     const gratuityEUR = gratuityDays(years) * (basicAED / 30) * fx;
-    return provOn ? Math.max(0, gratuityEUR - provBalance) : gratuityEUR;
+    if (!provOn) return { cash: gratuityEUR, forfeit: 0 };
+    const company = Math.max(0, Number(provCompany) || 0);
+    const vested = years >= 5 ? company : years >= 3 ? company * 0.75 : 0;
+    return { cash: Math.max(0, gratuityEUR - vested), forfeit: company - vested };
   }
   // Scenarios saved before `gratuityYears` was replaced by the automatic gratuity-vs-Provident
   // comparison: the key is dropped so it neither fails validation nor double-counts.
@@ -480,5 +488,5 @@
     for (const [key, value] of Object.entries(params)) if (!LEGACY_CHILD_KEYS.includes(key)) migrated[key] = value;
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, childMonthlyCost };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, childMonthlyCost };
 });
