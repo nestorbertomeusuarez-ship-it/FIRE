@@ -73,7 +73,7 @@ const PRE_EXISTING_EXCEPTIONS = new Set(['seed', 'calcPrecision', 'hipEnd', 'reC
 const controls = Array.from(section.matchAll(/<(input|select)\b[^>]*\bid="([^"]+)"/g), (m) => ({ id: m[2], idx: m.index }));
 
 test('#parametros contains the expected number of parameter controls', () => {
-  assert.equal(controls.length, 124, 'control count in #parametros (update this alongside PRE_EXISTING_EXCEPTIONS if it changes)');
+  assert.equal(controls.length, 125, 'control count in #parametros (update this alongside PRE_EXISTING_EXCEPTIONS if it changes)');
 });
 
 test('every input/select in #parametros has its own hint, in its .ctrl/.toggle block or as a toggle\'s immediate sibling', () => {

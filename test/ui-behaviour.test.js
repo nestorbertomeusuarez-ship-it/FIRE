@@ -134,7 +134,7 @@ const { loadApp } = require('./helpers/fake-app.js');
   // the target genuinely unreachable).
   for (const [id, value] of [
     ['startEq', '0'], ['vida', '7000'], ['hip', '1400'], ['salFO', '280000'], ['salCA', '420000'], ['gasto', '130000'],
-    ['ret', '2'], ['vol', '0'], ['btcRet', '0'], ['btcVol', '20'], ['consRet', '0'], ['consVol', '0'], ['cashRet', '0'], ['cashVol', '0']
+    ['profitShareWeeks', '0'], ['ret', '2'], ['vol', '0'], ['btcRet', '0'], ['btcVol', '20'], ['consRet', '0'], ['consVol', '0'], ['cashRet', '0'], ['cashVol', '0']
   ]) setValue(id, value); // ret=2 and btcVol=20 are each control's own minimum (0 is out of range for both)
   el('provOn').checked = false; // no Provident contributions to mask the household's own cash-flow debt
   setValue('seed', '1');
