@@ -36,7 +36,7 @@ test('the Provident balance is haircut for the FIRE-target comparison when taxes
     horizonAge: 90,
     // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
     // this test isolates the Provident tax haircut, not portfolio costs.
-    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, profitShareWeeks: 0
   };
   const off = simulate({ ...base, taxOn: false }, 2);
   const on = simulate({ ...base, taxOn: true }, 2);
@@ -63,7 +63,7 @@ test('the Provident haircut uses the regional general-IRPF effective rate, not t
     // this test isolates the regional general-IRPF Provident haircut, not portfolio costs.
     // taxThresholdDrift also defaults to non-zero now (fiscal drag); zero it here too, since
     // this test is about the difference between regions, not about eroding thresholds.
-    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, taxThresholdDrift: 0
+    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, profitShareWeeks: 0, taxThresholdDrift: 0
   };
   const catalonia = simulate({ ...base, taxRegion: 0 }, 2);
   const valencia = simulate({ ...base, taxRegion: 1 }, 2);

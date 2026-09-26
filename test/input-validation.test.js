@@ -68,7 +68,7 @@ assert.ok(stressed.debug.minBucket >= -1e-6, 'no bucket or cost basis goes negat
 // turn, and any shortfall left once every bucket is at 0 becomes pre-FIRE debt (negative vCash), not
 // permanent ruin — every OTHER bucket/basis still never goes negative.
 const deficitHousehold = { ...DEFAULTS, seed: 5, debugTrackBuckets: true, startEq: 60000, startBtc: 20000, startGold: 20000, goldAporte: 0, salFO: 280000, salCA: 420000,
-  vida: 7000, hip: 1400, gasto: 130000, swr: 2.4, allocCash: 10, allocBonds: 20, allocEquities: 70, reOn: true, reValue: 100000, reCountsFire: true };
+  vida: 7000, hip: 1400, gasto: 130000, swr: 2.4, allocCash: 10, allocBonds: 20, allocEquities: 70, reOn: true, reValue: 100000, reCountsFire: true, profitShareWeeks: 0 }; // no profit sharing: it would cover the deficit
 const deficitResult = simulate(deficitHousehold, 30);
 assert.ok(deficitResult.debug.minBucketExCash >= -1e-6, 'deficits never push a bucket other than cash (or its basis) below zero (min ' + deficitResult.debug.minBucketExCash + ')');
 assert.ok(deficitResult.debug.minCash < -1e-6, 'a household that cannot fund itself runs vCash into debt instead (min cash ' + deficitResult.debug.minCash + ')');

@@ -583,9 +583,14 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="salG" min="-1" max="2.5" step="0.1">
       </div>
       <div class="ctrl">
-        <div class="row"><label for="profitShareWeeks">Profit sharing máximo (semanas de básico/año)</label><output id="profitShareWeeks_o" for="profitShareWeeks"></output></div>
-        <p class="hint">Emirates paga un profit sharing discrecional, entre el 0 % y el 30 % del básico anual (≈0-15,6 semanas), que la compañía decide de cero cada año según resultados — aquí se sortea un valor distinto cada diciembre, entre 0 y el máximo que fijes, en vez de asumir un importe fijo. Con 0 semanas, no cambia nada respecto a no tenerlo en cuenta.</p>
-        <input type="range" id="profitShareWeeks" min="0" max="15.6" step="0.2">
+        <div class="row"><label for="profitShareWeeks">Profit sharing medio (semanas de básico/año)</label><output id="profitShareWeeks_o" for="profitShareWeeks"></output></div>
+        <p class="hint">Emirates paga el profit sharing en mayo, en semanas de salario básico, y lo decide cada año según resultados. Pagos reales: mayo 2023, 24 semanas; mayo 2024, 20; mayo 2025, 22; mayo 2026, 20 (media 21,5, por defecto). Cada año con reparto se sortea un valor entre el 90 % y el 110 % de esta media. Con 0 semanas no se tiene en cuenta.</p>
+        <input type="range" id="profitShareWeeks" min="0" max="30" step="0.5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="profitShareSkipPct">Probabilidad de año sin profit sharing</label><output id="profitShareSkipPct_o" for="profitShareSkipPct"></output></div>
+        <p class="hint">El reparto es discrecional: en 2020 y 2021 (COVID) Emirates no pagó. Cada mayo se sortea si ese año hay reparto. El 10 % por defecto es una estimación, no un dato publicado.</p>
+        <input type="range" id="profitShareSkipPct" min="0" max="100" step="1">
       </div>
       <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="mandatoryRetireOn">
@@ -1312,7 +1317,7 @@ const DEFAULTS = {
   allocCash:10, allocBonds:20, allocEquities:70, cashRet:1, cashVol:1.5,
   pensionAnnual:0, pensionStartAge:67, healthcareAnnual:0, healthcareStartAge:65,
   childAnnual:10000, childStartAge:29, childEndAge:32, lumpSums:'[]',
-  fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:0,
+  fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:21.5, profitShareSkipPct:10,
   mandatoryRetireOn:false, mandatoryRetireAge:65,
   ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
@@ -1619,7 +1624,8 @@ function paintLabels(p){
   set('captDelay',p.captDelay.toFixed(1)+' años');
   set('startDelay',p.startDelay.toFixed(0)+' meses');
   set('salG',p.salG.toFixed(1)+' %');
-  set('profitShareWeeks',p.profitShareWeeks.toFixed(1)+' semanas · hasta '+(p.profitShareWeeks*1.923).toFixed(0)+' % del básico anual');
+  set('profitShareWeeks',p.profitShareWeeks.toFixed(1)+' semanas · '+(p.profitShareWeeks/52*100).toFixed(0)+' % del básico anual');
+  set('profitShareSkipPct',p.profitShareSkipPct.toFixed(0)+' %');
   set('mandatoryRetireAge',p.mandatoryRetireAge+' años');
   set('ret',p.ret.toFixed(1)+' %');
   set('vol',p.vol.toFixed(1)+' %');
@@ -2073,9 +2079,9 @@ function simulate(p, paths){
       // while actively flying. Rolled before isWorking so the same month it triggers
       // is already excluded from salary/contributions. The uniform is drawn every month
       // (whether or not the path is still eligible) so the event stream never depends
-      // on path state; profit sharing draws once every December for the same reason.
+      // on path state; profit sharing draws twice every May for the same reason.
       const lolDraw=lolFeatureActive ? eventRandom() : 1;
-      const profitShareDraw=profitShareActive && d.m===12 ? eventRandom() : 0;
+      const profitShareWeeksNow=profitShareActive && d.m===5 ? NavlogCore.profitShareWeeksDraw(eventRandom(),eventRandom(),p.profitShareWeeks,p.profitShareSkipPct) : 0;
       if(lolFeatureActive && !retired && !lolTriggered && i>=careerStart && i<mandatoryRetireMonth
          && lolDraw<(lolMonthlyProbByMonth ? lolMonthlyProbByMonth[i] : lolMonthlyProb)){
         lolTriggered=true; lolMonthIdx=i;
@@ -2104,13 +2110,9 @@ function simulate(p, paths){
         lastSalaryEUR=salaryEUR;
         if(lolFeatureActive) net-=p.lolPremiumMonthly;
 
-        // Profit sharing: discretionary, decided fresh each year (0-30% of básico,
-        // ≈0-15.6 weeks of básico pay) — drawn independently per year, not smoothed
-        // or correlated with anything else, since the company's payout isn't public.
-        if(profitShareActive && d.m===12){
-          const weeksThisYear=profitShareDraw*p.profitShareWeeks;
-          net+=weeksThisYear*(basicAED*12/52)*fxEff;
-        }
+        // Profit sharing: paid every May in weeks of básico, decided fresh each year and
+        // drawn independently (profitShareWeeksDraw), not correlated with anything else.
+        if(profitShareActive && d.m===5) net+=profitShareWeeksNow*(basicAED*12/52)*fxEff;
       }
 
       // Loss-of-License payout: fires once, the exact month LOL triggered. Gratuity
@@ -3145,7 +3147,7 @@ function buildWorkerSource(){
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
     'const SOLIDARITY_EXEMPT='+NavlogCore.SOLIDARITY_EXEMPT+', SOLIDARITY_BRACKETS='+literal(NavlogCore.SOLIDARITY_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceTopUp:'+NavlogCore.endOfServiceTopUp.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     // Core helpers that call each other by bare name inside simulation-core.js need the same
     // top-level aliases here, or they throw ReferenceError only inside the worker.
@@ -3724,7 +3726,7 @@ async function run(mode){
   let calcTxt=pathsUsed.toLocaleString('es-ES')+' rutas'+(pathsUsed<PATHS_FULL_MIN?' (vista previa)':'')+' · mensual · '+(p.horizonAge-p.ageNow)+' años de horizonte · '+
     Math.round(successRate*100)+' % rutas FIRE voluntario exitosas · ruina en esa cohorte '+Math.round(ruinRate*100)+' % (n='+voluntaryCount.toLocaleString('es-ES')+') · salidas forzosas '+Math.round(forcedOutRate*100)+' % · LOL '+Math.round(licenseLossRate*100)+' % · '+
     Math.round(performance.now()-t0)+' ms';
-  if(p.profitShareWeeks>0) calcTxt+=' · profit sharing hasta '+p.profitShareWeeks.toFixed(1)+' semanas/año (sorteado)';
+  if(p.profitShareWeeks>0) calcTxt+=' · profit sharing medio '+p.profitShareWeeks.toFixed(1)+' semanas/año en mayo ('+p.profitShareSkipPct.toFixed(0)+' % de años sin reparto)';
   if(p.histMarketOn) calcTxt+=' · bolsa: bootstrap histórico real 1928-2025 (no teórico)';
   if(p.mandatoryRetireOn) calcTxt+=' · jubilación forzosa a los '+p.mandatoryRetireAge+' sin objetivo: '+Math.round(forcedOutRate*100)+' %';
   calcTxt+=' · estrategia '+STRAT_NAMES[Math.round(p.wdStrategy)];

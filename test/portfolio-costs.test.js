@@ -13,7 +13,8 @@ const p50 = p => simulate(p, 6).series.map(x => x.p50);
 const costs = { feeCash: 1, feeCons: 1, feeEq: 1.5, feeBtc: 2, feeGold: 1, feeProv: 1 };
 
 test('portfolio costs always reduce wealth, with no PRO switch involved', () => {
-  const base = { ...DEFAULTS, seed: 3 };
+  // No profit sharing: extra income moves the FIRE date, which makes final wealth path-dependent.
+  const base = { ...DEFAULTS, seed: 3, profitShareWeeks: 0 };
   const withCosts = p50({ ...base, ...costs }), without = p50(base);
   assert.ok(withCosts[withCosts.length - 1] < without[without.length - 1]);
 });

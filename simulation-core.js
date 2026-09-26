@@ -382,6 +382,16 @@
   // Floor & ceiling (Bengen): a percentage-of-portfolio withdrawal clamped to a band
   // around a fixed real base (the initial retirement spend), so a market crash cannot
   // force spending below the floor and a boom cannot inflate it past the ceiling.
+  // Emirates profit sharing for one year, in weeks of basic pay. u1 decides whether the year
+  // pays at all (skipPct % of years pay nothing, as in the 2020-2021 COVID years); u2 places a
+  // paying year uniformly within +/-10 % of the mean, which covers the real 2023-2026 payouts
+  // (24, 20, 22, 20 weeks) around their 21.5-week average.
+  function profitShareWeeksDraw(u1, u2, meanWeeks, skipPct) {
+    const mean = Number.isFinite(meanWeeks) && meanWeeks > 0 ? meanWeeks : 0;
+    const skip = Number.isFinite(skipPct) ? Math.max(0, Math.min(100, skipPct)) / 100 : 0;
+    if (mean === 0 || !Number.isFinite(u1) || !Number.isFinite(u2) || u1 < skip) return 0;
+    return mean * (0.9 + 0.2 * Math.max(0, Math.min(1, u2)));
+  }
   function floorCeilingWithdrawal(portfolio, ratePct, base, floorPct, ceilingPct) {
     const raw = Math.max(0, Number(portfolio) || 0) * (Number(ratePct) || 0) / 100;
     const floor = Math.max(0, Number(base) || 0) * (Number(floorPct) || 0) / 100;
@@ -435,5 +445,5 @@
     if (!('childAnnual' in migrated)) { migrated.childAnnual = params.nur; migrated.childStartAge = 29; migrated.childEndAge = 32; }
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceTopUp, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw };
 });

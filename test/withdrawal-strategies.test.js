@@ -275,6 +275,7 @@ test('E3: VPW weights vProv as risky money, consistent with the totalNow it is s
 
   const provScenario = {
     ...baseFlat, wdStrategy: 3, startEq: 0, startDelay: 0, captDelay: 0, salG: 0,
+    profitShareWeeks: 0, // the hand-rolled career above has no profit sharing
     salFO, basicFO, // baseFlat zeroes these out for the other fixtures; this scenario needs them
     provOn: true, swr: 5, gasto: totalAtFire * 0.05,
   };
