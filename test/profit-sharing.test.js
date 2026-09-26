@@ -1,6 +1,7 @@
-// Emirates profit sharing, calibrated on the real payouts: May 2023 24 weeks, May 2024 20,
-// May 2025 22, May 2026 20 (mean 21.5 weeks of basic pay, ~41 % of annual basic). It is paid
-// in May, and a year can still pay nothing (it did not pay in the 2020-2021 COVID years).
+// Emirates profit sharing, paid every May in weeks of basic pay. Last 10 years (payment May):
+// 2017 0 (unconfirmed), 2018 5, 2019-2022 0, 2023 24, 2024 20, 2025 22, 2026 20 -> paid 5 of 10
+// years, ~9 weeks/year on average, and clustered in cycles: after a paying year the next paid
+// 3 of 4 times, after a non-paying year 2 of 5 (a 35-point persistence).
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -25,12 +26,37 @@ test('profitShareWeeksDraw: skip year pays 0, otherwise mean ±10 %', () => {
   assert.equal(core.profitShareWeeksDraw(NaN, NaN, NaN, NaN), 0);
 });
 
-test('defaults match the 2023-2026 history and a 10 % no-payout year', () => {
-  assert.equal(DEFAULTS.profitShareWeeks, 21.5);
-  assert.equal(DEFAULTS.profitShareSkipPct, 10);
+test('profitShareWeeksDraw: persistence keeps the cycle, 0 % keeps years independent', () => {
+  // 50 % skip, 35 % persistence: P(paid | paid) = 0.5 + 0.35 * 0.5 = 0.675, P(paid | not) = 0.325.
+  assert.equal(core.profitShareWeeksDraw(0.33, 0.5, 18, 50, 35, true), 18, 'u1 >= 0.325 pays after a paying year');
+  assert.equal(core.profitShareWeeksDraw(0.32, 0.5, 18, 50, 35, true), 0);
+  assert.equal(core.profitShareWeeksDraw(0.67, 0.5, 18, 50, 35, false), 0, 'u1 < 0.675 skips after a skipped year');
+  assert.equal(core.profitShareWeeksDraw(0.68, 0.5, 18, 50, 35, false), 18);
+  for (const prev of [true, false]) {
+    assert.equal(core.profitShareWeeksDraw(0.49, 0.5, 18, 50, 0, prev), 0, 'no persistence: skip iff u1 < skip');
+    assert.equal(core.profitShareWeeksDraw(0.5, 0.5, 18, 50, 0, prev), 18);
+    assert.equal(core.profitShareWeeksDraw(0.999, 0.5, 18, 100, 90, prev), 0, '100 % skip never pays');
+    assert.equal(core.profitShareWeeksDraw(0, 0.5, 18, 0, 90, prev), 18, '0 % skip always pays');
+  }
+});
+
+test('the chain reproduces the configured long-run frequency and a positive lag-1 correlation', () => {
+  const rnd = core.seededRandom(7);
+  let prev = true, paid = 0, same = 0; const n = 200000;
+  for (let i = 0; i < n; i++) { const w = core.profitShareWeeksDraw(rnd(), rnd(), 18, 50, 35, prev); const now = w > 0; if (now === prev) same++; paid += now; prev = now; }
+  assert.ok(Math.abs(paid / n - 0.5) < 0.01, 'long-run paying share ~50 %');
+  assert.ok(Math.abs(same / n - 0.675) < 0.01, 'P(same state next year) = 0.5 + 0.35/2');
+});
+
+test('defaults match the 10-year history', () => {
+  assert.equal(DEFAULTS.profitShareWeeks, 18);
+  assert.equal(DEFAULTS.profitShareSkipPct, 50);
+  assert.equal(DEFAULTS.profitSharePersistPct, 35);
+  assert.match(html, /<input type="range" id="profitSharePersistPct" min="0" max="90" step="5">/);
   assert.match(html, /<input type="range" id="profitShareWeeks" min="0" max="30" step="0\.5">/);
   assert.match(html, /<input type="range" id="profitShareSkipPct" min="0" max="100" step="1">/);
   assert.doesNotMatch(html, /entre el 0 % y el 30 % del básico/, 'the old 0-30 % claim contradicts the real payouts');
+  assert.doesNotMatch(html, /en 2020 y 2021 \(COVID\)/, 'the no-payout years were May 2019-2022');
 });
 
 test('profit sharing is paid in May', () => {
