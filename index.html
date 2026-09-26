@@ -609,6 +609,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="ctrl">
         <div class="row"><label for="vida">Vida en Dubái (€/mes, sin vivienda)</label><output id="vida_o" for="vida"></output></div>
         <input type="range" id="vida" min="1800" max="7000" step="50">
+        <p class="hint">Sin vivienda porque Emirates la paga (alojamiento o ayuda de vivienda, unos 225.000 AED al año): ni ese beneficio ni el alquiler entran en el cálculo, se compensan. Si vivieras por tu cuenta, suma aquí el alquiler que no te cubra la compañía.</p>
       </div>
       <div class="ctrl">
         <div class="row"><label for="vidaG">Crecimiento real del gasto</label><output id="vidaG_o" for="vidaG"></output></div>
@@ -740,7 +741,7 @@ section[id],#notas{scroll-margin-top:88px}
         <div class="row"><label for="provCo">Aportación de Emirates</label><output id="provCo_o" for="provCo"></output></div>
         <input type="range" id="provCo" min="0" max="20" step="0.5">
       </div>
-      <p class="note">Emirates aporta el 12 % del básico (15 % a partir de 10 años de servicio) y tú el 5 %, que sale de tu nómina. Solo se cobra al dejar la compañía — y como dejarla es justo lo que significa jubilarse, cuenta para el objetivo. Antes de 5 años solo te llevas parte de lo que puso Emirates.</p>
+      <p class="note">Emirates aporta el 12 % del básico (15 % a partir de 10 años de servicio) y tú el 5 %, que sale de tu nómina. Solo se cobra al dejar la compañía — y como dejarla es justo lo que significa jubilarse, cuenta para el objetivo. Antes de 5 años solo te llevas parte de lo que puso Emirates; el simulador no aplica ese recorte y asume que cobras el saldo completo, así que una salida muy temprana sale algo mejor de lo real.</p>
       <p class="note">Indemnización de fin de servicio (gratuity, ley laboral de EAU): 21 días de básico por año de servicio los 5 primeros años y 30 días por año a partir del sexto, con un mínimo de 1 año de servicio y un tope de 2 años de básico. Emirates paga la gratuity <b>o</b> el Provident, el que sea mayor, nunca los dos. El simulador lo calcula solo con tus años de servicio al dejar la compañía (FIRE, jubilación obligatoria o LOL): como el Provident casi siempre es mayor, normalmente no añade nada; si desactivas el Provident, se cobra la gratuity entera.</p>
     </div>
 
@@ -941,7 +942,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="wdPhase" data-wd="1">
       <p class="subhead">Guyton-Klinger (guardrails)</p>
-      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más. Solo actúa cuando "Estrategia" está en "Guyton-Klinger".</p>
+      <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más. Solo actúa cuando "Estrategia" está en "Guyton-Klinger". De las cuatro reglas del artículo original (Guyton y Klinger, 2006) se aplican dos: la de prosperidad (subir) y la de preservación de capital (recortar), que como en el artículo deja de aplicarse en los últimos 15 años hasta tu Edad final. No se modelan la de congelar el gasto tras un año con pérdidas ni la de reordenar la cartera tras cada ajuste.</p>
       <div class="ctrl">
         <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o" for="gkGuard"></output></div>
         <p class="hint">Define el techo y el suelo de la banda como un % por encima y por debajo del SWR objetivo (Objetivo → Tasa de retiro segura, 3,25 % por defecto). Con el 20 % por defecto: techo = 3,25 %×1,20 = 3,9 %, suelo = 3,25 %×0,80 = 2,6 %. Si la tasa de retiro efectiva (gasto actual / cartera total) supera el 3,9 % se aplica el "Recorte de gasto al tocar el techo"; si cae por debajo del 2,6 % se aplica la "Subida de gasto al tocar el suelo".</p>
@@ -2288,7 +2289,10 @@ function simulate(p, paths){
             const effSpend=curSpendAnnual+(hipActive?hipReal*12:0);
             const currentWR=effSpend/totalNow, anchorWR=p.swr/100;
             const upper=anchorWR*(1+p.gkGuard/100), lower=anchorWR*(1-p.gkGuard/100);
-            if(currentWR>upper) curSpendAnnual*=(1-p.gkCut/100);
+            // Guyton & Klinger (2006): the capital preservation rule (cuts) no longer applies in
+            // the last 15 years of the plan; the prosperity rule (raises) always does.
+            const yearsLeftGK=p.horizonAge-(p.ageNow+i/12);
+            if(currentWR>upper && yearsLeftGK>15) curSpendAnnual*=(1-p.gkCut/100);
             else if(currentWR<lower) curSpendAnnual*=(1+p.gkRaise/100);
           }
           wd=curSpendAnnual/12;

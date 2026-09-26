@@ -238,21 +238,17 @@ test('Guyton-Klinger cuts spending once the mortgage payment is counted in the w
     // so the mortgage/salary machinery stays inert before that, same as fireMonth=0.
     startDelay: 0, careerYear: 2027, ageNow: 28
   };
-  // horizonAge chosen so the run's own final month lands exactly at i=12 (the month-12
-  // GK check itself, whose cut-or-not applies to that same month's withdrawal) vs i=14
-  // (two more months at whatever rate the check left in place), isolating the
-  // withdrawal delta across exactly those two post-check months either way.
-  const before = simulate({ ...gkBase, horizonAge: 29.0 }, 2);
-  const after = simulate({ ...gkBase, horizonAge: 29.2 }, 2);
-  assert.equal(before.fireMonthAll[0], 0, 'sanity: FIRE triggers immediately');
-  assert.equal(after.fireMonthAll[0], 0, 'sanity: FIRE triggers immediately');
-  const decline = before.series[before.series.length - 1].p50 - after.series[after.series.length - 1].p50;
-  // Fixed: the ratio check includes the 12,000 EUR/year mortgage, crosses the 20%
-  // upper guard, and cuts curSpendAnnual by 10% (40,000 -> 36,000) starting month 12:
-  // 2 post-check months x (36,000/12 + 1,000) = 8,000. Unfixed, the ratio never
-  // crosses the guard (mortgage excluded) and the 2 months cost 2 x (40,000/12 +
-  // 1,000) = 8,666.67 instead.
-  assert.ok(Math.abs(decline - 8000) < 1, `expected an 8,000 EUR decline after the guardrail cut (got ${decline})`);
+  // Long horizon so the capital preservation rule is active (it is switched off in the last 15
+  // years, as in Guyton & Klinger 2006). Compare a 10 % cut with no cut: the first review is at
+  // month 12 and applies to that month's withdrawal, so by the Dec-2027 snapshot (month 15) the
+  // cut run has spent 4 x 4,000/12 = 1,333.33 EUR less. Without the mortgage in the rate check the
+  // guard is never crossed (40,000/1,000,000 = 4 % vs a 4.8 % upper band) and the runs are equal.
+  const year2027 = r => r.series.find(x => x.year === 2027).p50;
+  const cut = simulate({ ...gkBase, horizonAge: 70 }, 2);
+  const noCut = simulate({ ...gkBase, horizonAge: 70, gkCut: 0 }, 2);
+  assert.equal(cut.fireMonthAll[0], 0, 'sanity: FIRE triggers immediately');
+  const saved = year2027(cut) - year2027(noCut);
+  assert.ok(Math.abs(saved - 4000 * 4 / 12) < 1, `expected ~1,333 EUR saved by the guardrail cut (got ${saved})`);
 });
 
 // ---- Fix #3 (fees): cumFees must never read negative, even while vCash is in debt ----
