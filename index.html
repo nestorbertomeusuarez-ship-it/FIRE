@@ -716,7 +716,7 @@ section[id],#notas{scroll-margin-top:88px}
       <h3>Liquidaciones</h3>
       <div class="ctrl">
         <div class="row"><label for="burr">Burriana, tu 50 % neto (€)</label><output id="burr_o" for="burr"></output></div>
-        <p class="hint">Importe neto (tu 50 %) que cobras por la venta de Burriana: entra de una vez como ingreso en diciembre de 2027, sea cual sea tu situación en ese momento: si trabajas se invierte según tu reparto, y si ya te has jubilado reduce lo que retiras ese mes, con el Tipo sobre la venta de Burriana aplicado si la fiscalidad española está activa.</p>
+        <p class="hint">Importe neto (tu 50 %) que cobras por la venta de Burriana: entra de una vez como ingreso en diciembre de 2027 y se invierte según tu reparto, tanto si trabajas como si ya estás jubilado (no reduce directamente lo que retiras ese mes), con el Tipo sobre la venta de Burriana aplicado si la fiscalidad española está activa.</p>
         <input type="range" id="burr" min="0" max="130000" step="1000">
       </div>
       <div class="toggle">
@@ -1062,7 +1062,7 @@ section[id],#notas{scroll-margin-top:88px}
       <div class="toggle">
         <input type="checkbox" id="phOn">
         <label for="phOn">Prime Harvesting: vender renta variable con beneficios hacia bonos/efectivo</label>
-        <p class="hint">Activa el Prime Harvesting (técnica de McClung): retira antes de efectivo y bonos, y traspasa a la cartera conservadora un 20 % de la renta variable cada vez que esta suba un 20 % o más en real desde el FIRE; con esto desactivado, el mecanismo no interviene aunque configures el resto de esta sección.</p>
+        <p class="hint">Activa el Prime Harvesting (técnica de McClung): una vez al año, si la renta variable vale un 20 % o más en real que al hacer FIRE, traspasa un 20 % de ella a la cartera conservadora. Con esto desactivado ese traspaso no ocurre; el orden de retirada (efectivo y bonos antes que acciones) es el mismo con o sin este interruptor.</p>
       </div>
       <p class="note">Con "SWR fijo" el gasto es idéntico al modo simple. Guyton-Klinger ajusta el gasto anual cuando la tasa de retiro efectiva se sale de la banda alrededor del SWR objetivo. Las fases aplican un multiplicador al gasto base según los años transcurridos desde el FIRE de cada ruta. VPW recalcula el gasto cada año como % de la cartera restante. Suelo y techo acota un % de retiro variable entre dos límites del gasto base. Yield Shield limita el gasto inicial a lo que rinde la cartera. Prime Harvesting (independiente de la estrategia elegida) decide el orden de las retiradas y recoge beneficios de renta variable hacia bonos/efectivo una vez al año.</p>
     </div>
