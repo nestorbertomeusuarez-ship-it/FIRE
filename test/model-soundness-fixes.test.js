@@ -202,6 +202,96 @@ test('during the Beckham window, wealth tax still applies to the rental property
   assert.ok(Math.abs(bite - 18000) < 1, 'the vRE-only wealth tax bite matches the regional rate against (reValue - wealthExempt) (got ' + bite + ')');
 });
 
+// ---- Debt follow-ups: pre-FIRE debt must be repaid at retirement, never silently carried ----
+test('pre-FIRE debt is repaid at the retirement transition, and no fired path ends the horizon negative while ruined==0', () => {
+  // The auditor's repro: high living cost + a large mortgage relative to salary,
+  // plus a big negative lump sum, reliably drives some paths into pre-FIRE debt
+  // (negative vCash) while a large Provident balance (locked, untouched by the
+  // deficit cascade) still crosses the FIRE target in the same month.
+  const base = {
+    ...DEFAULTS, seed: 42, proMode: true, taxOn: true,
+    ageNow: 25, horizonAge: 75, vida: 9500, hip: 3500, hipEnd: 2032,
+    lumpSums: [{ year: 2027, month: 6, amount: -450000 }],
+    gasto: 45000, swr: 4.5,
+    debugTrackBuckets: true
+  };
+  const r = simulate(base, 50);
+  assert.ok(r.debug.minCash < 0, 'sanity: this scenario does create pre-FIRE debt somewhere across the 50 paths');
+  assert.ok(r.debug.minCashAfterFire >= -1e-6, 'debt must be fully repaid (vCash >= 0) by the moment any path retires (voluntary FIRE, mandatory exit, or LOL)');
+  assert.ok(r.debug.minRawFinalNonRuined >= -1e-6, 'no path flagged as NOT ruined may actually end the horizon with a negative raw (unclamped) total');
+});
+
+// ---- Fix #2 (GK guardrail): the withdrawal-rate check must include the post-FIRE mortgage ----
+test('Guyton-Klinger cuts spending once the mortgage payment is counted in the withdrawal rate', () => {
+  const gkBase = {
+    ...DEFAULTS, seed: 1, proMode: true,
+    ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
+    startEq: 1000000, startBtc: 0,
+    allocEquities: 100, allocBonds: 0, allocCash: 0,
+    vida: 0, burr: 0, brOn: false,
+    salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
+    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    gasto: 40000, swr: 4, // target exactly matches startEq: immediate FIRE at month 0
+    wdStrategy: 1, gkGuard: 20, gkCut: 10, gkRaise: 10, gkFreq: 12,
+    hip: 1000, hipEnd: 2100,
+    // Default careerYear/CAREER_MONTH puts careerStart at absolute month 9 (Jun-2027),
+    // so the mortgage/salary machinery stays inert before that, same as fireMonth=0.
+    startDelay: 0, careerYear: 2027, ageNow: 28
+  };
+  // horizonAge chosen so the run's own final month lands exactly at i=12 (the month-12
+  // GK check itself, whose cut-or-not applies to that same month's withdrawal) vs i=14
+  // (two more months at whatever rate the check left in place), isolating the
+  // withdrawal delta across exactly those two post-check months either way.
+  const before = simulate({ ...gkBase, horizonAge: 29.0 }, 2);
+  const after = simulate({ ...gkBase, horizonAge: 29.2 }, 2);
+  assert.equal(before.fireMonthAll[0], 0, 'sanity: FIRE triggers immediately');
+  assert.equal(after.fireMonthAll[0], 0, 'sanity: FIRE triggers immediately');
+  const decline = before.series[before.series.length - 1].p50 - after.series[after.series.length - 1].p50;
+  // Fixed: the ratio check includes the 12,000 EUR/year mortgage, crosses the 20%
+  // upper guard, and cuts curSpendAnnual by 10% (40,000 -> 36,000) starting month 12:
+  // 2 post-check months x (36,000/12 + 1,000) = 8,000. Unfixed, the ratio never
+  // crosses the guard (mortgage excluded) and the 2 months cost 2 x (40,000/12 +
+  // 1,000) = 8,666.67 instead.
+  assert.ok(Math.abs(decline - 8000) < 1, `expected an 8,000 EUR decline after the guardrail cut (got ${decline})`);
+});
+
+// ---- Fix #3 (fees): cumFees must never read negative, even while vCash is in debt ----
+test('cumulative fees never read negative even while a path is carrying debt (negative vCash)', () => {
+  const debtWithFees = {
+    ...DEFAULTS, seed: 1, proMode: true,
+    ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
+    feeCash: 2,
+    startEq: 0, startBtc: 0,
+    allocEquities: 50, allocBonds: 0, allocCash: 50,
+    vida: 0, hip: 0, burr: 0, brOn: false,
+    salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
+    childAnnual: 0, healthcareAnnual: 0, pensionAnnual: 0,
+    gasto: 1000000, swr: 4, horizonAge: 30, careerYear: 2026,
+    lumpSums: [{ year: 2026, month: 9, amount: -50000 }]
+  };
+  const r = simulate(debtWithFees, 2);
+  assert.ok(r.series.every(s => s.fee50 >= 0), 'the published cumulative fee series must never go negative, even while vCash is in debt');
+});
+
+// ---- Fix #4 (texts): outcome-dashboard wording, README test list, and the hip/hipEnd hint ----
+test('README documents the actual outcome-dashboard categories and lists the model-soundness test file', () => {
+  const readme = fs.readFileSync('README.md', 'utf8');
+  assert.ok(/FIRE voluntario/.test(readme), 'README must name voluntary FIRE');
+  assert.ok(/post-FIRE ruin/i.test(readme), 'README must name the post-FIRE ruin sub-rate');
+  assert.ok(/salida forzosa/.test(readme), 'README must name forced retirement (salida forzosa)');
+  assert.ok(/p[eé]rdida de licencia/.test(readme), 'README must name loss of licence');
+  assert.ok(/nunca llega al FIRE/.test(readme) && /deuda/.test(readme), 'README must name the never-fires-and-ends-in-debt category');
+  assert.ok(readme.includes('model-soundness-fixes.test.js'), 'README test list must include model-soundness-fixes.test.js');
+});
+
+test('the hip/hipEnd controls explain the mortgage continues after FIRE and is separate from retirement spend', () => {
+  const rawHtml = fs.readFileSync('index.html', 'utf8');
+  const hipSection = rawHtml.slice(rawHtml.indexOf('id="hip"'), rawHtml.indexOf('id="mortgageBalance"'));
+  assert.ok(/class="hint"/.test(hipSection), 'a hint paragraph must sit between the hip/hipEnd controls and mortgageBalance');
+  assert.ok(/Fin de hipoteca/.test(hipSection), 'the hint must reference "Fin de hipoteca"');
+  assert.ok(/Gasto anual al jubilarte/.test(hipSection), 'the hint must clarify it is separate from "Gasto anual al jubilarte"');
+});
+
 test('during the Beckham window, wealth tax is fully suspended on everything except the rental property', () => {
   const base = {
     ...DEFAULTS, seed: 1, proMode: true,
