@@ -398,6 +398,33 @@
     if (u1 < 1 - pPaid) return 0;
     return mean * (0.9 + 0.2 * Math.max(0, Math.min(1, u2)));
   }
+  // Ties the yearly profit-sharing uniform to the airline's fiscal year (April-March) equity
+  // return through a Gaussian copula: u' = Phi(rho*z + sqrt(1-rho^2)*PhiInv(u)), with z the
+  // standardized fiscal-year equity log return. A low u' means no payout, so bad market years
+  // make a skipped year more likely, while u' stays uniform when z is standard normal and the
+  // long-run share of non-paying years is unchanged. Self-contained so the worker can inline it.
+  function profitShareMarketU(u, marketZ, corrPct) {
+    const rho = Number.isFinite(corrPct) ? Math.max(0, Math.min(99, corrPct)) / 100 : 0;
+    if (rho === 0 || !Number.isFinite(u) || !Number.isFinite(marketZ)) return u;
+    const phi = x => { // Abramowitz-Stegun 7.1.26, |error| < 1.5e-7
+      const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2);
+      const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x / 2);
+      return x >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
+    };
+    const phiInv = q => { // Acklam's rational approximation, relative error < 1.2e-9
+      const a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.3577518672690, -30.66479806614716, 2.506628277459239];
+      const b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+      const c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+      const d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+      const pl = 0.02425;
+      if (q < pl) { const r = Math.sqrt(-2 * Math.log(q)); return (((((c[0] * r + c[1]) * r + c[2]) * r + c[3]) * r + c[4]) * r + c[5]) / ((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1); }
+      if (q > 1 - pl) { const r = Math.sqrt(-2 * Math.log(1 - q)); return -(((((c[0] * r + c[1]) * r + c[2]) * r + c[3]) * r + c[4]) * r + c[5]) / ((((d[0] * r + d[1]) * r + d[2]) * r + d[3]) * r + 1); }
+      const r = q - 0.5, r2 = r * r;
+      return (((((a[0] * r2 + a[1]) * r2 + a[2]) * r2 + a[3]) * r2 + a[4]) * r2 + a[5]) * r / (((((b[0] * r2 + b[1]) * r2 + b[2]) * r2 + b[3]) * r2 + b[4]) * r2 + 1);
+    };
+    const q = Math.min(1 - 1e-12, Math.max(1e-12, u));
+    return phi(rho * marketZ + Math.sqrt(1 - rho * rho) * phiInv(q));
+  }
   function floorCeilingWithdrawal(portfolio, ratePct, base, floorPct, ceilingPct) {
     const raw = Math.max(0, Number(portfolio) || 0) * (Number(ratePct) || 0) / 100;
     const floor = Math.max(0, Number(base) || 0) * (Number(floorPct) || 0) / 100;
@@ -496,5 +523,5 @@
     for (const [key, value] of Object.entries(params)) if (!LEGACY_CHILD_KEYS.includes(key)) migrated[key] = value;
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, erpTopUpEUR, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, childMonthlyCost };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, erpTopUpEUR, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, profitShareMarketU, childMonthlyCost };
 });
