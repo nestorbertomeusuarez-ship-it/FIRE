@@ -848,6 +848,11 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">Vender y recomprar la cartera mientras aún eres residente en EAU (allí no tributa y España no grava las ganancias de un no residente) actualiza el precio de compra, así que en España solo tributa lo que ganes después. El simulador lo aplica justo al empezar la residencia fiscal española, a efectivo, bonos, acciones, oro y BTC; no al inmueble, que si está en España tributa allí igualmente. En la realidad hazlo el año natural anterior: con 183 días en España eres residente todo ese año. Confírmalo con un asesor fiscal.</p>
       </div>
       <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="etfInSpain">
+        <label for="etfInSpain">Invertir con ETFs en España (en vez de fondos)</label>
+        <p class="hint">Ya residiendo en España, pasar dinero de un fondo de inversión a otro (traspaso) no tributa, pero vender un ETF sí. Afecta al Prime Harvesting y al reequilibrio de la senda de asignación: con fondos (por defecto) mover acciones a bonos es un traspaso sin impuestos; con ETFs cada movimiento tributa por la plusvalía vendida y se reinvierte lo que queda. El BTC y el oro (ETP y ETC, no fondos) tributan siempre al reequilibrar. Las retiradas para vivir tributan igual en ambos casos.</p>
+      </div>
+      <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="beckhamOn">
         <label for="beckhamOn">Acogido a la Ley Beckham (régimen de impatriados)</label>
         <p class="hint">Activa el régimen de impatriados para la fase en que resides fiscalmente en España: mientras esté dentro de su ventana (Duración del régimen), se suspenden tanto el impuesto sobre plusvalías de toda la cartera como el de patrimonio, salvo sobre el inmueble en alquiler si lo cuentas.</p>
@@ -1344,7 +1349,7 @@ const DEFAULTS = {
   basicFO:26485, basicCA:40100, provCo:12, provOn:true,
 
   // fiscalidad España
-  fiscalOn:false, taxOn:false, useIrpfBrackets:false, feeCash:0.10, feeCons:0.15, feeEq:0.20, feeBtc:0.20, feeGold:0.15, feeProv:0.75, taxRate:19, taxRepatDelay:2, preRepatStepUp:true, burrTaxRate:19, taxThresholdDrift:2,
+  fiscalOn:false, taxOn:false, useIrpfBrackets:false, feeCash:0.10, feeCons:0.15, feeEq:0.20, feeBtc:0.20, feeGold:0.15, feeProv:0.75, taxRate:19, taxRepatDelay:2, preRepatStepUp:true, etfInSpain:false, burrTaxRate:19, taxThresholdDrift:2,
   lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
@@ -2074,6 +2079,17 @@ function simulate(p, paths){
     // IRPF savings base for the 60% joint IRPF/wealth-tax limit (Ley 19/1991 art. 31); its tax
     // follows the configured mode (progressive brackets or flat rate) — see wealthTaxAfterJointLimit below.
     let ytdGainForLimit=0;
+    // Capital-gains tax on a rebalancing sale while taxed as a Spanish resident (outside the
+    // Beckham window); fund-to-fund traspasos never call this. Same brackets/flat rate and
+    // year-to-date accumulation as a withdrawal.
+    const rebalanceTax=(gain,iNow)=>{
+      if(!taxActive || !spanishResident || !(gain>0) || NavlogCore.beckhamApplies(beckhamActive,spanishResidentMonth,iNow,p.beckhamYears)) return 0;
+      let t;
+      if(p.useIrpfBrackets){ const sc=thresholdScale(iNow,cumInfl,cumInflVar); t=NavlogCore.progressiveSavingsTax(ytdGainCartera+gain,sc)-NavlogCore.progressiveSavingsTax(ytdGainCartera,sc); ytdGainCartera+=gain; }
+      else t=gain*p.taxRate/100;
+      ytdGainForLimit+=gain;
+      return t;
+    };
     // Tracks pure market-driven growth (returns compounding on whatever balance
     // already existed), independent of contributions/withdrawals — so "aportado"
     // (net cash you put in) can be recovered as totalWealth-cumGrowth without
@@ -2606,18 +2622,25 @@ function simulate(p, paths){
         if(Math.abs(diff)>1){
           if(diff>0 && risky>0){
             const frac=diff/risky;
-            // Basis moves in lockstep with value, same proportional split.
-            const basisMoved=basisEq*frac+basisBtc*frac+(goldActive?basisGold*frac:0);
-            vCons+=diff; vEq-=vEq*frac; vBtc-=vBtc*frac; if(goldActive) vGold-=vGold*frac;
-            basisCons+=basisMoved; basisEq-=basisEq*frac; basisBtc-=basisBtc*frac; if(goldActive) basisGold-=basisGold*frac;
+            // Each leg sells frac of its bucket. Untaxed legs (equity-fund traspaso, or not yet a
+            // Spanish taxpayer) carry their basis; taxed legs reinvest the net and that is the new basis.
+            const eqV=vEq*frac, eqB=basisEq*frac, btcV=vBtc*frac, btcB=basisBtc*frac, goldV=goldActive?vGold*frac:0, goldB=goldActive?basisGold*frac:0;
+            const tEq=p.etfInSpain ? rebalanceTax(eqV-eqB,i) : 0, tBtc=rebalanceTax(btcV-btcB,i), tGold=goldActive ? rebalanceTax(goldV-goldB,i) : 0;
+            vCons+=diff-tEq-tBtc-tGold; vEq-=eqV; vBtc-=btcV; if(goldActive) vGold-=goldV;
+            basisCons+=(tEq>0?eqV-tEq:eqB)+(tBtc>0?btcV-tBtc:btcB)+(tGold>0?goldV-tGold:goldB); basisEq-=eqB; basisBtc-=btcB; if(goldActive) basisGold-=goldB;
           } else if(diff<0 && vCons>0){
             const move=Math.min(vCons,-diff);
             const basisMoved=basisCons*(move/vCons);
             const riskySum=(vEq+vBtc+(goldActive?vGold:0))||1;
             const shareEq=(vEq+vBtc+(goldActive?vGold:0))>0?vEq/riskySum:1, shareBtc=vBtc/riskySum, shareGold=goldActive?vGold/riskySum:0;
             vCons-=move; basisCons-=basisMoved;
-            vEq+=move*shareEq; vBtc+=move*shareBtc; if(goldActive) vGold+=move*shareGold;
-            basisEq+=basisMoved*shareEq; basisBtc+=basisMoved*shareBtc; if(goldActive) basisGold+=basisMoved*shareGold;
+            // Bond fund -> equity fund is a traspaso unless holding ETFs; buying BTC/gold always sells the bonds.
+            const legs=[[shareEq,p.etfInSpain],[shareBtc,true],[shareGold,true]].map(([share,taxable])=>{
+              const v=move*share, b=basisMoved*share, t=taxable ? rebalanceTax(v-b,i) : 0;
+              return {v:v-t, b:t>0 ? v-t : b};
+            });
+            vEq+=legs[0].v; vBtc+=legs[1].v; if(goldActive) vGold+=legs[2].v;
+            basisEq+=legs[0].b; basisBtc+=legs[1].b; if(goldActive) basisGold+=legs[2].b;
           }
         }
       }
@@ -2634,7 +2657,9 @@ function simulate(p, paths){
       if(phActive && retired && !ruinedPath && isSnap && i>fireMonth[k] && primeHarvestE0>0 && vEq>=1.2*primeHarvestE0){
         const move=vEq*0.2, basisMoved=basisEq*0.2;
         vEq-=move; basisEq-=basisMoved;
-        vCons+=move; basisCons+=basisMoved;
+        // Equity fund -> bond fund is a traspaso; with ETFs it is a taxable sale and the net is reinvested.
+        const phTax=p.etfInSpain ? rebalanceTax(move-basisMoved,i) : 0;
+        vCons+=move-phTax; basisCons+=phTax>0 ? move-phTax : basisMoved;
       }
 
       if(trackBuckets && i===11) earlyWealth[k]=vEq+vBtc+vProv+vGold+vCons+vCash;
