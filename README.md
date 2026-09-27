@@ -18,8 +18,7 @@ scenario exploration tool, not a financial, investment, tax, or legal adviser.
 
 The project is static and can be hosted from the repository root with GitHub
 Pages or another static host. Publish `index.html`, `simulation-core.js`, and
-the referenced assets together. Do not publish from `index-publico.html`; that
-file is retained as a historical comparison and is not the canonical app.
+the referenced assets together.
 
 ## Model assumptions and limitations
 

@@ -5,7 +5,7 @@
 // entry defined in index.html, boundedPair never returns an inverted pair
 // (low > high) when clamping around DEFAULTS. This mirrors the extraction
 // technique used by test/worker-parity.test.js and
-// test/index-publico-sensitivity.test.js (regex-extract the inline <script>,
+// the vm pattern used by other tests (regex-extract the inline <script>,
 // evaluate the pure prefix in node:vm) to reach the REAL SENSITIVITY_PARAMS
 // table and DEFAULTS, rather than a hand-copied duplicate that could drift.
 const assert = require('node:assert/strict');
