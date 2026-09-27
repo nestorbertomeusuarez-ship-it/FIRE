@@ -29,7 +29,7 @@ const { loadApp } = require('./helpers/fake-app.js');
   // childEndAge — were later replaced by the per-band child-cost model; see
   // test/children-costs.test.js for their controls' own coverage.)
   const CONVERTED_DEFAULTS = {
-    ageNow: 28, horizonAge: 90, careerYear: 2027,
+    ageNow: 28, horizonAge: 95, careerYear: 2027,
     allocCash: 10, allocBonds: 20, allocEquities: 70, cashRet: 1, cashVol: 1.5,
     pensionAnnual: 0, pensionStartAge: 67, healthcareAnnual: 3000,
   };
