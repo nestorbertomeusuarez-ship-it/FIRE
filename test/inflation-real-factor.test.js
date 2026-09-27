@@ -17,5 +17,5 @@ test('real factor of a nominal amount has mean 1 under mean-zero inflation surpr
 
 test('the engine applies the corrected factor to the mortgage', () => {
   const html = fs.readFileSync('index.html', 'utf8');
-  assert.match(html, /hipReal=inflActive \? p\.hip\*NavlogCore\.inflationRealFactor\(cumInfl, *cumInflVar\)/);
+  assert.match(html, /hipReal=p\.hip\*hipErosion\[i\]\*\(inflActive \? NavlogCore\.inflationRealFactor\(cumInfl, *cumInflVar\) : 1\)/);
 });

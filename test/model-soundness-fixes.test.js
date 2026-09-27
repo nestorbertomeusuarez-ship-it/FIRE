@@ -60,7 +60,7 @@ test('the mortgage payment keeps being deducted every month after FIRE, until hi
     childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 40000, swr: 4, // target exactly matches startEq: immediate FIRE
     horizonAge: 35, wdStrategy: 0,
-    hipEnd: 2100,
+    hipEnd: 2100, hipRealErosion: 0, // constant real payment: the delta is exactly 12,000 EUR/year
     // feeEq/etc default to non-zero now (realistic TER assumptions); zero them here since this
     // test isolates the exact 12,000 EUR/year mortgage delta, not portfolio-cost drag.
     feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0

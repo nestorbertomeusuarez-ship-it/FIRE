@@ -39,7 +39,7 @@ const EXPECTED_IDS = [
   'captY_o', 'captY', 'captDelay_o', 'captDelay', 'startDelay_o', 'startDelay', 'salG_o', 'salG',
   'profitShareWeeks_o', 'profitShareWeeks', 'profitShareSkipPct_o', 'profitShareSkipPct', 'profitSharePersistPct_o', 'profitSharePersistPct', 'profitShareMarketCorr_o', 'profitShareMarketCorr', 'mandatoryRetireOn', 'mandatoryRetireAge_o', 'mandatoryRetireAge', 'ret_o', 'ret', 'vol_o',
   'vol', 'histMarketOn', 'vida_o', 'vida', 'vidaG_o', 'vidaG', 'hip_o', 'hip',
-  'hipEnd_o', 'hipEnd', 'burr_o', 'burr', 'brOn', 'brNet_o',
+  'hipEnd_o', 'hipEnd', 'hipRealErosion_o', 'hipRealErosion', 'burr_o', 'burr', 'brOn', 'brNet_o',
   'brNet', 'brStart_o', 'brStart', 'brYears_o', 'brYears', 'startEq_o', 'startEq', 'startBtc_o',
   'startBtc', 'btcRet_o', 'btcRet', 'btcVol_o', 'btcVol', 'btcRho_o', 'btcRho', 'btcAporte_o',
   'btcAporte', 'provOn', 'basicFO_o', 'basicFO', 'basicCA_o', 'basicCA', 'provCo_o', 'provCo',
