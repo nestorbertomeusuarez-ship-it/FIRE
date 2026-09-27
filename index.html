@@ -399,7 +399,7 @@ section[id],#notas{scroll-margin-top:88px}
     <div class="cell">
       <div class="lbl">Capital objetivo</div>
       <div class="big dim" id="targetCap" style="font-size:34px">—</div>
-      <div class="unit" id="targetNote">(gasto + sanidad) ÷ tasa de retiro, más lo pendiente de hijos e hipoteca (el Provident cuenta a valor íntegro: se cobra en efectivo, sin tributar, al dejar Emirates)</div>
+      <div class="unit" id="targetNote">(gasto + sanidad) ÷ tasa de retiro, más lo pendiente de hijos, hipoteca y pagos puntuales (el Provident cuenta a valor íntegro: se cobra en efectivo, sin tributar, al dejar Emirates)</div>
     </div>
   </div>
 
@@ -528,7 +528,7 @@ section[id],#notas{scroll-margin-top:88px}
       <h3>Objetivo</h3>
       <div class="ctrl">
         <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o" for="gasto"></output></div>
-        <p class="hint">Gasto anual real que asumes ya jubilado: junto con la Tasa de retiro segura fija tu objetivo FIRE: (gasto + coste sanitario) ÷ SWR, más lo que quede por pagar de hijos e hipoteca desde ese mes (con los valores por defecto, la parte de gasto y sanidad es 51.000 € ÷ 3 % = 1,7 M€) y es la base del gasto mensual que se retira de la cartera con la estrategia SWR fijo.</p>
+        <p class="hint">Gasto anual real que asumes ya jubilado: junto con la Tasa de retiro segura fija tu objetivo FIRE: (gasto + coste sanitario) ÷ SWR, más lo que quede por pagar de hijos, hipoteca y pagos puntuales desde ese mes (con los valores por defecto, la parte de gasto y sanidad es 51.000 € ÷ 3 % = 1,7 M€) y es la base del gasto mensual que se retira de la cartera con la estrategia SWR fijo.</p>
         <input type="range" id="gasto" min="25000" max="130000" step="1000">
       </div>
       <div class="ctrl">
@@ -1891,17 +1891,22 @@ function simulate(p, paths){
   const childCosts={cost0to2:p.childCost0to2, cost3to17:p.childCost3to17, cost18to22:p.childCost18to22, schoolCost:p.childSchoolCost, fs1Cost:p.childFS1Cost};
   // FIRE target: healthcare is permanent, so it joins the spend divided by the SWR; children
   // (post-Emirates costs: age bands and school) and the mortgage end, so what is still left to
-  // pay from month i to the horizon is added on top, undiscounted in real euros (the random career
+  // pay from month i to the horizon is added on top, undiscounted in real euros, as are one-off payments (the random career
   // start delay is ignored here).
   const targetBase=(p.gasto+p.healthcareAnnual)/(p.swr/100);
   // Real value of the fixed nominal mortgage payment at month i (see hipRealErosion).
   const hipErosion=new Float64Array(months+1);
   for(let i=0;i<=months;i++) hipErosion[i]=Math.exp(-Math.log(1+p.hipRealErosion/100)*i/12);
+  // One-off payments the user entered (negative lump sums) still ahead are funded too; one-off
+  // inflows are not counted, so the plan never relies on money that may not arrive.
+  const lumpOut=new Float64Array(months+1);
+  for(const event of p.lumpSums){ const idx=monthIndex(event.year,event.month); if(event.amount<0 && idx>=0 && idx<months) lumpOut[idx]-=event.amount; }
   const commitRemaining=new Float64Array(months+1);
   const commitCareerStart=monthIndex(p.careerYear,CAREER_MONTH); // the mortgage is paid from the career start, as in the engine
   for(let i=months-1;i>=0;i--){
     const d=MONTH_DATES[i];
     let m=(i>=commitCareerStart && (d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12))) ? p.hip*hipErosion[i] : 0;
+    m+=lumpOut[i];
     for(let n=0;n<childCount;n++) m+=NavlogCore.childMonthlyCost(i-childBirthIdx[n],childCosts,false,0);
     commitRemaining[i]=commitRemaining[i+1]+m;
   }
@@ -3825,7 +3830,7 @@ async function run(mode){
   document.getElementById('yearP10').textContent=fmConservative===null?'sin rutas exitosas':ymdLabel(fmConservative)+' · P90 de fechas FIRE exitosas';
   document.getElementById('targetCap').textContent=eurK(target);
   const targetSpendPart=(p.gasto+p.healthcareAnnual)/(p.swr/100), targetCommitments=Math.max(0,target-targetSpendPart);
-  document.getElementById('targetNote').textContent=eur(p.gasto+p.healthcareAnnual)+'/año (gasto + sanidad) ÷ '+p.swr.toFixed(2)+' %'+(targetCommitments>0.5?' + '+eurK(targetCommitments)+' pendientes de hijos e hipoteca':'');
+  document.getElementById('targetNote').textContent=eur(p.gasto+p.healthcareAnnual)+'/año (gasto + sanidad) ÷ '+p.swr.toFixed(2)+' %'+(targetCommitments>0.5?' + '+eurK(targetCommitments)+' pendientes de hijos, hipoteca y pagos puntuales':'');
 
   const marks=[1e6,1.5e6,2e6,3e6];
   document.getElementById('wpts').innerHTML=marks.map(m=>{
