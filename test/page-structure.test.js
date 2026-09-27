@@ -48,7 +48,7 @@ const EXPECTED_IDS = [
   'ccaaPreset_o', 'ccaaPreset', 'wealthExempt_o', 'wealthExempt', 'wealthRate_o', 'wealthRate', 'wealthBonusPct_o', 'wealthBonusPct',
   'mortgageBalance_o', 'mortgageBalance', 'lolOn', 'lolEmiratesOn', 'lolAgeCurveOn', 'lolAnnualProb_o', 'lolAnnualProb', 'lolPremiumMonthly_o', 'lolPremiumMonthly', 'lolPayoutMode_o',
   'lolPayoutMode', 'lolPayout_o', 'lolPayout', 'lolReplacePct_o', 'lolReplacePct', 'lolReplaceYears_o', 'lolReplaceYears', 'fxVolOn',
-  'fxVol_o', 'fxVol', 'fxMeanRevert_o', 'fxMeanRevert', 'inflOn', 'inflVol_o', 'inflVol', 'wdStrategy_o',
+  'fxVol_o', 'fxVol', 'fxMeanRevert_o', 'fxMeanRevert', 'erpOn', 'inflOn', 'inflVol_o', 'inflVol', 'wdStrategy_o',
   'wdStrategy', 'gkGuard_o', 'gkGuard', 'gkCut_o', 'gkCut', 'gkRaise_o', 'gkRaise', 'gkFreq_o',
   'gkFreq', 'goGoMult_o', 'goGoMult', 'goGoYears_o', 'goGoYears', 'slowGoMult_o', 'slowGoMult', 'slowGoYears_o',
   'slowGoYears', 'noGoMult_o', 'noGoMult', 'fcFloor_o', 'fcFloor', 'fcCeiling_o', 'fcCeiling', 'ysYears_o', 'ysYears',

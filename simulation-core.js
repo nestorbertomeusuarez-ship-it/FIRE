@@ -452,6 +452,14 @@
     if (!(years >= 1)) return 0;
     return Math.min(Math.min(years, 5) * 21 + Math.max(0, years - 5) * 30, 730);
   }
+  // Emirates Exchange Rate Protection (Candidate Information - Pilots, 11.0): half of basic pay is
+  // protected against the dirham weakening below the threshold rate (the last five years'
+  // average, reset every 1 January), for a move of up to 15 % of the threshold. Rates are EUR
+  // per AED; returns the monthly top-up in EUR.
+  function erpTopUpEUR(basicAED, fxNow, fxThreshold) {
+    if (!Number.isFinite(basicAED) || !Number.isFinite(fxNow) || !Number.isFinite(fxThreshold) || fxNow >= fxThreshold) return 0;
+    return 0.5 * basicAED * Math.min(fxThreshold - fxNow, 0.15 * fxThreshold);
+  }
   // Emirates contract (Candidate Information - Pilots, 6.1): on leaving you receive EITHER the
   // Provident company contributions OR the end-of-service gratuity, whichever is higher, PLUS
   // your own member contributions, with the company part vesting by length of service:
@@ -488,5 +496,5 @@
     for (const [key, value] of Object.entries(params)) if (!LEGACY_CHILD_KEYS.includes(key)) migrated[key] = value;
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, childMonthlyCost };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, erpTopUpEUR, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, childMonthlyCost };
 });
