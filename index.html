@@ -1238,7 +1238,7 @@ section[id],#notas{scroll-margin-top:88px}
     <button type="button" class="reset" id="runSensitivity">Calcular sensibilidad</button>
     <p class="calcLoading" id="sensLoading" style="display:none">Calculando…</p>
     <div class="sensList" id="sensList" aria-live="polite"></div>
-    <p class="hint"><b>Qué hace:</b> repite la simulación Monte Carlo moviendo un solo parámetro cada vez un margen razonable por encima y por debajo de su valor actual, con el resto sin tocar (28 simulaciones, dos por cada uno de los 14 parámetros).<br><b>Qué te dice:</b> cuántos años adelanta o retrasa cada parámetro tu edad mediana de FIRE, de mayor a menor impacto. Así sabes dónde merece la pena afinar la estimación o dejar margen de seguridad, y dónde da igual acertar al milímetro.<br>Usa la precisión máxima, así que puede tardar de unos segundos a un par de minutos.</p>
+    <p class="hint"><b>Qué hace:</b> repite la simulación Monte Carlo moviendo un solo parámetro cada vez un margen razonable por encima y por debajo de su valor actual, con el resto sin tocar (36 simulaciones, dos por cada uno de los 18 parámetros).<br><b>Qué te dice:</b> cuántos años adelanta o retrasa cada parámetro tu edad mediana de FIRE, de mayor a menor impacto. Así sabes dónde merece la pena afinar la estimación o dejar margen de seguridad, y dónde da igual acertar al milímetro.<br>Usa la precisión máxima, así que puede tardar de unos segundos a un par de minutos.</p>
   </section>
 
   <section>
@@ -3512,6 +3512,10 @@ const SENSITIVITY_PARAMS = [
   {key:'salG', label:'Crecimiento salarial anual', delta:0.5, min:-1, max:2.5, fmt:v=>v.toFixed(1)+' %'},
   {key:'startDelay', label:'Retraso en empezar la carrera', delta:6, min:0, max:18, fmt:v=>v.toFixed(0)+' meses'},
   {key:'hip', label:'Hipoteca mensual', delta:p=>p.hip*0.1, min:0, max:1400, fmt:v=>eur(v)+'/mes'},
+  {key:'gasto', label:'Gasto anual al jubilarte', delta:p=>p.gasto*0.1, min:25000, max:130000, fmt:v=>eur(v)+'/año'},
+  {key:'profitShareWeeks', label:'Profit sharing medio (semanas)', delta:5, min:0, max:30, fmt:v=>v.toFixed(1)+' semanas'},
+  {key:'profitShareSkipPct', label:'Años sin profit sharing', delta:20, min:0, max:100, fmt:v=>v.toFixed(0)+' %'},
+  {key:'childCount', label:'Número de hijos', delta:1, min:0, max:3, fmt:v=>v.toFixed(0)},
 ];
 
 // Runs each SENSITIVITY_PARAMS entry both up and down from baseParams, at the

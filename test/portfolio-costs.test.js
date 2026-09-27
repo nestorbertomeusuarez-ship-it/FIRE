@@ -41,5 +41,5 @@ test('sensitivity always tests portfolio costs: no proOnly gating remains', () =
   }
   const run = html.slice(html.indexOf('async function runSensitivity'), html.indexOf('async function runSensitivity') + 800);
   assert.equal(/proOnly/.test(run), false, 'runSensitivity must no longer filter by proOnly');
-  assert.match(html, /28 simulaciones/);
+  assert.match(html, /36 simulaciones/);
 });
