@@ -973,6 +973,11 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="fxMeanRevert" min="0" max="100" step="5">
       </div>
       <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="erpOn">
+        <label for="erpOn">Protección de tipo de cambio de Emirates (ERP)</label>
+        <p class="hint">El contrato protege el 50 % del salario básico frente a la caída del dírham respecto a tu moneda: si el tipo del mes queda por debajo del tipo umbral (la media de los últimos 5 años, fijada cada 1 de enero), Emirates paga la diferencia sobre ese 50 %, hasta un 15 % del umbral. Solo tiene efecto con el tipo AED→EUR aleatorio activado y mientras trabajas en Emirates.</p>
+      </div>
+      <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="inflOn">
         <label for="inflOn">Sorpresas de inflación EUR (en vez de tasas reales fijas)</label>
         <p class="hint">Activa sorpresas mensuales de inflación en euros alrededor de la inflación real ya asumida en el resto del modelo, erosionando algo el retorno de bolsa/BTC y abaratando en términos reales la hipoteca nominal fija; con esto desactivado, la inflación real se trata como constante.</p>
@@ -1349,7 +1354,7 @@ const DEFAULTS = {
   beckhamOn:false, beckhamYears:6,
   wealthTaxOn:false, ccaaPreset:0, wealthExempt:700000, wealthRate:0.5, wealthBonusPct:0, mortgageBalance:0,
   // inflación / FX estocásticos
-  fxVolOn:false, fxVol:4, fxMeanRevert:20,
+  fxVolOn:false, fxVol:4, fxMeanRevert:20, erpOn:true,
   inflOn:false, inflVol:1.2,
   // estrategia de retirada
   wdStrategy:0,
@@ -1817,6 +1822,9 @@ function simulate(p, paths){
   const beckhamActive=p.fiscalOn && p.beckhamOn;
   const fiscalityActive=taxActive || wealthTaxActive || beckhamActive;
   const fxVolActive=p.fxVolOn;
+  // With a fixed rate the threshold always equals it, so ERP can only pay with a random rate.
+  const erpActive=p.erpOn && fxVolActive;
+  const erpRing=new Float64Array(60);
   const inflActive=p.inflOn;
   // Fiscal drag: nominal IRPF/wealth-tax thresholds are not indexed to inflation in Spanish
   // law, so their real value shrinks every year at (roughly) inflation minus indexation —
@@ -2024,6 +2032,10 @@ function simulate(p, paths){
     // takeFromBucket's comment above.
     let basisEq=vEq, basisBtc=p.startBtc;
     let basisGold=goldActive?p.startGold:0, basisCons=vCons, basisCash=vCash, basisRE=reActive?p.reValue:0;
+    // ERP threshold: rolling 60-month average of the rate, reset each January; months before
+    // the simulation start are assumed at the base rate.
+    let erpThreshold=p.fx, erpSum=60*p.fx, erpIdx=0;
+    if(erpActive) erpRing.fill(p.fx);
     let fxCur=p.fx, cumInfl=0, cumInflVar=0, curSpendAnnual=p.gasto, spanishResident=false, spanishResidentMonth=-1, cumFees=0;
     // Prime Harvesting (McClung, phOn): equity value captured at the FIRE month (E0).
     // Stays 0 (inert) until retirement actually starts; -1 would also work as a sentinel
@@ -2106,6 +2118,7 @@ function simulate(p, paths){
         if(fxCur<0.05) fxCur=0.05;
       }
       const fxEff=fxVolActive ? fxCur : p.fx;
+      if(erpActive){ if(d.m===1) erpThreshold=erpSum/60; erpSum+=fxEff-erpRing[erpIdx]; erpRing[erpIdx]=fxEff; erpIdx=(erpIdx+1)%60; }
 
       // Loss-of-License: a small monthly chance of permanent medical disqualification
       // while actively flying. Rolled before isWorking so the same month it triggers
@@ -2141,6 +2154,7 @@ function simulate(p, paths){
           net-=basicEUR*0.05;
         }
         net+=salaryEUR;
+        if(erpActive) net+=NavlogCore.erpTopUpEUR(basicAED,fxEff,erpThreshold);
         lastSalaryEUR=salaryEUR;
         if(lolFeatureActive) net-=p.lolPremiumMonthly;
 
@@ -3200,7 +3214,7 @@ function buildWorkerSource(){
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const GENERAL_STATE_BRACKETS='+literal(NavlogCore.GENERAL_STATE_BRACKETS)+', GENERAL_REGIONAL_BRACKETS='+literal(NavlogCore.GENERAL_REGIONAL_BRACKETS)+';',
     'const SOLIDARITY_EXEMPT='+NavlogCore.SOLIDARITY_EXEMPT+', SOLIDARITY_BRACKETS='+literal(NavlogCore.SOLIDARITY_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceSettlement:'+NavlogCore.endOfServiceSettlement.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+',childMonthlyCost:'+NavlogCore.childMonthlyCost.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',generalIncomeTax:'+NavlogCore.generalIncomeTax.toString()+',netAfterGeneralIncomeTax:'+NavlogCore.netAfterGeneralIncomeTax.toString()+',grossForNetGeneralIncome:'+NavlogCore.grossForNetGeneralIncome.toString()+',providentFireTaxRate:'+NavlogCore.providentFireTaxRate.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',providentFirst:'+NavlogCore.providentFirst.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceSettlement:'+NavlogCore.endOfServiceSettlement.toString()+',erpTopUpEUR:'+NavlogCore.erpTopUpEUR.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+',childMonthlyCost:'+NavlogCore.childMonthlyCost.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     // Core helpers that call each other by bare name inside simulation-core.js need the same
     // top-level aliases here, or they throw ReferenceError only inside the worker.
