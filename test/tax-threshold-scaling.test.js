@@ -40,14 +40,9 @@ test('progressiveSavingsTax: scale halves the ahorro bracket boundaries', () => 
   assert.ok(Math.abs(core.progressiveSavingsTax(12000, 0.5) - 2460) < 1e-9);
 });
 
-test('generalIncomeTax: scale threads through both the state and regional brackets', () => {
-  const base = 40000;
-  const unscaled = core.generalIncomeTax(base, 'catalonia');
-  assert.equal(core.generalIncomeTax(base, 'catalonia', 1), unscaled);
-  const scaled = core.generalIncomeTax(base, 'catalonia', 0.5);
-  assert.ok(scaled > unscaled, 'halved thresholds push more of the same base into higher brackets, so tax rises');
-  assert.equal(core.generalIncomeTax(base, 'catalonia', 0), unscaled, 'invalid scale falls back to 1');
-});
+// generalIncomeTax (and its scale threading) was removed with the Provident cash-payout fix:
+// it only existed to tax the Provident Scheme as regional general income, and the Provident
+// is now paid out in cash while still a UAE resident, so Spain never taxes it that way.
 
 test('solidarityWealthTax: scale applies to both the exemption and the bracket boundaries', () => {
   const unscaled = core.solidarityWealthTax(4700000);
@@ -73,12 +68,7 @@ test('marginalSavingsTaxRate: scale shifts which bracket a given ytdGain falls i
   assert.ok(Math.abs(scaled - 23) < 1e-9);
 });
 
-test('grossForNetGeneralIncome / netAfterGeneralIncomeTax: round-trip inverse holds with scale != 1', () => {
-  const needNet = 30000, ytdIncome = 5000, region = 'catalonia', maxGross = 200000, scale = 0.7;
-  const gross = core.grossForNetGeneralIncome(needNet, ytdIncome, region, maxGross, scale);
-  const net = core.netAfterGeneralIncomeTax(gross, ytdIncome, region, scale);
-  assert.ok(Math.abs(net - needNet) < 1, `round-trip net (${net}) should match needNet (${needNet})`);
-});
+// grossForNetGeneralIncome / netAfterGeneralIncomeTax were removed for the same reason.
 
 test('grossForNetSavings / netAfterSavingsTax: round-trip inverse holds with scale != 1', () => {
   const needNet = 20000, gainFraction = 0.6, ytdGain = 10000, maxGross = 500000, scale = 0.4;
@@ -87,8 +77,5 @@ test('grossForNetSavings / netAfterSavingsTax: round-trip inverse holds with sca
   assert.ok(Math.abs(net - needNet) < 1, `round-trip net (${net}) should match needNet (${needNet})`);
 });
 
-test('providentFireTaxRate: threads scale through the regional-general estimate', () => {
-  const unscaled = core.providentFireTaxRate(500000, true, true, 19, 'catalonia');
-  const scaled = core.providentFireTaxRate(500000, true, true, 19, 'catalonia', 0.5);
-  assert.ok(scaled > unscaled, 'shrinking thresholds raises the effective average rate used for the FIRE-target haircut');
-});
+// providentFireTaxRate was removed too: the Provident no longer has a FIRE-target haircut
+// to scale (see test/provident-payout.test.js).

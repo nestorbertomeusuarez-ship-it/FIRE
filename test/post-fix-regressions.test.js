@@ -36,13 +36,11 @@ assert.equal(noWindow[0],taxedFlat[0],'a zero-year window behaves exactly like n
 assert.ok(oneYear[oneYear.length-1]<untaxed[untaxed.length-1],'tax resumes once the Beckham window is over');
 assert.ok(oneYear[oneYear.length-1]>taxedFlat[taxedFlat.length-1],'but the exempt year still leaves the path better off than never being exempt');
 assert.notEqual(oneYear[1],untaxed[1],'the year after the window is already taxed');
-// Provident vs savings brackets: in bracket mode the Provident tax rate must still steer the withdrawal
-// order (cheap Provident is drained first, expensive one last), so the two runs cannot coincide.
-// (Final gross wealth is not comparable across the two orders, hence only inequality is asserted.)
-const providentBase={...DEFAULTS,seed:9,fiscalOn:true,startEq:900000,startBtc:0,gasto:40000,swr:3.25,provOn:true,taxOn:true,useIrpfBrackets:true,taxRepatDelay:0,startDelay:0,captDelay:0,horizonAge:70,vol:0,ret:4};
-const providentCheap=p50({...providentBase,taxRateProv:0}), providentDear=p50({...providentBase,taxRateProv:47});
-assert.notDeepEqual(providentCheap,providentDear,'the Provident rate changes the withdrawal order in bracket mode');
-assert.equal(providentCheap[0],providentDear[0],'orders only diverge once withdrawals start');
+// Provident vs savings brackets ordering (removed): taxRateProv/the Provident-first cascade no
+// longer exist — the Provident is paid out in cash and invested (never taxed as income) the
+// month the household leaves Emirates, so there is nothing left to order against the savings
+// buckets during retirement. See test/provident-payout.test.js for the coverage that replaces
+// this (Provident always paid out untaxed, no general-income tax ever computed).
 const fireMonthAll=new Int32Array(3000); fireMonthAll.fill(-1); fireMonthAll.set([12,12,12]);
 const ruinMonth=new Int32Array(3000); ruinMonth.fill(-1); ruinMonth.set([14,14,14]);
 const forcedOut=new Uint8Array(3000); forcedOut[1]=1; const licenseLossOut=new Uint8Array(3000); licenseLossOut[2]=1;
@@ -55,8 +53,8 @@ assert.equal(seedZeroA(),seedZeroB(),'seed zero remains reproducible');
 assert.notEqual(seedZeroB(),seedFallback(),'seed zero does not collide with fallback seed');
 assert.throws(()=>core.seededRandom(''),'blank seed is not silently made deterministic');
 assert.equal(core.marginalSavingsTaxRate(1,300001),30,'large YTD gains use the top progressive savings bracket');
-assert.equal(core.providentFirst(10,[{balance:100000,basis:0}],300001),true,'cheaper Provident bucket wins over savings gains at the top bracket');
-assert.equal(core.providentFirst(19,[{balance:100000,basis:50000}],300001),false,'effective gains tax accounts for the savings basis fraction');
+// core.providentFirst was removed with the Provident cash-payout fix: the Provident never
+// reaches the retirement withdrawal cascade any more, so there is nothing left to order.
 const safeScenario={id:'sc1',name:'Safe',color:'#1F7A4D',visible:true,series:[{year:2030,p10:1,p50:2,p90:3}],target:100,ageMed:'40',successRate:.8,params:{ageNow:28}};
 const normalized=core.normalizeScenarios([safeScenario,{...safeScenario,id:'sc2',name:'<img src=x onerror=alert(1)>'},{...safeScenario,id:'sc3',color:'red'}],['ageNow'],['#1F7A4D']);
 assert.equal(normalized.length,2,'scenario sanitizer rejects invalid color while retaining valid records');

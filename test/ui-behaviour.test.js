@@ -186,15 +186,13 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.equal(csv('safe text - with dash'), '"safe text - with dash"');
 
   // ---- run summary describes bracket mode separately from the flat rate ----
-  setValue('seed', '2'); el('fiscalOn').checked = true; el('taxOn').checked = true; el('useIrpfBrackets').checked = true; setValue('taxRateProv', '5');
+  setValue('seed', '2'); el('fiscalOn').checked = true; el('taxOn').checked = true; el('useIrpfBrackets').checked = true;
   await call("safeRun('preview')");
   assert.match(el('calc').textContent, /tramos progresivos del ahorro 19-30 %/);
-  assert.match(el('calc').textContent, /Provident \(5\.0%\)/);
   assert.doesNotMatch(el('calc').textContent, /tipo medio 19/, 'bracket mode never reports the unused flat rate');
-  el('useIrpfBrackets').checked = false; setValue('taxRateProv', '9');
+  el('useIrpfBrackets').checked = false;
   await call("safeRun('preview')");
   assert.match(el('calc').textContent, /tipo medio 19\.0%/);
-  assert.match(el('calc').textContent, /Provident antes que la cartera/);
 
   // ---- sensitivity / stress buttons surface input errors instead of rejecting silently ----
   for (const [button, loading] of [['runSensitivity', 'sensLoading'], ['runSrrStress', 'srrLoading']]) {

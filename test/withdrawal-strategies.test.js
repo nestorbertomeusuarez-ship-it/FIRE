@@ -249,12 +249,15 @@ test('E2: a Loss-of-License forced exit computes its first-year spend the same w
 });
 
 // ---- E3: VPW's rWeighted must be consistent with the totalNow it is applied to -----------
-// annualSpendFor's rWeighted historically only mixed riskyNow (equities/BTC/gold) against
-// safeNow (bonds/cash), excluding vProv from both sides of the ratio even though vProv is
-// part of totalNow and grows/spends at the equity rate. This scenario builds up a real
+// annualSpendFor's rWeighted mixes riskyNow (equities/BTC/gold) against safeNow (bonds/cash).
+// The Provident no longer survives as its own bucket into retirement at all: it is paid out
+// in cash and invested across vCash/vCons/vEq (by the configured allocation) the same month
+// the household leaves Emirates (see payoutProvident in simulate()), so by the time VPW's
+// rWeighted is computed at the FIRE month, the leftover member-only Provident balance has
+// already been folded into those three ordinary buckets. This scenario builds up a real
 // Provident balance through a short, fully deterministic career (flat markets, no salary
-// growth, always first-officer pay) so vProv is a material share of totalNow at FIRE.
-test('E3: VPW weights vProv as risky money, consistent with the totalNow it is spent from', () => {
+// growth, always first-officer pay) so that payout is a material share of totalNow at FIRE.
+test('E3: VPW weights the paid-out Provident by allocation, consistent with the totalNow it is spent from', () => {
   const fx = DEFAULTS.fx, basicFO = DEFAULTS.basicFO, salFO = DEFAULTS.salFO, provCo = DEFAULTS.provCo;
   const basicEUR = basicFO * fx, salaryEUR = salFO / 12 * fx;
   let vEq = 0, vCons = 0, vCash = 0, vProv = 0, vProvMember = 0;
@@ -270,10 +273,13 @@ test('E3: VPW weights vProv as risky money, consistent with the totalNow it is s
     vEq += net * 0.70; vCons += net * 0.20; vCash += net * 0.10;
   }
   // Leaving after 23 months (< 3 years): the company contributions are forfeited and the EOSB
-  // (21 days of basic per year of service) is paid instead; the member 5 % stays in vProv.
+  // (21 days of basic per year of service) is paid instead; the member 5 % stays in vProv,
+  // and payoutProvident immediately invests it across vCash/vCons/vEq (10/20/70 % here,
+  // baseFlat's allocation) — it never survives into retirement as its own bucket.
   vEq += core.gratuityDays(23 / 12) * (basicFO / 30) * fx;
   vProv = vProvMember;
-  const totalAtFire = vEq + vCons + vCash + vProv;
+  vEq += vProv * 0.70; vCons += vProv * 0.20; vCash += vProv * 0.10;
+  const totalAtFire = vEq + vCons + vCash;
   const safeNow = vCons + vCash;
   const rWeighted = ((totalAtFire - safeNow) * 0.05 + safeNow * 0.018) / totalAtFire;
   const ageAtFire = DEFAULTS.ageNow + 32 / 12; // FIRE fires at i=32 (careerStart 9 + 23 months)
