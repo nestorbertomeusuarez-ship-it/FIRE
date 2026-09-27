@@ -104,14 +104,15 @@ test('child2BirthYear/child3BirthYear controls are hidden by class unless childC
 
 // ---- engine-level: childCount 0 vs 1 delays/reduces contributions towards FIRE ----
 
-test('childCount 0 vs 1: FIRE month median is later (or equal) and contributions are lower with a child', () => {
-  const base = { ...DEFAULTS, seed: 2026, horizonAge: 70, gasto: 60000, swr: 3.25 };
+test('childCount 0 vs 1: the FIRE target rises and the median FIRE month comes later with a child', () => {
+  // The target funds the child's remaining post-Emirates costs, so with a child you work longer
+  // (and therefore contribute more in total) instead of retiring on an underfunded plan.
+  const base = { ...DEFAULTS, seed: 2026, horizonAge: 70, gasto: 60000, swr: 3 };
   const withChild = simulate({ ...base, childCount: 1 }, 300);
   const withoutChild = simulate({ ...base, childCount: 0 }, 300);
   const fireMedian = result => median(result.fireMonthAll.filter(m => m >= 0));
-  assert.ok(fireMedian(withChild) >= fireMedian(withoutChild), 'a child cost never brings the median FIRE month forward');
-  const contribAt = result => result.series[result.series.length - 1].contrib50;
-  assert.ok(contribAt(withoutChild) > contribAt(withChild), 'contributions end up lower once the child cost is subtracted every month');
+  assert.ok(withChild.target > withoutChild.target, 'the child raises the FIRE target');
+  assert.ok(fireMedian(withChild) > fireMedian(withoutChild), 'a child delays the median FIRE month');
 });
 
 // ---- engine-level: childSchoolCost only matters after leaving Emirates ----

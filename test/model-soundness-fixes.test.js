@@ -115,9 +115,11 @@ test('the mortgage payment keeps being deducted every month after FIRE, until hi
     feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0
   };
   const withoutHip = simulate({ ...base, hip: 0 }, 2);
-  const withHip = simulate({ ...base, hip: 1000 }, 2);
+  // The FIRE target now includes the mortgage still to pay (career start, month 9, to the last
+  // month 84 of this horizon: 76 x 1,000 EUR), so that run gets exactly that extra capital.
+  const withHip = simulate({ ...base, hip: 1000, startEq: 1076000 }, 2);
   assert.equal(withoutHip.fireMonthAll[0], 0, 'sanity: FIRE triggers immediately in this scenario');
-  assert.equal(withHip.fireMonthAll[0], 0, 'the mortgage payment does not block or delay reaching the target');
+  assert.equal(withHip.fireMonthAll[0], 0, 'with capital covering the remaining mortgage, FIRE still triggers immediately');
   // A full retirement year (2028, the first with no partial-year edge effects) must
   // show exactly 12 months x 1000 EUR/month of extra withdrawal versus no mortgage.
   const year2027 = withoutHip.series.find(s => s.year === 2027).p50 - withHip.series.find(s => s.year === 2027).p50;
@@ -240,14 +242,16 @@ test('Guyton-Klinger cuts spending once the mortgage payment is counted in the w
   const gkBase = {
     ...DEFAULTS, seed: 1,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
-    startEq: 1000000, startBtc: 0,
+    startBtc: 0,
     allocEquities: 100, allocBonds: 0, allocCash: 0,
     vida: 0, burr: 0, brOn: false,
     salFO: 0, salCA: 0, basicFO: 0, basicCA: 0, provOn: false,
     childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
     gasto: 40000, swr: 4, // target exactly matches startEq: immediate FIRE at month 0
     wdStrategy: 1, gkGuard: 20, gkCut: 10, gkRaise: 10, gkFreq: 12,
-    hip: 1000, hipEnd: 2100,
+    // The FIRE target includes the mortgage still to pay: career start (month 9, Jun-2027) to
+    // Dec-2028 is 19 x 1,000 EUR, so the capital is raised by exactly that for an immediate FIRE.
+    hip: 1000, hipEnd: 2028, startEq: 1019000,
     // Default careerYear/CAREER_MONTH puts careerStart at absolute month 9 (Jun-2027),
     // so the mortgage/salary machinery stays inert before that, same as fireMonth=0.
     startDelay: 0, careerYear: 2027, ageNow: 28,
