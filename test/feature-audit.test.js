@@ -15,7 +15,7 @@ const { simulate, DEFAULTS, buildRuinCurve, readParams, controls, MONTHS, monthI
 // Deterministic retired profile: no returns, no volatility, retires in month 0 with far more than the target.
 // feeEq/feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
 // the hand-rolled model() below does not account for portfolio costs.
-const flat = { ...DEFAULTS, seed: 3, startEq: 10000000, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
+const flat = { ...DEFAULTS, wdStrategy: 0, phOn: false /* fixed-spend arithmetic */, seed: 3, startEq: 10000000, startBtc: 0, ret: 0, vol: 0, btcRet: 0, btcVol: 0, cashRet: 0, cashVol: 0, consRet: 0, consVol: 0,
   gasto: 100000, swr: 4, vida: 0, hip: 0, childCount: 0, healthcareAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, horizonAge: 60,
   allocCash: 0, allocBonds: 0, allocEquities: 100,
   feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0 };

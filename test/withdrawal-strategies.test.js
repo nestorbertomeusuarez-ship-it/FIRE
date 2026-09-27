@@ -183,7 +183,7 @@ test('new sliders: defaults are within [min,max] and on the step grid', () => {
   }
   assert.deepEqual(ranges.get('wdStrategy'), { min: 0, max: 5, step: 1 }, 'wdStrategy now spans 6 strategies (0-5)');
   assert.equal(typeof DEFAULTS.phOn, 'boolean', 'phOn is a checkbox default, not a range');
-  assert.equal(DEFAULTS.phOn, false);
+  assert.equal(DEFAULTS.phOn, true, 'Prime Harvesting is on by default, paired with Guyton-Klinger');
 });
 
 // ---- markup: every new control has its own hint, and labels list all 6 strategies -
