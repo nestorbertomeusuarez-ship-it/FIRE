@@ -1322,15 +1322,6 @@ const HIST_EQ_REAL_RETURNS = [0.4633,-0.083,-0.2333,-0.383,0.0136,0.5806,-0.0414
 -0.389,0.264,0.1297,-0.0103,0.1354,0.3025,0.1171,0.0126,0.1038,0.1907,
 -0.0656,0.2894,0.1659,0.227,-0.2411,0.2107,0.2137,0.1462];
 
-// Spanish savings-income (ahorro) IRPF brackets — illustrative 2024/2025 figures,
-// NOT auto-updated: tax law changes yearly, verify the current thresholds/rates
-// before relying on this. Applies only to the capital-gains-taxed buckets
-// (vCons/vEq/vGold/vBtc/vRE) when useIrpfBrackets is on. The Provident Scheme is
-// paid out in cash while still a UAE resident (see payoutProvident in simulate()),
-// so it is never taxed as Spanish income and never reaches these brackets.
-const IRPF_SAVINGS_BRACKETS = [
-  {upTo:6000, rate:19}, {upTo:50000, rate:21}, {upTo:200000, rate:23}, {upTo:300000, rate:27}, {upTo:Infinity, rate:30}
-];
 
 const DEFAULTS = {
   seed:null,
@@ -3259,7 +3250,6 @@ function buildWorkerSource(){
     'const CAREER_YEAR_MAX='+CAREER_YEAR_MAX+';',
     'const MONTH_DATES='+JSON.stringify(MONTH_DATES)+';',
     'const HIST_EQ_REAL_RETURNS='+JSON.stringify(HIST_EQ_REAL_RETURNS)+';',
-    'const IRPF_SAVINGS_BRACKETS='+literal(IRPF_SAVINGS_BRACKETS)+';',
     'const MONTHS=MONTH_DATES.length;',
     'const NUMERIC_PARAM_KEYS='+JSON.stringify(NUMERIC_PARAM_KEYS)+';',
     'const PARAM_BOUNDS='+literal(PARAM_BOUNDS)+';',

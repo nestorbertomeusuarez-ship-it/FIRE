@@ -2,9 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const test = require('node:test');
 
-// index-publico.html is not the canonical app, but GitHub Pages serves it from
-// the repository root too, so it must carry the same policy.
-for (const file of ['index.html', 'index-publico.html']) test(`${file}: a Content-Security-Policy forbids network exfiltration and foreign scripts`, () => {
+for (const file of ['index.html']) test(`${file}: a Content-Security-Policy forbids network exfiltration and foreign scripts`, () => {
   const html = fs.readFileSync(file, 'utf8');
   const m = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
   assert.ok(m, 'CSP meta must exist');

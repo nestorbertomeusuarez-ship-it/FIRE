@@ -34,7 +34,6 @@ for (const gain of [0, 5000, 6000, 6001, 50000, 200000, 300000, 300001, 400000, 
 assert.equal(inWorker('progressiveSavingsTax(400000)'), 101880, 'worker applies the 30% bracket above 300k');
 assert.equal(core.progressiveSavingsTax(400000), 101880);
 assert.equal(inWorker('SAVINGS_BRACKETS[SAVINGS_BRACKETS.length-1].upTo'), Infinity, 'top bracket stays open-ended in the worker');
-assert.equal(inWorker('IRPF_SAVINGS_BRACKETS[IRPF_SAVINGS_BRACKETS.length-1].upTo'), Infinity, 'IRPF bracket table keeps its open top in the worker');
 
 // 2) Every NavlogCore member the simulation code calls must exist in the worker.
 const called = new Set();
