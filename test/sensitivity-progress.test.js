@@ -1,7 +1,7 @@
 // Sensitivity runs ~50s of wall-clock time with a static "Calculando…" the whole way, giving no
 // feedback. #sensLoading must instead show "Calculando… X de N simulaciones", updating as each
 // paired (low/high) job resolves. Every SENSITIVITY_PARAMS entry is always active now (no PRO
-// gating), so N is always SENSITIVITY_PARAMS.length*2 (28, for 14 parameters).
+// gating), so N is always SENSITIVITY_PARAMS.length*2 (36, for 18 parameters).
 const assert = require('node:assert/strict');
 const { loadApp } = require('./helpers/fake-app.js');
 
@@ -12,24 +12,24 @@ const { loadApp } = require('./helpers/fake-app.js');
   await quiesce(); // the page's own start-up run
 
   const btn = el('runSensitivity'), loadingEl = el('sensLoading');
-  // 14 SENSITIVITY_PARAMS entries, always active => 28 requests (low+high per param).
+  // 18 SENSITIVITY_PARAMS entries, always active => 36 requests (low+high per param).
   app.run(`
     globalThis.__originalRAS = requestAnalysisSimulation;
     globalThis.__pending = [];
     requestAnalysisSimulation = () => new Promise(resolve => { __pending.push(resolve); });
   `);
   const clickDone = btn.fireAsync('click');
-  for (let i = 0; i < 20 && app.run('__pending.length') < 28; i++) await Promise.resolve();
-  assert.equal(app.run('__pending.length'), 28, 'issues 28 requests (14 parameters, low+high)');
-  assert.match(loadingEl.textContent, /Calculando… 0 de 28 simulaciones/, 'shows the total up front, before any pair resolves');
+  for (let i = 0; i < 20 && app.run('__pending.length') < 36; i++) await Promise.resolve();
+  assert.equal(app.run('__pending.length'), 36, 'issues 36 requests (18 parameters, low+high)');
+  assert.match(loadingEl.textContent, /Calculando… 0 de 36 simulaciones/, 'shows the total up front, before any pair resolves');
 
   // Resolve pairs (low+high, contiguous per parameter) one at a time; the counter must advance by
   // 2 (one full pair) each time, never stay static across the whole ~50s run.
-  for (let done = 2; done <= 28; done += 2) {
+  for (let done = 2; done <= 36; done += 2) {
     app.run(`__pending.slice(${done - 2}, ${done}).forEach(resolve => resolve({ result: { fireMonths: new Int32Array(0) } }));`);
-    const pattern = new RegExp('Calculando… ' + done + ' de 28 simulaciones');
+    const pattern = new RegExp('Calculando… ' + done + ' de 36 simulaciones');
     for (let i = 0; i < 20 && !pattern.test(loadingEl.textContent); i++) await Promise.resolve();
-    assert.match(loadingEl.textContent, pattern, 'progress reaches ' + done + ' of 28');
+    assert.match(loadingEl.textContent, pattern, 'progress reaches ' + done + ' of 36');
   }
   await clickDone;
   assert.equal(loadingEl.style.display, 'none', 'the loading indicator hides once the run completes');
@@ -44,16 +44,16 @@ const { loadApp } = require('./helpers/fake-app.js');
     requestAnalysisSimulation = () => new Promise(resolve => { __pending2.push(resolve); });
   `);
   const first = btn.fireAsync('click');
-  for (let i = 0; i < 20 && app.run('__pending2.length') < 28; i++) await Promise.resolve();
+  for (let i = 0; i < 20 && app.run('__pending2.length') < 36; i++) await Promise.resolve();
   const second = btn.fireAsync('click');
-  for (let i = 0; i < 20 && app.run('__pending2.length') < 56; i++) await Promise.resolve();
+  for (let i = 0; i < 20 && app.run('__pending2.length') < 72; i++) await Promise.resolve();
   // Resolve click 2 (the winner) fully first.
-  app.run('__pending2.slice(28, 56).forEach(resolve => resolve({ result: { fireMonths: new Int32Array(0) } }));');
+  app.run('__pending2.slice(36, 72).forEach(resolve => resolve({ result: { fireMonths: new Int32Array(0) } }));');
   await second;
   assert.equal(loadingEl.style.display, 'none', 'the winning (second) click hides the loading indicator');
   assert.equal(loadingEl.textContent, 'Calculando…', 'the winning click resets the text');
   // Now resolve click 1 (superseded) late: its progress ticks must not reappear.
-  app.run('__pending2.slice(0, 28).forEach(resolve => resolve({ result: { fireMonths: new Int32Array(0) } }));');
+  app.run('__pending2.slice(0, 36).forEach(resolve => resolve({ result: { fireMonths: new Int32Array(0) } }));');
   await first;
   assert.equal(loadingEl.style.display, 'none', 'the late, superseded click must not show the loading indicator again');
   assert.equal(loadingEl.textContent, 'Calculando…', 'the late, superseded click must not overwrite the text');
