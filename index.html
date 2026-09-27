@@ -528,7 +528,7 @@ section[id],#notas{scroll-margin-top:88px}
       <h3>Objetivo</h3>
       <div class="ctrl">
         <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o" for="gasto"></output></div>
-        <p class="hint">Gasto anual real que asumes ya jubilado: junto con la Tasa de retiro segura fija tu objetivo FIRE: (gasto + coste sanitario) ÷ SWR, más lo que quede por pagar de hijos e hipoteca desde ese mes (con los valores por defecto, la parte de gasto y sanidad es 63.000 € ÷ 3 % = 2,1 M€) y es la base del gasto mensual que se retira de la cartera con la estrategia SWR fijo.</p>
+        <p class="hint">Gasto anual real que asumes ya jubilado: junto con la Tasa de retiro segura fija tu objetivo FIRE: (gasto + coste sanitario) ÷ SWR, más lo que quede por pagar de hijos e hipoteca desde ese mes (con los valores por defecto, la parte de gasto y sanidad es 51.000 € ÷ 3 % = 1,7 M€) y es la base del gasto mensual que se retira de la cartera con la estrategia SWR fijo.</p>
         <input type="range" id="gasto" min="25000" max="130000" step="1000">
       </div>
       <div class="ctrl">
@@ -1003,12 +1003,12 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkCut">Recorte de gasto al tocar el techo</label><output id="gkCut_o" for="gkCut"></output></div>
-        <p class="hint">% que se descuenta del gasto anual vigente la próxima vez que toque revisión (según la "Frecuencia de revisión" configurada) si la tasa de retiro efectiva está por encima del techo de la banda. Con el 10 % por defecto y un gasto de 60.000 €/año, ese recorte lo deja en 54.000 €/año; el recorte se aplica sobre el gasto ya vigente, así que se acumula si vuelve a activarse en revisiones sucesivas.</p>
+        <p class="hint">% que se descuenta del gasto anual vigente la próxima vez que toque revisión (según la "Frecuencia de revisión" configurada) si la tasa de retiro efectiva está por encima del techo de la banda. Con el 10 % por defecto y un gasto de 48.000 €/año, ese recorte lo deja en 43.200 €/año; el recorte se aplica sobre el gasto ya vigente, así que se acumula si vuelve a activarse en revisiones sucesivas.</p>
         <input type="range" id="gkCut" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
         <div class="row"><label for="gkRaise">Subida de gasto al tocar el suelo</label><output id="gkRaise_o" for="gkRaise"></output></div>
-        <p class="hint">% que se añade al gasto anual vigente cuando, en la revisión periódica, la tasa de retiro efectiva está por debajo del suelo de la banda (la cartera ha ido mejor de lo esperado). Con el 10 % por defecto y un gasto de 60.000 €/año, la subida lo deja en 66.000 €/año.</p>
+        <p class="hint">% que se añade al gasto anual vigente cuando, en la revisión periódica, la tasa de retiro efectiva está por debajo del suelo de la banda (la cartera ha ido mejor de lo esperado). Con el 10 % por defecto y un gasto de 48.000 €/año, la subida lo deja en 52.800 €/año.</p>
         <input type="range" id="gkRaise" min="5" max="15" step="1">
       </div>
       <div class="ctrl">
@@ -1022,7 +1022,7 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="hint">Un patrón habitual de gasto en jubilación: gastas más los primeros años mientras estás activo (go-go), moderas según te haces mayor (slow-go), y bajas más aún cuando ya viajas y sales menos (no-go). Las tres fases son consecutivas y cubren siempre todo el tiempo tras el FIRE: primero go-go, luego slow-go, y no-go el resto de años, sin fecha de fin. Solo actúa cuando "Estrategia" está en "Fases go-go/slow-go/no-go".</p>
       <div class="ctrl">
         <div class="row"><label for="goGoMult">Gasto fase go-go (% del base)</label><output id="goGoMult_o" for="goGoMult"></output></div>
-        <p class="hint">Multiplicador que se aplica al gasto base (Objetivo → Gasto anual al jubilarte, 60.000 € por defecto) durante los primeros años tras el FIRE. Con el 115 % por defecto, el gasto real en esta fase es 69.000 €/año — a diferencia de Guyton-Klinger, aquí el gasto no depende de cómo vaya la cartera, solo de los años transcurridos.</p>
+        <p class="hint">Multiplicador que se aplica al gasto base (Objetivo → Gasto anual al jubilarte, 48.000 € por defecto) durante los primeros años tras el FIRE. Con el 115 % por defecto, el gasto real en esta fase es 55.200 €/año — a diferencia de Guyton-Klinger, aquí el gasto no depende de cómo vaya la cartera, solo de los años transcurridos.</p>
         <input type="range" id="goGoMult" min="80" max="150" step="5">
       </div>
       <div class="ctrl">
@@ -1032,7 +1032,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="slowGoMult">Gasto fase slow-go (% del base)</label><output id="slowGoMult_o" for="slowGoMult"></output></div>
-        <p class="hint">Multiplicador sobre el gasto base durante la fase intermedia, tras acabar go-go. Con el 90 % por defecto y un gasto base de 60.000 €/año, el gasto en esta fase es 54.000 €/año.</p>
+        <p class="hint">Multiplicador sobre el gasto base durante la fase intermedia, tras acabar go-go. Con el 90 % por defecto y un gasto base de 48.000 €/año, el gasto en esta fase es 43.200 €/año.</p>
         <input type="range" id="slowGoMult" min="60" max="120" step="5">
       </div>
       <div class="ctrl">
@@ -1042,7 +1042,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="noGoMult">Gasto fase no-go (% del base)</label><output id="noGoMult_o" for="noGoMult"></output></div>
-        <p class="hint">Multiplicador sobre el gasto base a partir de que terminan go-go y slow-go, y hasta el final del horizonte. Con el 100 % por defecto el gasto vuelve a ser igual al gasto base (60.000 €/año) — sube o baja este valor si esperas gastar más o menos en la vejez que en la fase intermedia.</p>
+        <p class="hint">Multiplicador sobre el gasto base a partir de que terminan go-go y slow-go, y hasta el final del horizonte. Con el 100 % por defecto el gasto vuelve a ser igual al gasto base (48.000 €/año) — sube o baja este valor si esperas gastar más o menos en la vejez que en la fase intermedia.</p>
         <input type="range" id="noGoMult" min="50" max="110" step="5">
       </div>
       </div>
@@ -1052,21 +1052,21 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="wdPhase" data-wd="4">
       <p class="subhead">Suelo y techo (Bengen)</p>
-      <p class="hint">Cada año tras el primero (que gasta el Gasto anual configurado) se recalcula el gasto como la Tasa de retiro objetivo aplicada a la cartera líquida de ese momento, pero el resultado se acota entre un suelo y un techo definidos como % del gasto base. Con los valores por defecto (gasto 60.000 €, SWR 3 %, suelo 90 %, techo 125 %): suelo = 54.000 €, techo = 75.000 €. Si la cartera ha subido a 3.000.000 €, el 3 % serían 90.000 €/año pero el techo lo recorta a 75.000 €/año; si la cartera ha caído a 1.000.000 €, el 3 % serían 30.000 €/año pero el suelo lo sube a 54.000 €/año.</p>
+      <p class="hint">Cada año tras el primero (que gasta el Gasto anual configurado) se recalcula el gasto como la Tasa de retiro objetivo aplicada a la cartera líquida de ese momento, pero el resultado se acota entre un suelo y un techo definidos como % del gasto base. Con los valores por defecto (gasto 48.000 €, SWR 3 %, suelo 90 %, techo 125 %): suelo = 43.200 €, techo = 60.000 €. Si la cartera ha subido a 3.000.000 €, el 3 % serían 90.000 €/año pero el techo lo recorta a 60.000 €/año; si la cartera ha caído a 1.000.000 €, el 3 % serían 30.000 €/año pero el suelo lo sube a 43.200 €/año.</p>
       <div class="ctrl">
         <div class="row"><label for="fcFloor">Suelo del gasto (% del gasto base)</label><output id="fcFloor_o" for="fcFloor"></output></div>
-        <p class="hint">Por debajo de este % del gasto base (Objetivo → Gasto anual, 60.000 € por defecto) el gasto nunca cae, aunque la cartera vaya mal. Con el 90 % por defecto, el suelo es 54.000 €/año — protege frente a recortes severos en mercados bajistas prolongados, pero puede obligar a vender cartera incluso en plena caída para sostener ese mínimo.</p>
+        <p class="hint">Por debajo de este % del gasto base (Objetivo → Gasto anual, 48.000 € por defecto) el gasto nunca cae, aunque la cartera vaya mal. Con el 90 % por defecto, el suelo es 43.200 €/año — protege frente a recortes severos en mercados bajistas prolongados, pero puede obligar a vender cartera incluso en plena caída para sostener ese mínimo.</p>
         <input type="range" id="fcFloor" min="50" max="100" step="5">
       </div>
       <div class="ctrl">
         <div class="row"><label for="fcCeiling">Techo del gasto (% del gasto base)</label><output id="fcCeiling_o" for="fcCeiling"></output></div>
-        <p class="hint">Por encima de este % del gasto base el gasto nunca sube, aunque la cartera vaya muy bien. Con el 125 % por defecto, el techo es 75.000 €/año — limita el gasto en mercados alcistas para no comprometer la sostenibilidad futura de la cartera.</p>
+        <p class="hint">Por encima de este % del gasto base el gasto nunca sube, aunque la cartera vaya muy bien. Con el 125 % por defecto, el techo es 60.000 €/año — limita el gasto en mercados alcistas para no comprometer la sostenibilidad futura de la cartera.</p>
         <input type="range" id="fcCeiling" min="100" max="200" step="5">
       </div>
       </div>
       <div class="wdPhase" data-wd="5">
       <p class="subhead">Yield Shield</p>
-      <p class="hint">Aproximación a la táctica difundida por Millennial Revolution: durante los primeros años tras el FIRE solo gastas lo que "rinde" la cartera (un % de su valor), nunca más que tu gasto normal configurado; pasados esos años, el gasto vuelve a ser el gasto base fijo, igual que "SWR fijo". Ejemplo con los valores por defecto (gasto 60.000 €, rendimiento objetivo 4 %): con una cartera de 1.200.000 € el rendimiento sería 48.000 €/año, así que ese año gastas 48.000 € (por debajo de lo normal); con una cartera de 2.000.000 € el rendimiento sería 80.000 €/año, pero el gasto sigue topado en 60.000 €/año (nunca por encima del gasto normal). Es una táctica pensada para sortear temporalmente una mala racha del mercado nada más jubilarte, no una regla permanente — y el modelo no distingue dividendos de plusvalías, así que "rendimiento" aquí es simplemente un % de la cartera total, no solo su renta.</p>
+      <p class="hint">Aproximación a la táctica difundida por Millennial Revolution: durante los primeros años tras el FIRE solo gastas lo que "rinde" la cartera (un % de su valor), nunca más que tu gasto normal configurado; pasados esos años, el gasto vuelve a ser el gasto base fijo, igual que "SWR fijo". Ejemplo con los valores por defecto (gasto 48.000 €, rendimiento objetivo 4 %): con una cartera de 1.000.000 € el rendimiento sería 40.000 €/año, así que ese año gastas 40.000 € (por debajo de lo normal); con una cartera de 2.000.000 € el rendimiento sería 80.000 €/año, pero el gasto sigue topado en 48.000 €/año (nunca por encima del gasto normal). Es una táctica pensada para sortear temporalmente una mala racha del mercado nada más jubilarte, no una regla permanente — y el modelo no distingue dividendos de plusvalías, así que "rendimiento" aquí es simplemente un % de la cartera total, no solo su renta.</p>
       <div class="ctrl">
         <div class="row"><label for="ysYears">Duración Yield Shield (años)</label><output id="ysYears_o" for="ysYears"></output></div>
         <p class="hint">Cuántos años tras el FIRE se aplica la regla de "solo gastar el rendimiento"; a partir de ahí el gasto vuelve a ser el gasto base fijo. Con el valor por defecto de 5 años, la táctica cubre solo el arranque de la jubilación.</p>
@@ -1074,7 +1074,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl">
         <div class="row"><label for="ysYield">Rendimiento objetivo (% de la cartera)</label><output id="ysYield_o" for="ysYield"></output></div>
-        <p class="hint">% de la cartera líquida que se considera "rendimiento disponible" cada año durante la duración de Yield Shield. Con el 4 % por defecto y una cartera de 1.500.000 €, el gasto de ese año sería 60.000 € (coincide con el gasto base en este ejemplo porque 4 % de 1.500.000 € es exactamente 60.000 €).</p>
+        <p class="hint">% de la cartera líquida que se considera "rendimiento disponible" cada año durante la duración de Yield Shield. Con el 4 % por defecto y una cartera de 1.200.000 €, el gasto de ese año sería 48.000 € (coincide con el gasto base en este ejemplo porque 4 % de 1.200.000 € es exactamente 48.000 €).</p>
         <input type="range" id="ysYield" min="1" max="8" step="0.25">
       </div>
       </div>
@@ -1177,7 +1177,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="ctrl" style="margin-top:14px">
         <div class="row"><label for="baristaIncome">Ingreso extra tras el FIRE (€/año reales)</label><output id="baristaIncome_o" for="baristaIncome"></output></div>
-        <p class="hint">Se resta directamente, mes a mes, de la retirada que tocaría hacer de la cartera (no se suma como ahorro nuevo). Con el gasto base de 60.000 €/año (5.000 €/mes) y el valor por defecto de 12.000 €/año (1.000 €/mes), solo hace falta retirar 4.000 €/mes de la cartera durante los años que dure este ingreso.</p>
+        <p class="hint">Se resta directamente, mes a mes, de la retirada que tocaría hacer de la cartera (no se suma como ahorro nuevo). Con el gasto base de 48.000 €/año (4.000 €/mes) y el valor por defecto de 12.000 €/año (1.000 €/mes), solo hace falta retirar 3.000 €/mes de la cartera durante los años que dure este ingreso.</p>
         <input type="range" id="baristaIncome" min="0" max="40000" step="1000">
       </div>
       <div class="ctrl">
@@ -1338,7 +1338,7 @@ const DEFAULTS = {
   mandatoryRetireOn:false, mandatoryRetireAge:65,
   ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
-  gasto:60000, swr:3,
+  gasto:48000, swr:3,
   startEq:3000, startBtc:15000,
   btcRet:10, btcVol:55, btcRho:40, btcAporte:0,
   basicFO:26485, basicCA:40100, provCo:12, provOn:true,

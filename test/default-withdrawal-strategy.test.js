@@ -17,3 +17,7 @@ test('the default withdrawal strategy is Guyton-Klinger with Prime Harvesting', 
   assert.equal(DEFAULTS.wdStrategy, 1);
   assert.equal(DEFAULTS.phOn, true);
 });
+
+test('the default retirement spend is 48,000 EUR a year', () => {
+  assert.equal(DEFAULTS.gasto, 48000);
+});
