@@ -7,12 +7,10 @@ assert.equal(core.netMonthlyReturn(.01, 0), .01, 'zero fee preserves gross month
 assert.ok(core.netMonthlyReturn(.01, 1) < .01, 'annual fee reduces the monthly return');
 assert.equal(core.netMonthlyReturn(.01, 101), -1, 'out-of-range annual fees cannot produce NaN returns');
 assert.ok(core.historicalWithdrawalBacktest([.10], 1000, 0, 1, 1)[0].finalBalance < 1100, 'historical backtests apply the configured annual equity cost');
-assert.equal(core.generalIncomeTax(50000, 'catalonia'), 14465.75, '2025 individual general IRPF combines state and Catalan scales without deductions');
-assert.equal(core.generalIncomeTax(50000, 'valencian-community'), 14230.75, '2025 individual general IRPF combines state and Valencian scales without deductions');
-for (const [region, ytd, net] of [['catalonia', 0, 10000], ['valencian-community', 49000, 3000]]) {
-  const gross = core.grossForNetGeneralIncome(net, ytd, region, 1e6);
-  assert.ok(Math.abs(core.netAfterGeneralIncomeTax(gross, ytd, region) - net) < 1e-3, 'regional IRPF gross-up round-trips');
-}
+// generalIncomeTax/grossForNetGeneralIncome/netAfterGeneralIncomeTax were removed with the
+// Provident cash-payout fix: the general-IRPF brackets existed only to tax the Provident
+// Scheme as ordinary income, and the Provident is now paid out in cash while still a UAE
+// resident (never Spanish income), so that machinery has no remaining caller.
 assert.equal(core.progressiveSavingsTax(7000), 1350, 'second bracket applies only above €6k');
 assert.equal(core.netAfterSavingsTax(1000, 0, 0), 1000, 'principal is never gains-taxed');
 assert.ok(core.netAfterSavingsTax(1000, .5, 0) > 900, 'only gain fraction is taxed');
@@ -295,15 +293,6 @@ console.log('validateLumpSums valid/invalid schedules: OK');
 }
 console.log('canonicalParameterFingerprint key-order independence: OK');
 
-// ---- providentFireTaxRate: FIRE-target haircut for the Provident balance (audit fix #1) ----
-{
-  assert.equal(core.providentFireTaxRate(100000, false, false, 30, 'catalonia'), 0, 'taxes off: no haircut regardless of mode');
-  assert.equal(core.providentFireTaxRate(0, true, false, 30, 'catalonia'), 0, 'an empty balance has nothing to haircut');
-  assert.equal(core.providentFireTaxRate(100000, true, false, 30, 'catalonia'), 0.30, 'flat mode uses the configured average rate directly');
-  assert.equal(core.providentFireTaxRate(100000, true, false, 0, 'catalonia'), 0, 'a 0% flat rate is a 0% haircut');
-  const withdrawal = 100000 / 10;
-  const expectedRegional = core.generalIncomeTax(withdrawal, 'catalonia') / withdrawal;
-  assert.equal(core.providentFireTaxRate(100000, true, true, 30, 'catalonia'), expectedRegional, 'regional mode uses the effective average rate of a 10-year withdrawal, not the flat taxRateProv');
-  assert.ok(core.providentFireTaxRate(100000, true, true, 30, 'catalonia') > 0 && core.providentFireTaxRate(100000, true, true, 30, 'catalonia') < 1, 'the regional haircut is a genuine rate between 0 and 1');
-}
-console.log('providentFireTaxRate: OK');
+// providentFireTaxRate was removed with the Provident cash-payout fix: the Provident Scheme
+// is paid out in cash while still a UAE resident and counts at full, untaxed value in the
+// FIRE target now, so there is no haircut left to compute. See test/provident-payout.test.js.

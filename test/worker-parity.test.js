@@ -65,7 +65,7 @@ for (const fn of embedded) {
 // 3) Full simulate() runs through the worker entry point must equal the main thread.
 const rich = {
   ...DEFAULTS, fiscalOn: true, seed: 20260921, startEq: 2500000, startBtc: 400000, startGold: 150000, gasto: 45000, swr: 3.5,
-  taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0, provOn: true, taxRateProv: 8, beckhamOn: false,
+  taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0, provOn: true, beckhamOn: false,
   wealthTaxOn: true, wealthExempt: 300000, mortgageBalance: 50000, reOn: true, reValue: 300000, reCountsFire: true,
   lolOn: true, lolAnnualProb: 3, glideOn: true, glideTargetYear: 2040, fxVolOn: true, inflOn: true, histMarketOn: false,
   baristaOn: true, wdStrategy: 1, srrShockOn: true, profitShareWeeks: 6,
@@ -76,10 +76,8 @@ const rich = {
 };
 const variants = [
   rich,
-  { ...rich, useRegionalGeneralIrpf: true, taxRegion: 0 },
-  { ...rich, useRegionalGeneralIrpf: true, taxRegion: 1 },
   { ...rich, wdStrategy: 2, histMarketOn: true, beckhamOn: true, beckhamYears: 6, useIrpfBrackets: false, taxRate: 21, lolPayoutMode: 1 },
-  { ...rich, taxRateProv: 30, startEq: 9000000, gasto: 200000, swr: 4, taxRepatDelay: 1 },
+  { ...rich, taxRate: 30, startEq: 9000000, gasto: 200000, swr: 4, taxRepatDelay: 1 },
   { ...DEFAULTS, seed: 0 },
   { ...DEFAULTS, seed: null }
 ];

@@ -15,12 +15,18 @@ const context = { console, Math, Float64Array, Int32Array, Uint8Array, Date, Inf
 context.globalThis = context; vm.createContext(context); vm.runInContext(source, context, { timeout: 5000 });
 const { simulate, DEFAULTS } = context.__test;
 
-// ---- Fix #1: FIRE target counts the Provident net of expected tax when taxes are on ----
-test('the Provident balance is haircut for the FIRE-target comparison when taxes are on (flat mode)', () => {
-  // A deterministic, zero-market-return household whose accumulation is dominated by
-  // Provident contributions (huge basic salary relative to a thin cash salary): the
-  // target-crossing month should move later once taxOn applies the haircut, purely
-  // from the FIRE-target comparison (not from any change to the actual balances).
+// ---- Provident cash-payout fix: the Provident is no longer haircut for the FIRE target ----
+// (was: "the Provident balance is haircut for the FIRE-target comparison when taxes are on
+// (flat mode)" / "...in regional mode" / "providentFireTaxRate never changes the actual
+// balances, only the FIRE-target comparison" — all three asserted the OLD behavior, where
+// taxOn delayed FIRE via a haircut on vProv and a regional-IRPF variant of that haircut.
+// The Provident is now paid out in cash while still a UAE resident (Candidate Information -
+// Pilots, 6.0) and invested untaxed, so it counts at full value in the FIRE target regardless
+// of taxOn, and taxRateProv/useRegionalGeneralIrpf/taxRegion/providentFireTaxRate no longer
+// exist. Replaced by a single test asserting the new behavior below.)
+test('the FIRE target counts the Provident at full value, whether or not Spanish taxes are on', () => {
+  // Same deterministic, zero-market-return household as the old haircut test: accumulation
+  // dominated by Provident contributions (huge basic salary relative to a thin cash salary).
   const base = {
     ...DEFAULTS, seed: 1, fiscalOn: true,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
@@ -31,70 +37,15 @@ test('the Provident balance is haircut for the FIRE-target comparison when taxes
     fx: 1, salG: 0,
     salFO: 120000, salCA: 120000, basicFO: 120000, basicCA: 120000, provCo: 12, provOn: true,
     captY: 2200, // never promoted to captain within the horizon
-    taxRateProv: 50, useRegionalGeneralIrpf: false,
     gasto: 400000, swr: 4,
     horizonAge: 90,
     // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
-    // this test isolates the Provident tax haircut, not portfolio costs.
+    // this test isolates the FIRE-target Provident treatment, not portfolio costs.
     feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, profitShareWeeks: 0
   };
   const off = simulate({ ...base, taxOn: false }, 2);
   const on = simulate({ ...base, taxOn: true }, 2);
-  assert.equal(off.fireMonthAll[0], 384, 'sanity: locked-in untaxed FIRE month for this deterministic scenario');
-  assert.equal(on.fireMonthAll[0], 649, 'taxOn delays FIRE because the Provident now counts net of its 50% haircut');
-  assert.ok(on.fireMonthAll[0] > off.fireMonthAll[0], 'taxes on can only delay (never advance) crossing the target');
-});
-
-test('the Provident haircut uses the regional general-IRPF effective rate, not the flat taxRateProv, in regional mode', () => {
-  const base = {
-    ...DEFAULTS, seed: 1, fiscalOn: true,
-    ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
-    startEq: 0, startBtc: 0, startGold: 0,
-    allocCash: 0, allocBonds: 0, allocEquities: 100,
-    vida: 0, hip: 0, burr: 0, brOn: false,
-    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
-    fx: 1, salG: 0,
-    salFO: 120000, salCA: 120000, basicFO: 120000, basicCA: 120000, provCo: 12, provOn: true,
-    captY: 2200,
-    taxOn: true, taxRateProv: 50, useRegionalGeneralIrpf: true,
-    gasto: 400000, swr: 4,
-    horizonAge: 90,
-    // feeCash/etc default to non-zero now (realistic TER assumptions); zero them here since
-    // this test isolates the regional general-IRPF Provident haircut, not portfolio costs.
-    // taxThresholdDrift also defaults to non-zero now (fiscal drag); zero it here too, since
-    // this test is about the difference between regions, not about eroding thresholds.
-    feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, profitShareWeeks: 0, taxThresholdDrift: 0
-  };
-  const catalonia = simulate({ ...base, taxRegion: 0 }, 2);
-  const valencia = simulate({ ...base, taxRegion: 1 }, 2);
-  const flat = simulate({ ...base, useRegionalGeneralIrpf: false }, 2);
-  assert.equal(catalonia.fireMonthAll[0], 637);
-  assert.equal(valencia.fireMonthAll[0], 673);
-  assert.notEqual(catalonia.fireMonthAll[0], valencia.fireMonthAll[0], 'the two regions have different general-IRPF scales, so their haircut differs');
-  assert.notEqual(catalonia.fireMonthAll[0], flat.fireMonthAll[0], 'regional mode does not fall back to the flat taxRateProv figure');
-});
-
-test('providentFireTaxRate never changes the actual balances, only the FIRE-target comparison', () => {
-  // Same scenario, taxOn true vs false: the RAW total (uncapped, including vProv at
-  // full value) at the untaxed FIRE month must be identical either way, proving the
-  // fix only moves the comparison, never vProv itself.
-  const base = {
-    ...DEFAULTS, seed: 1, fiscalOn: true,
-    ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0, goldRet: 0, goldVol: 0,
-    startEq: 0, startBtc: 0, startGold: 0,
-    allocCash: 0, allocBonds: 0, allocEquities: 100,
-    vida: 0, hip: 0, burr: 0, brOn: false,
-    childCount: 0, healthcareAnnual: 0, pensionAnnual: 0,
-    fx: 1, salG: 0,
-    salFO: 120000, salCA: 120000, basicFO: 120000, basicCA: 120000, provCo: 12, provOn: true,
-    captY: 2200, taxRateProv: 50, useRegionalGeneralIrpf: false,
-    gasto: 200000, swr: 4, horizonAge: 90
-  };
-  const off = simulate({ ...base, taxOn: false }, 2);
-  const on = simulate({ ...base, taxOn: true }, 2);
-  // Compare the accumulated wealth at the SAME early year (well before either path
-  // retires and taxes start touching withdrawals): balances must be bit-identical.
-  assert.deepEqual(on.series.slice(0, 5).map(s => s.p50), off.series.slice(0, 5).map(s => s.p50), 'accumulation-phase balances are unaffected by the FIRE-target haircut');
+  assert.equal(off.fireMonthAll[0], on.fireMonthAll[0], 'taxOn no longer haircuts the Provident, so the FIRE month is identical either way');
 });
 
 // ---- Fix #2: the Esparreguera mortgage payment continues after FIRE until hipEnd ----

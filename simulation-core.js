@@ -7,16 +7,6 @@
     { upTo: 6000, rate: 0.19 }, { upTo: 50000, rate: 0.21 }, { upTo: 200000, rate: 0.23 },
     { upTo: 300000, rate: 0.27 }, { upTo: Infinity, rate: 0.30 }
   ];
-  // 2025 IRPF general scales. This is deliberately an individual, no-deductions
-  // estimate: the caller supplies the taxable general base, not a full return.
-  const GENERAL_STATE_BRACKETS = [
-    { upTo: 12450, rate: 0.095 }, { upTo: 20200, rate: 0.12 }, { upTo: 35200, rate: 0.15 },
-    { upTo: 60000, rate: 0.185 }, { upTo: 300000, rate: 0.225 }, { upTo: Infinity, rate: 0.245 }
-  ];
-  const GENERAL_REGIONAL_BRACKETS = {
-    catalonia: [{ upTo: 12500, rate: 0.095 }, { upTo: 22000, rate: 0.125 }, { upTo: 33000, rate: 0.16 }, { upTo: 53000, rate: 0.19 }, { upTo: 90000, rate: 0.215 }, { upTo: 120000, rate: 0.235 }, { upTo: 175000, rate: 0.245 }, { upTo: Infinity, rate: 0.255 }],
-    'valencian-community': [{ upTo: 12000, rate: 0.09 }, { upTo: 22000, rate: 0.12 }, { upTo: 32000, rate: 0.15 }, { upTo: 42000, rate: 0.175 }, { upTo: 52000, rate: 0.20 }, { upTo: 62000, rate: 0.225 }, { upTo: 72000, rate: 0.25 }, { upTo: 100000, rate: 0.265 }, { upTo: 150000, rate: 0.275 }, { upTo: 200000, rate: 0.285 }, { upTo: Infinity, rate: 0.295 }]
-  };
   // `scale` shrinks/grows every bracket boundary in place (default 1 = unchanged), used to
   // model nominal thresholds eroding in real terms under fiscal drag (taxThresholdDrift in
   // index.html): scaling every boundary by s is exactly equivalent to s * tax(base/s) against
@@ -54,36 +44,6 @@
     const fee = Math.min(1, Math.max(0, Number(annualFeePct) || 0) / 100);
     if (fee === 0) return grossMonthlyReturn;
     return (1 + grossMonthlyReturn) * Math.pow(1 - fee, 1 / 12) - 1;
-  }
-  function generalIncomeTax(base, region, scale = 1) {
-    const regional = GENERAL_REGIONAL_BRACKETS[region];
-    if (!regional) throw new RangeError('Unsupported IRPF region');
-    return progressiveTax(base, GENERAL_STATE_BRACKETS, scale) + progressiveTax(base, regional, scale);
-  }
-  function netAfterGeneralIncomeTax(gross, ytdIncome, region, scale = 1) {
-    const income = Math.max(0, Number(gross) || 0), ytd = Math.max(0, Number(ytdIncome) || 0);
-    return income - (generalIncomeTax(ytd + income, region, scale) - generalIncomeTax(ytd, region, scale));
-  }
-  function grossForNetGeneralIncome(needNet, ytdIncome, region, maxGross, scale = 1) {
-    if (needNet <= 0 || maxGross <= 0) return 0;
-    let low = 0, high = maxGross;
-    for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (netAfterGeneralIncomeTax(mid, ytdIncome, region, scale) >= needNet) high = mid; else low = mid; }
-    return high;
-  }
-  // FIRE-target haircut for the Provident/company-scheme balance: what fraction of it
-  // would be lost to tax if withdrawn, used ONLY to test whether the FIRE target has
-  // been reached (see simulate() in index.html) — never to adjust the actual balance.
-  // Flat mode uses the configured average rate directly. The regional general-IRPF
-  // mode has no single flat rate (it is progressive against year-to-date income), so
-  // this uses the effective average rate of withdrawing the whole balance spread over
-  // a representative 10 years (generalIncomeTax(vProv/10, region) / (vProv/10)) as a
-  // reasonable, simple estimate — not exact, but conservative enough for a target
-  // comparison, and it keeps the FIRE check independent of the actual withdrawal plan.
-  function providentFireTaxRate(vProv, taxActive, regionalGeneralActive, taxRateProv, region, scale = 1) {
-    if (!taxActive || !(vProv > 0)) return 0;
-    if (!regionalGeneralActive) return Math.max(0, Math.min(1, (Number(taxRateProv) || 0) / 100));
-    const annualTest = vProv / 10;
-    return Math.max(0, Math.min(1, generalIncomeTax(annualTest, region, scale) / annualTest));
   }
   // Single gate for every seed source (UI text, saved scenarios, sensitivity pairs).
   // Returns null (= random, not reproducible) for anything that is not an unsigned
@@ -431,13 +391,6 @@
     const ceiling = Math.max(0, Number(base) || 0) * (Number(ceilingPct) || 0) / 100;
     return Math.min(ceiling, Math.max(floor, raw));
   }
-  function providentFirst(providentRate, savingsBuckets, ytdGain, scale = 1) {
-    const availableRates = (savingsBuckets || []).filter(bucket => bucket && bucket.balance > 0).map(bucket => {
-      const gainFraction = Math.max(0, Math.min(1, 1 - bucket.basis / bucket.balance));
-      return NavlogCore.marginalSavingsTaxRate(gainFraction, ytdGain, scale);
-    });
-    return availableRates.length > 0 && providentRate < Math.min(...availableRates);
-  }
   function beckhamApplies(active, residentMonth, currentMonth, years) {
     return Boolean(active && residentMonth >= 0 && currentMonth >= residentMonth && currentMonth - residentMonth < years * 12);
   }
@@ -507,7 +460,10 @@
   // PRO mode, and then the simulation effectively ended at the lower of the two ages.
   // `healthcareStartAge` is dropped too: healthcare now starts the month the household stops
   // working at Emirates (see the `healthCost` computation in simulate()), not at a configured age.
-  const LEGACY_KEYS = ['gratuityYears', 'lifeExpOn', 'lifeExp', 'healthcareStartAge'];
+  // `taxRateProv`/`useRegionalGeneralIrpf`/`taxRegion` are dropped too: the Provident Scheme is
+  // now paid out in cash while still a UAE resident and invested (see payoutProvident in
+  // simulate()), so Spain never taxes it as income and these controls no longer apply to anything.
+  const LEGACY_KEYS = ['gratuityYears', 'lifeExpOn', 'lifeExp', 'healthcareStartAge', 'taxRateProv', 'useRegionalGeneralIrpf', 'taxRegion'];
   function migrateLegacyParams(params) {
     const child = migrateLegacyChildParams(params);
     if (!child || typeof child !== 'object' || Array.isArray(child) || !LEGACY_KEYS.some(key => key in child)) return child;
@@ -523,5 +479,5 @@
     for (const [key, value] of Object.entries(params)) if (!LEGACY_CHILD_KEYS.includes(key)) migrated[key] = value;
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, erpTopUpEUR, migrateLegacyParams, SAVINGS_BRACKETS, GENERAL_STATE_BRACKETS, GENERAL_REGIONAL_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, generalIncomeTax, netAfterGeneralIncomeTax, grossForNetGeneralIncome, providentFireTaxRate, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, providentFirst, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, profitShareMarketU, childMonthlyCost };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, erpTopUpEUR, migrateLegacyParams, SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, profitShareMarketU, childMonthlyCost };
 });
