@@ -23,7 +23,7 @@ test('with no commitments the target is still spend / SWR', () => {
 });
 
 test('the reported target adds healthcare to the spend and the remaining child and mortgage payments (mortgage from the career start)', () => {
-  const p = { ...DEFAULTS, seed: 1, horizonAge: 80 };
+  const p = { ...DEFAULTS, seed: 1, horizonAge: 80, hipRealErosion: 0 }; // constant real payment (erosion has its own test)
   const months = Math.floor((p.horizonAge - p.ageNow) * 12) + 1;
   const costs = { cost0to2: p.childCost0to2, cost3to17: p.childCost3to17, cost18to22: p.childCost18to22, schoolCost: p.childSchoolCost, fs1Cost: p.childFS1Cost };
   const birth = monthIndex(p.child1BirthYear, p.child1BirthMonth), careerStart = monthIndex(p.careerYear, CAREER_MONTH);

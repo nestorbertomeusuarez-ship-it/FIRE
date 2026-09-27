@@ -639,6 +639,11 @@ section[id],#notas{scroll-margin-top:88px}
         <div class="row"><label for="hipEnd">Fin de hipoteca</label><output id="hipEnd_o" for="hipEnd"></output></div>
         <input type="range" id="hipEnd" min="2027" max="2065" step="1">
       </div>
+      <div class="ctrl">
+        <div class="row"><label for="hipRealErosion">Pérdida de valor real de la cuota de la hipoteca</label><output id="hipRealErosion_o" for="hipRealErosion"></output></div>
+        <p class="hint">Con una hipoteca a tipo fijo la cuota nominal no cambia, así que la inflación la abarata cada año en euros de hoy. Por defecto 2 %/año: tipo fijo con un 2 % de inflación (en 2056 la cuota pesa como un 55 % de la actual). Pon 0 % si es a tipo variable y la cuota sube con los tipos.</p>
+        <input type="range" id="hipRealErosion" min="0" max="5" step="0.25">
+      </div>
       <p class="hint">La cuota mensual de la hipoteca sigue pagándose después del FIRE, hasta el año de "Fin de hipoteca" que hayas fijado: no forma parte de "Gasto anual al jubilarte", se suma aparte cada mes.</p>
       <div class="ctrl fiscal-only">
         <div class="row"><label for="mortgageBalance">Saldo pendiente hoy de esa hipoteca (€)</label><output id="mortgageBalance_o" for="mortgageBalance"></output></div>
@@ -1332,7 +1337,7 @@ const DEFAULTS = {
   childCost0to2:9400, childCost3to17:9400, childCost18to22:10000, childSchoolCost:9000, childFS1Cost:10400, childInsuranceAED:1323, lumpSums:'[]',
   fx:0.235, salFO:385000, salCA:575000, captY:2034, captDelay:1.5, startDelay:3, salG:0.5, profitShareWeeks:18, profitShareSkipPct:50, profitSharePersistPct:35, profitShareMarketCorr:50,
   mandatoryRetireOn:false, mandatoryRetireAge:65,
-  ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
+  ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056, hipRealErosion:2,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
   gasto:48000, swr:3,
   startEq:3000, startBtc:15000,
@@ -1652,6 +1657,7 @@ function paintLabels(p){
   set('vida',eur(p.vida)+'/mes');
   set('vidaG',p.vidaG.toFixed(1)+' %');
   set('hip',eur(p.hip)+'/mes');
+  set('hipRealErosion',p.hipRealErosion.toFixed(2)+' %/año');
   set('hipEnd',String(p.hipEnd));
   set('burr',eur(p.burr));
   set('brNet',eur(p.brNet));
@@ -1888,11 +1894,14 @@ function simulate(p, paths){
   // pay from month i to the horizon is added on top, undiscounted in real euros (the random career
   // start delay is ignored here).
   const targetBase=(p.gasto+p.healthcareAnnual)/(p.swr/100);
+  // Real value of the fixed nominal mortgage payment at month i (see hipRealErosion).
+  const hipErosion=new Float64Array(months+1);
+  for(let i=0;i<=months;i++) hipErosion[i]=Math.exp(-Math.log(1+p.hipRealErosion/100)*i/12);
   const commitRemaining=new Float64Array(months+1);
   const commitCareerStart=monthIndex(p.careerYear,CAREER_MONTH); // the mortgage is paid from the career start, as in the engine
   for(let i=months-1;i>=0;i--){
     const d=MONTH_DATES[i];
-    let m=(i>=commitCareerStart && (d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12))) ? p.hip : 0;
+    let m=(i>=commitCareerStart && (d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12))) ? p.hip*hipErosion[i] : 0;
     for(let n=0;n<childCount;n++) m+=NavlogCore.childMonthlyCost(i-childBirthIdx[n],childCosts,false,0);
     commitRemaining[i]=commitRemaining[i+1]+m;
   }
@@ -2247,7 +2256,7 @@ function simulate(p, paths){
       // the retired branch further down apply the exact same monthly figure until the
       // mortgage's own end year, instead of the payment silently vanishing the month
       // you retire.
-      const hipReal=inflActive ? p.hip*NavlogCore.inflationRealFactor(cumInfl, cumInflVar) : p.hip;
+      const hipReal=p.hip*hipErosion[i]*(inflActive ? NavlogCore.inflationRealFactor(cumInfl, cumInflVar) : 1);
       const hipActive=i>=careerStart && (d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12));
 
       // Living costs only begin with the Dubai career phase in this model.
