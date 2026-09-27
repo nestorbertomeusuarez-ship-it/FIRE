@@ -41,14 +41,15 @@ const { loadApp } = require('./helpers/fake-app.js');
   assert.equal(hiddenByStrategy()['5'], false, 'loadScenario re-syncs wdPhase visibility to the loaded strategy');
   assert.equal(hiddenByStrategy()['4'], true);
 
-  // Resetting also re-syncs visibility back to the default strategy (0, "SWR fijo", which
-  // like above has no sub-section of its own: every strategy-specific block goes hidden).
+  // Resetting also re-syncs visibility back to the default strategy (1, Guyton-Klinger): only
+  // its own sub-section is shown.
   el('wdStrategy').value = '3';
   el('wdStrategy').fire('input');
   el('reset').fire('click');
-  assert.equal(app.run('DEFAULTS.wdStrategy'), 0);
-  const afterReset = Object.values(hiddenByStrategy());
-  assert.ok(afterReset.length > 0 && afterReset.every(Boolean), 'reset re-syncs wdPhase visibility back to the default strategy');
+  assert.equal(app.run('DEFAULTS.wdStrategy'), 1);
+  const afterReset = hiddenByStrategy();
+  assert.equal(afterReset['1'], false, 'reset shows the default Guyton-Klinger sub-section');
+  assert.ok(Object.entries(afterReset).filter(([wd]) => wd !== '1').every(([, hidden]) => hidden), 'and hides every other strategy sub-section');
 
   console.log('wd-strategy-visibility: OK');
 })().catch(error => { console.error(error); process.exit(1); });

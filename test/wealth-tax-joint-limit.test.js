@@ -119,7 +119,7 @@ test('taxThresholdDrift 0: reproduces the pre-existing (unscaled) tax behavior',
 
 test('taxThresholdDrift > 0 over a long horizon results in more tax paid (lower median wealth) than drift 0', () => {
   const base = {
-    ...DEFAULTS, seed: 3, fiscalOn: true, taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0,
+    ...DEFAULTS, wdStrategy: 0, phOn: false /* fixed-spend arithmetic */, seed: 3, fiscalOn: true, taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0,
     startEq: 5000000, startBtc: 0, ret: 3, vol: 0, gasto: 200000, swr: 4,
     vida: 0, hip: 0, childAnnual: 0, brOn: false, burr: 0, provOn: false,
     allocCash: 0, allocBonds: 0, allocEquities: 100, horizonAge: 90, ageNow: 30,

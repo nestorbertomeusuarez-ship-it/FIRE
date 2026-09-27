@@ -17,7 +17,7 @@ const { simulate, DEFAULTS } = context.__t;
 // feeEq/etc and taxThresholdDrift default to non-zero now (realistic TER assumptions / fiscal
 // drag); zero them here since this test's hand-rolled model() below replicates the unscaled
 // bracket accumulation logic exactly, not portfolio costs or eroding thresholds.
-const params = { ...DEFAULTS, seed: 1, fiscalOn: true, startEq: 400e6, startBtc: 0, ret: 5, vol: 0, btcRet: 0, btcVol: 0, gasto: 12e6, swr: 4,
+const params = { ...DEFAULTS, wdStrategy: 0, phOn: false /* fixed-spend arithmetic */, seed: 1, fiscalOn: true, startEq: 400e6, startBtc: 0, ret: 5, vol: 0, btcRet: 0, btcVol: 0, gasto: 12e6, swr: 4,
   vida: 0, hip: 0, childCount: 0, healthcareAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0,
   allocCash: 0, allocBonds: 0, allocEquities: 100, horizonAge: 38,
   feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, taxThresholdDrift: 0,

@@ -264,7 +264,7 @@ test('the hip/hipEnd controls explain the mortgage continues after FIRE and is s
 
 test('during the Beckham window, wealth tax is fully suspended on everything except the rental property', () => {
   const base = {
-    ...DEFAULTS, seed: 1, fiscalOn: true,
+    ...DEFAULTS, wdStrategy: 0, phOn: false /* fixed-spend arithmetic */, seed: 1, fiscalOn: true,
     ret: 0, vol: 0, btcRet: 0, btcVol: 0, consRet: 0, consVol: 0, cashRet: 0, cashVol: 0,
     startEq: 2000000, startBtc: 0,
     allocEquities: 100, allocBonds: 0, allocCash: 0,
