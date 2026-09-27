@@ -858,6 +858,11 @@ section[id],#notas{scroll-margin-top:88px}
         <input type="range" id="taxRepatDelay" min="0" max="20" step="1">
       </div>
       <div class="toggle" style="margin-top:14px">
+        <input type="checkbox" id="preRepatStepUp">
+        <label for="preRepatStepUp">Realizar plusvalías antes de volver a España</label>
+        <p class="hint">Vender y recomprar la cartera mientras aún eres residente en EAU (allí no tributa y España no grava las ganancias de un no residente) actualiza el precio de compra, así que en España solo tributa lo que ganes después. El simulador lo aplica justo al empezar la residencia fiscal española, a efectivo, bonos, acciones, oro y BTC; no al inmueble, que si está en España tributa allí igualmente. En la realidad hazlo el año natural anterior: con 183 días en España eres residente todo ese año. Confírmalo con un asesor fiscal.</p>
+      </div>
+      <div class="toggle" style="margin-top:14px">
         <input type="checkbox" id="beckhamOn">
         <label for="beckhamOn">Acogido a la Ley Beckham (régimen de impatriados)</label>
         <p class="hint">Activa el régimen de impatriados para la fase en que resides fiscalmente en España: mientras esté dentro de su ventana (Duración del régimen), se suspenden tanto el impuesto sobre plusvalías de toda la cartera como el de patrimonio, salvo sobre el inmueble en alquiler si lo cuentas.</p>
@@ -1353,7 +1358,7 @@ const DEFAULTS = {
   basicFO:26485, basicCA:40100, provCo:12, provOn:true,
 
   // fiscalidad España
-  fiscalOn:false, taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0.10, feeCons:0.15, feeEq:0.20, feeBtc:0.20, feeGold:0.15, feeProv:0.75, taxRate:19, taxRateProv:19, taxRepatDelay:2, burrTaxRate:19, taxThresholdDrift:2,
+  fiscalOn:false, taxOn:false, useIrpfBrackets:false, useRegionalGeneralIrpf:false, taxRegion:0, feeCash:0.10, feeCons:0.15, feeEq:0.20, feeBtc:0.20, feeGold:0.15, feeProv:0.75, taxRate:19, taxRateProv:19, taxRepatDelay:2, preRepatStepUp:true, burrTaxRate:19, taxThresholdDrift:2,
   lolOn:false, lolEmiratesOn:true, lolAgeCurveOn:true, lolAnnualProb:0.4, lolPayoutMode:0, lolPayout:0, lolReplacePct:60, lolReplaceYears:3, lolPremiumMonthly:0,
   srrShockPct:-30, srrShockMonths:12,
   beckhamOn:false, beckhamYears:6,
@@ -2466,6 +2471,9 @@ function simulate(p, paths){
         if(fiscalityActive && !spanishResident && i>=fireMonth[k]+p.taxRepatDelay*12){
           spanishResident=true;
           spanishResidentMonth=i;
+          // Gains realized while still non-resident: the cost basis restarts at market value
+          // (Spain-located real estate excluded, it is taxed there regardless).
+          if(p.preRepatStepUp){ basisCash=vCash; basisCons=vCons; basisEq=vEq; basisGold=vGold; basisBtc=vBtc; }
           // Residency starts at the top of this withdrawal month. Recompute
           // the special regime immediately so its first month is not taxed as
           // ordinary Spanish residence before the window is opened.

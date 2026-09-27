@@ -20,7 +20,8 @@ const { simulate, DEFAULTS } = context.__t;
 const params = { ...DEFAULTS, seed: 1, fiscalOn: true, startEq: 400e6, startBtc: 0, ret: 5, vol: 0, btcRet: 0, btcVol: 0, gasto: 12e6, swr: 4,
   vida: 0, hip: 0, childCount: 0, healthcareAnnual: 0, brOn: false, burr: 0, provOn: false, startDelay: 0, captDelay: 0, taxOn: true, useIrpfBrackets: true, taxRepatDelay: 0,
   allocCash: 0, allocBonds: 0, allocEquities: 100, horizonAge: 38,
-  feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, taxThresholdDrift: 0 };
+  feeCash: 0, feeCons: 0, feeEq: 0, feeBtc: 0, feeGold: 0, feeProv: 0, taxThresholdDrift: 0,
+  preRepatStepUp: false /* the hand-rolled model() keeps the original cost basis */ };
 
 // Mirrors simulate()'s own year-end snapshot gate: every December, PLUS this
 // run's own final month (a partial year for an integer-age horizon, since the

@@ -44,7 +44,7 @@ const EXPECTED_IDS = [
   'startBtc', 'btcRet_o', 'btcRet', 'btcVol_o', 'btcVol', 'btcRho_o', 'btcRho', 'btcAporte_o',
   'btcAporte', 'provOn', 'basicFO_o', 'basicFO', 'basicCA_o', 'basicCA', 'provCo_o', 'provCo',
   'taxOn', 'useIrpfBrackets', 'taxRate_o', 'taxRate', 'taxRateProv_o', 'taxRateProv', 'useRegionalGeneralIrpf', 'taxRegion_o', 'taxRegion', 'taxThresholdDrift_o', 'taxThresholdDrift', 'feeCash_o', 'feeCash', 'feeCons_o', 'feeCons', 'feeEq_o', 'feeEq', 'feeBtc_o', 'feeBtc', 'feeGold_o', 'feeGold', 'feeProv_o', 'feeProv',
-  'burrTaxRate_o', 'burrTaxRate', 'taxRepatDelay_o', 'taxRepatDelay', 'beckhamOn', 'beckhamYears_o', 'beckhamYears', 'wealthTaxOn',
+  'burrTaxRate_o', 'burrTaxRate', 'taxRepatDelay_o', 'taxRepatDelay', 'preRepatStepUp', 'beckhamOn', 'beckhamYears_o', 'beckhamYears', 'wealthTaxOn',
   'ccaaPreset_o', 'ccaaPreset', 'wealthExempt_o', 'wealthExempt', 'wealthRate_o', 'wealthRate', 'wealthBonusPct_o', 'wealthBonusPct',
   'mortgageBalance_o', 'mortgageBalance', 'lolOn', 'lolEmiratesOn', 'lolAgeCurveOn', 'lolAnnualProb_o', 'lolAnnualProb', 'lolPremiumMonthly_o', 'lolPremiumMonthly', 'lolPayoutMode_o',
   'lolPayoutMode', 'lolPayout_o', 'lolPayout', 'lolReplacePct_o', 'lolReplacePct', 'lolReplaceYears_o', 'lolReplaceYears', 'fxVolOn',
