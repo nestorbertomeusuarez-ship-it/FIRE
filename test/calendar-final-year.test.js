@@ -17,7 +17,7 @@ const context = { console, Math, Float64Array, Int32Array, Uint8Array, Date, Inf
 context.globalThis = context; vm.createContext(context); vm.runInContext(source, context, { timeout: 5000 });
 const { simulate, DEFAULTS } = context.__t;
 
-// --- 1. Default profile: the run ends at age 90 (September), not December. ---
+// --- 1. Default profile: the run ends at age 95 (September), not December. ---
 {
   const p = { ...DEFAULTS, seed: 1 };
   const months = Math.floor((p.horizonAge - p.ageNow) * 12) + 1;
@@ -25,8 +25,8 @@ const { simulate, DEFAULTS } = context.__t;
   assert.ok(r.series.length > 0, 'series must not be empty');
   const last = r.series[r.series.length - 1];
   assert.equal(last.idx, months - 1, 'the last series point must be the run\'s own final month, not a global one');
-  // months-1 = 744 from age 28 to 90 starting Sep-2026 -> Sep-2088.
-  assert.equal(last.year, 2088, 'the final partial year must be labelled with its own calendar year');
+  // months-1 = 804 from age 28 to 95 starting Sep-2026 -> Sep-2093.
+  assert.equal(last.year, 2093, 'the final partial year must be labelled with its own calendar year');
 }
 
 // --- 2. Wealth tax must be charged in the final partial year when active,

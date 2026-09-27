@@ -21,3 +21,7 @@ test('the default withdrawal strategy is Guyton-Klinger with Prime Harvesting', 
 test('the default retirement spend is 48,000 EUR a year', () => {
   assert.equal(DEFAULTS.gasto, 48000);
 });
+
+test('the default planning horizon is age 95', () => {
+  assert.equal(DEFAULTS.horizonAge, 95);
+});
