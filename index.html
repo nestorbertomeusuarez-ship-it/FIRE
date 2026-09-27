@@ -399,7 +399,7 @@ section[id],#notas{scroll-margin-top:88px}
     <div class="cell">
       <div class="lbl">Capital objetivo</div>
       <div class="big dim" id="targetCap" style="font-size:34px">—</div>
-      <div class="unit" id="targetNote">gasto ÷ tasa de retiro (con fiscalidad activa, el Provident cuenta neto de impuestos)</div>
+      <div class="unit" id="targetNote">(gasto + sanidad) ÷ tasa de retiro, más lo pendiente de hijos e hipoteca (con fiscalidad activa, el Provident cuenta neto de impuestos)</div>
     </div>
   </div>
 
@@ -528,7 +528,7 @@ section[id],#notas{scroll-margin-top:88px}
       <h3>Objetivo</h3>
       <div class="ctrl">
         <div class="row"><label for="gasto">Gasto anual al jubilarte (€ reales)</label><output id="gasto_o" for="gasto"></output></div>
-        <p class="hint">Gasto anual real que asumes ya jubilado: junto con la Tasa de retiro segura fija tu objetivo FIRE (gasto ÷ SWR; con los valores por defecto, 60.000 € ÷ 3,25 % ≈ 1,85 M€) y es la base del gasto mensual que se retira de la cartera con la estrategia SWR fijo.</p>
+        <p class="hint">Gasto anual real que asumes ya jubilado: junto con la Tasa de retiro segura fija tu objetivo FIRE: (gasto + coste sanitario) ÷ SWR, más lo que quede por pagar de hijos e hipoteca desde ese mes (con los valores por defecto, la parte de gasto y sanidad es 63.000 € ÷ 3 % = 2,1 M€) y es la base del gasto mensual que se retira de la cartera con la estrategia SWR fijo.</p>
         <input type="range" id="gasto" min="25000" max="130000" step="1000">
       </div>
       <div class="ctrl">
@@ -1013,7 +1013,7 @@ section[id],#notas{scroll-margin-top:88px}
       <p class="hint">Un "guardrail" (quitamiedos) sube o baja el gasto anual cuando la tasa de retiro efectiva se sale de una banda alrededor del SWR objetivo: si la cartera va mal, recortas gasto para no acelerar la ruina; si va bien, te permites gastar más. Solo actúa cuando "Estrategia" está en "Guyton-Klinger". De las cuatro reglas del artículo original (Guyton y Klinger, 2006) se aplican dos: la de prosperidad (subir) y la de preservación de capital (recortar), que como en el artículo deja de aplicarse en los últimos 15 años hasta tu Edad final. No se modelan la de congelar el gasto tras un año con pérdidas ni la de reordenar la cartera tras cada ajuste.</p>
       <div class="ctrl">
         <div class="row"><label for="gkGuard">Ancho de banda alrededor del SWR</label><output id="gkGuard_o" for="gkGuard"></output></div>
-        <p class="hint">Define el techo y el suelo de la banda como un % por encima y por debajo del SWR objetivo (Objetivo → Tasa de retiro segura, 3,25 % por defecto). Con el 20 % por defecto: techo = 3,25 %×1,20 = 3,9 %, suelo = 3,25 %×0,80 = 2,6 %. Si la tasa de retiro efectiva (gasto actual / cartera total) supera el 3,9 % se aplica el "Recorte de gasto al tocar el techo"; si cae por debajo del 2,6 % se aplica la "Subida de gasto al tocar el suelo".</p>
+        <p class="hint">Define el techo y el suelo de la banda como un % por encima y por debajo del SWR objetivo (Objetivo → Tasa de retiro segura, 3 % por defecto). Con el 20 % por defecto: techo = 3 %×1,20 = 3,6 %, suelo = 3 %×0,80 = 2,4 %. Si la tasa de retiro efectiva (gasto actual / cartera total) supera el 3,9 % se aplica el "Recorte de gasto al tocar el techo"; si cae por debajo del 2,6 % se aplica la "Subida de gasto al tocar el suelo".</p>
         <input type="range" id="gkGuard" min="10" max="30" step="1">
       </div>
       <div class="ctrl">
@@ -1067,7 +1067,7 @@ section[id],#notas{scroll-margin-top:88px}
       </div>
       <div class="wdPhase" data-wd="4">
       <p class="subhead">Suelo y techo (Bengen)</p>
-      <p class="hint">Cada año tras el primero (que gasta el Gasto anual configurado) se recalcula el gasto como la Tasa de retiro objetivo aplicada a la cartera líquida de ese momento, pero el resultado se acota entre un suelo y un techo definidos como % del gasto base. Con los valores por defecto (gasto 60.000 €, SWR 3,25 %, suelo 90 %, techo 125 %): suelo = 54.000 €, techo = 75.000 €. Si la cartera ha subido a 2.500.000 €, el 3,25 % serían 81.250 €/año pero el techo lo recorta a 75.000 €/año; si la cartera ha caído a 1.000.000 €, el 3,25 % serían 32.500 €/año pero el suelo lo sube a 54.000 €/año.</p>
+      <p class="hint">Cada año tras el primero (que gasta el Gasto anual configurado) se recalcula el gasto como la Tasa de retiro objetivo aplicada a la cartera líquida de ese momento, pero el resultado se acota entre un suelo y un techo definidos como % del gasto base. Con los valores por defecto (gasto 60.000 €, SWR 3 %, suelo 90 %, techo 125 %): suelo = 54.000 €, techo = 75.000 €. Si la cartera ha subido a 3.000.000 €, el 3 % serían 90.000 €/año pero el techo lo recorta a 75.000 €/año; si la cartera ha caído a 1.000.000 €, el 3 % serían 30.000 €/año pero el suelo lo sube a 54.000 €/año.</p>
       <div class="ctrl">
         <div class="row"><label for="fcFloor">Suelo del gasto (% del gasto base)</label><output id="fcFloor_o" for="fcFloor"></output></div>
         <p class="hint">Por debajo de este % del gasto base (Objetivo → Gasto anual, 60.000 € por defecto) el gasto nunca cae, aunque la cartera vaya mal. Con el 90 % por defecto, el suelo es 54.000 €/año — protege frente a recortes severos en mercados bajistas prolongados, pero puede obligar a vender cartera incluso en plena caída para sostener ese mínimo.</p>
@@ -1352,7 +1352,7 @@ const DEFAULTS = {
   mandatoryRetireOn:false, mandatoryRetireAge:65,
   ret:5.5, vol:17, histMarketOn:false, vida:3600, vidaG:1.0, hip:850, hipEnd:2056,
   burr:72000, brOn:true, brNet:253000, brStart:2028, brYears:7,
-  gasto:60000, swr:3.25,
+  gasto:60000, swr:3,
   startEq:3000, startBtc:15000,
   btcRet:10, btcVol:55, btcRho:40, btcAporte:0,
   basicFO:26485, basicCA:40100, provCo:12, provOn:true,
@@ -1817,7 +1817,6 @@ function simulate(p, paths){
     retGrowthPow[n]=Math.pow(1+annualRetGrowth,n);
     spendGrowthPow[n]=Math.pow(1+annualSpendGrowth,n);
   }
-  const target=p.gasto/(p.swr/100);
 
   // ---- Feature activation: every former PRO section is always on, gated only by its own
   // toggle. Spanish taxation (IRPF, Burriana sale tax, wealth/solidarity tax, Beckham) is
@@ -1900,6 +1899,19 @@ function simulate(p, paths){
   const childCount=Math.max(0,Math.min(3,Math.round(p.childCount)));
   const childBirthIdx=[monthIndex(p.child1BirthYear,p.child1BirthMonth), monthIndex(p.child2BirthYear,6), monthIndex(p.child3BirthYear,6)];
   const childCosts={cost0to2:p.childCost0to2, cost3to17:p.childCost3to17, cost18to22:p.childCost18to22, schoolCost:p.childSchoolCost, fs1Cost:p.childFS1Cost};
+  // FIRE target: healthcare is permanent, so it joins the spend divided by the SWR; children
+  // (post-Emirates costs: age bands and school) and the mortgage end, so what is still left to
+  // pay from month i to the horizon is added on top, undiscounted in real euros (the random career
+  // start delay is ignored here).
+  const targetBase=(p.gasto+p.healthcareAnnual)/(p.swr/100);
+  const commitRemaining=new Float64Array(months+1);
+  const commitCareerStart=monthIndex(p.careerYear,CAREER_MONTH); // the mortgage is paid from the career start, as in the engine
+  for(let i=months-1;i>=0;i--){
+    const d=MONTH_DATES[i];
+    let m=(i>=commitCareerStart && (d.y<p.hipEnd || (d.y===p.hipEnd && d.m<=12))) ? p.hip : 0;
+    for(let n=0;n<childCount;n++) m+=NavlogCore.childMonthlyCost(i-childBirthIdx[n],childCosts,false,0);
+    commitRemaining[i]=commitRemaining[i+1]+m;
+  }
 
   // Tax-aware withdrawal helpers (used by the retirement drawdown cascade below).
   // Plain functions with no closure over path/month state, so they stay cheap to
@@ -2353,16 +2365,17 @@ function simulate(p, paths){
         // The gratuity can never exceed 730 days of basic pay, so it is only worked out in the
         // months where it could change the outcome: the target is within reach or this is the
         // mandatory exit. With the Provident already above that ceiling the top-up is always 0.
+        const targetNow=targetBase+commitRemaining[i];
         const gratuityCeilingEUR=i>=careerStart ? 730*((i>=captMonth?p.basicCA:p.basicFO)/30)*fxEff : 0;
         // Under 5 years of service part of the company money is forfeited, so the settlement
         // always matters then; after that only an EOSB shortfall can, as before.
         const provCompanyNow=Math.max(0,vProv-vProvMember);
         const unvested=p.provOn && provCompanyNow>0 && (i-careerStart)/12<5;
         const gratuityMatters=gratuityCeilingEUR>0 && (unvested || (!(p.provOn && provCompanyNow>=gratuityCeilingEUR)
-          && (fireTotal+gratuityCeilingEUR>=target || (mandatoryRetireActive && i>=mandatoryRetireMonth))));
+          && (fireTotal+gratuityCeilingEUR>=targetNow || (mandatoryRetireActive && i>=mandatoryRetireMonth))));
         const settlement=gratuityMatters ? endOfService(i,careerStart,captMonth,vProv,vProvMember,fxEff) : {cash:0, forfeit:0};
         const gratuityEUR=settlement.cash;
-        if(!licenseLossPath && fireTotal-settlement.forfeit*(1-provFireRate)+gratuityEUR>=target && !ruinedPath){
+        if(!licenseLossPath && fireTotal-settlement.forfeit*(1-provFireRate)+gratuityEUR>=targetNow && !ruinedPath){
           retired=true;
           fireMonth[k]=i;
           vProv-=settlement.forfeit;
@@ -2695,7 +2708,7 @@ function simulate(p, paths){
   for(let k=0;k<paths;k++) if(fireMonth[k]>=0 && !ruined[k] && !forcedOut[k] && !licenseLossOut[k]) successBuf[successCount++]=fireMonth[k];
   const successful=successBuf.subarray(0,successCount);
 
-  const result={series,target,fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots,forcedOut,licenseLossOut};
+  const result={series,target:targetBase+commitRemaining[0],fireMonths:successful,fireMonthAll:fireMonth,ruined,ruinMonth,annualSnapshots,forcedOut,licenseLossOut};
   if(trackBuckets) result.debug={minBucket,minBucketExCash,minCash,minCashAfterFire,minRawFinalNonRuined,earlyWealth};
   return result;
 }
@@ -3793,7 +3806,8 @@ async function run(mode){
   document.getElementById('ageP10').textContent=fmConservative===null?'—':Math.floor(p.ageNow+yearFrac(fmConservative));
   document.getElementById('yearP10').textContent=fmConservative===null?'sin rutas exitosas':ymdLabel(fmConservative)+' · P90 de fechas FIRE exitosas';
   document.getElementById('targetCap').textContent=eurK(target);
-  document.getElementById('targetNote').textContent=eur(p.gasto)+'/año ÷ '+p.swr.toFixed(2)+' %';
+  const targetSpendPart=(p.gasto+p.healthcareAnnual)/(p.swr/100), targetCommitments=Math.max(0,target-targetSpendPart);
+  document.getElementById('targetNote').textContent=eur(p.gasto+p.healthcareAnnual)+'/año (gasto + sanidad) ÷ '+p.swr.toFixed(2)+' %'+(targetCommitments>0.5?' + '+eurK(targetCommitments)+' pendientes de hijos e hipoteca':'');
 
   const marks=[1e6,1.5e6,2e6,3e6];
   document.getElementById('wpts').innerHTML=marks.map(m=>{
