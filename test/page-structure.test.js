@@ -55,7 +55,7 @@ const EXPECTED_IDS = [
   'ysYield_o', 'ysYield', 'phOn', 'startGold_o', 'startGold', 'goldRet_o', 'goldRet', 'goldVol_o',
   'goldVol', 'goldRho_o', 'goldRho', 'goldAporte_o', 'goldAporte', 'reOn', 'reValue_o', 'reValue',
   'reYield_o', 'reYield', 'reAppr_o', 'reAppr', 'reCountsFire', 'glideOn', 'glideTargetYear_o', 'glideTargetYear',
-  'glideStartYears_o', 'glideStartYears', 'glideEqFloor_o', 'glideEqFloor', 'consRet_o', 'consRet', 'consVol_o', 'consVol',
+  'glideStartYears_o', 'glideStartYears', 'glideEqFloor_o', 'glideEqFloor', 'glideAtFire', 'glideStartPct_o', 'glideStartPct', 'glideRiseYears_o', 'glideRiseYears', 'glideRiseTo_o', 'glideRiseTo', 'consRet_o', 'consRet', 'consVol_o', 'consVol',
   'baristaOn', 'baristaIncome_o', 'baristaIncome', 'baristaYears_o', 'baristaYears',
   'gasto_o', 'gasto', 'swr_o', 'swr', 'reset', 'seed', 'calc', 'calcAnnounce',
   'simulationContext', 'calcLoading',

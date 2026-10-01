@@ -290,6 +290,28 @@
     if (Math.abs(keys.reduce((sum, key) => sum + allocation[key], 0) - 100) > 0.01) throw new RangeError('Allocation must total 100%');
     return { cash: allocation.cash, bonds: allocation.bonds, equities: allocation.equities };
   }
+  // Share of (risky + conservative) wealth that should sit in risky assets under the glide path.
+  // `ceiling` is the share the portfolio starts with (default 1): the glide never pushes the mix
+  // above it, so the basic allocation's bonds are left alone until the ramp starts. Never below `floor`.
+  // anchor 'year': linear ramp over `startYears` ending at a fixed calendar year (`yearsToTarget`).
+  // anchor 'fire': follows `progress` (wealth / FIRE target) before FIRE, holds `floor` at FIRE and
+  // then climbs to `riseTo` (capped by the ceiling) over `riseYears`; riseYears 0 keeps the floor.
+  function glideRiskyShare({ anchor, floor, ceiling = 1, yearsToTarget, startYears, progress, startPct, retired, yearsSinceFire, riseYears, riseTo }) {
+    const top = Math.max(floor, Math.min(1, ceiling));
+    if (anchor !== 'fire') {
+      if (yearsToTarget >= startYears) return top;
+      if (yearsToTarget <= 0) return floor;
+      return floor + (top - floor) * (yearsToTarget / startYears);
+    }
+    if (retired) {
+      if (!(riseYears > 0)) return floor;
+      const riseTop = Math.max(floor, Math.min(top, riseTo));
+      return floor + (riseTop - floor) * Math.min(1, Math.max(0, yearsSinceFire) / riseYears);
+    }
+    if (progress >= 1) return floor;
+    if (progress <= startPct) return top;
+    return floor + (top - floor) * ((1 - progress) / (1 - startPct));
+  }
   function validateHorizon({ currentAge, endAge, startAge }) {
     if (Number.isFinite(currentAge) && currentAge < 18) throw new RangeError('Current age must be at least 18');
     if (![currentAge, endAge, startAge].every(Number.isFinite) || endAge > 110 || endAge <= currentAge || startAge < currentAge || startAge > endAge) throw new RangeError('Invalid horizon or age; horizon must be positive and no longer than 80 years');
@@ -479,5 +501,5 @@
     for (const [key, value] of Object.entries(params)) if (!LEGACY_CHILD_KEYS.includes(key)) migrated[key] = value;
     return migrated;
   }
-  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, erpTopUpEUR, migrateLegacyParams, SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, profitShareMarketU, childMonthlyCost };
+  return { inflationRealFactor, SOLIDARITY_EXEMPT, SOLIDARITY_BRACKETS, solidarityWealthTax, wealthTaxAfterJointLimit, gratuityDays, endOfServiceSettlement, erpTopUpEUR, migrateLegacyParams, SAVINGS_BRACKETS, normalizeSeed, deriveSeed, seededRandom, pathRandom, progressiveTax, netMonthlyReturn, progressiveSavingsTax, netAfterSavingsTax, marginalSavingsTaxRate, beckhamApplies, grossForNetSavings, boundedPair, standardErrorProportion, historicalWithdrawalBacktest, retirementCohortCounts, wealthTaxBase, validScenario, normalizeScenarios, sameParameterSnapshot, canonicalParameterFingerprint, validateAllocation, glideRiskyShare, validateHorizon, validateLumpSums, monthlyRetirementCashflow, exportScenarioJson, importScenarioJson, migrateLegacyChildParams, vpwRate, floorCeilingWithdrawal, profitShareWeeksDraw, profitShareMarketU, childMonthlyCost };
 });

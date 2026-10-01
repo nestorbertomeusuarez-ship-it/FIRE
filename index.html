@@ -1174,6 +1174,26 @@ section[id],#notas{scroll-margin-top:88px}
         <p class="hint">% mínimo de la cartera de riesgo+conservadora que sigue en activos de riesgo (acciones, BTC, oro) una vez llegada la fecha ancla; el resto queda en la cartera conservadora. Con el 50 % por defecto, en 2045 la mitad de esa cartera sigue en riesgo y la otra mitad ya está des-arriesgada — nunca baja de este suelo por mucho que pasen los años.</p>
         <input type="range" id="glideEqFloor" min="20" max="90" step="5">
       </div>
+      <div class="toggle">
+        <input type="checkbox" id="glideAtFire">
+        <label for="glideAtFire">Anclar al FIRE real de cada ruta</label>
+        <p class="hint">En lugar de usar el Año FIRE esperado, cada ruta de la simulación empieza a des-arriesgar cuando su patrimonio se acerca al objetivo FIRE y llega al mínimo en riesgo justo al alcanzarlo. Así no depende de acertar un año fijo: las rutas que llegan antes o después al FIRE se protegen en su propio momento. Con esta opción activa, "Año FIRE esperado" y "Años antes de empezar" se ignoran.</p>
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="glideStartPct">Empezar a des-arriesgar al llegar al (% del objetivo)</label><output id="glideStartPct_o" for="glideStartPct"></output></div>
+        <p class="hint">Solo con el ancla al FIRE real. Mientras tu patrimonio esté por debajo de este % del objetivo FIRE, todo sigue en activos de riesgo; entre este % y el 100 % del objetivo, el % en riesgo baja de forma lineal hasta el mínimo configurado. Con el 80 % por defecto, al tener el 90 % del objetivo estás a mitad de la rampa.</p>
+        <input type="range" id="glideStartPct" min="50" max="95" step="5">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="glideRiseYears">Años de subida tras el FIRE</label><output id="glideRiseYears_o" for="glideRiseYears"></output></div>
+        <p class="hint">Solo con el ancla al FIRE real. Tras retirarte, el % en riesgo sube de forma lineal desde el mínimo hasta "Subida hasta" durante estos años (trayectoria en U): reduce el riesgo de secuencia al inicio de la jubilación y recupera crecimiento después, útil con horizontes largos. Con 0 se queda en el mínimo para siempre.</p>
+        <input type="range" id="glideRiseYears" min="0" max="20" step="1">
+      </div>
+      <div class="ctrl">
+        <div class="row"><label for="glideRiseTo">Subida hasta (% en riesgo)</label><output id="glideRiseTo_o" for="glideRiseTo"></output></div>
+        <p class="hint">Solo con el ancla al FIRE real y más de 0 años de subida. % de la cartera de riesgo+conservadora que vuelve a estar en activos de riesgo al terminar la subida; nunca queda por debajo del mínimo configurado. Con el 75 % por defecto y 10 años, pasas del 50 % al 75 % de forma gradual.</p>
+        <input type="range" id="glideRiseTo" min="20" max="100" step="5">
+      </div>
       <p class="note">El dinero des-arriesgado por el glide path va a la misma cartera conservadora que los "Bonos (%)" de la sección "Reparto de la cartera básica": ajusta su rentabilidad y volatilidad ahí (rentabilidad/volatilidad de bonos), no aquí. "Año FIRE esperado" es un ancla manual: como el FIRE es first-passage y varía por ruta, ajústalo para que se acerque a la mediana que ves en la lectura principal. El rebalanceo del glide se revisa una vez al año.</p>
     </div>
 
@@ -1362,6 +1382,7 @@ const DEFAULTS = {
   startGold:0, goldRet:1.5, goldVol:15, goldRho:-10, goldAporte:0,
   reOn:false, reValue:0, reYield:3.5, reAppr:1, reCountsFire:false,
   glideOn:false, glideTargetYear:2045, glideStartYears:7, glideEqFloor:50, consRet:1.5, consVol:4,
+  glideAtFire:false, glideStartPct:80, glideRiseYears:0, glideRiseTo:75,
   // FIRE parcial
   baristaOn:false, baristaIncome:12000, baristaYears:5
 };
@@ -1723,6 +1744,9 @@ function paintLabels(p){
   set('glideTargetYear',String(p.glideTargetYear));
   set('glideStartYears',p.glideStartYears+(p.glideStartYears===1?' año':' años'));
   set('glideEqFloor',p.glideEqFloor.toFixed(0)+' %');
+  set('glideStartPct',p.glideStartPct.toFixed(0)+' %');
+  set('glideRiseYears',p.glideRiseYears===0?'sin subida':p.glideRiseYears+(p.glideRiseYears===1?' año':' años'));
+  set('glideRiseTo',p.glideRiseTo.toFixed(0)+' %');
   set('consRet',p.consRet.toFixed(2)+' %');
   set('consVol',p.consVol.toFixed(1)+' %');
   set('baristaIncome',eur(p.baristaIncome)+'/año');
@@ -2049,6 +2073,7 @@ function simulate(p, paths){
     let vProvMember=0;
     let vGold=goldActive?p.startGold:0, vCons=p.startEq*alloc.bonds/100, vCash=p.startEq*alloc.cash/100, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false, forcedOutPath=false, licenseLossPath=false;
+    let glideCeil=-1;
     // Loss-of-License: absorbing once triggered (never reset), same discipline as
     // ruin. lastSalaryEUR is captured each working month so an income-replacement
     // payout has a real figure to base itself on.
@@ -2614,11 +2639,15 @@ function simulate(p, paths){
 
       // Glide path: rebalanceo anual entre activos de riesgo (equity+BTC+oro) y la cartera conservadora.
       if(glideActive && !ruinedPath && isSnap){
-        const yearsToTarget=(monthIndex(p.glideTargetYear,1)-i)/12;
-        let riskyShare;
-        if(yearsToTarget>=p.glideStartYears) riskyShare=1;
-        else if(yearsToTarget<=0) riskyShare=p.glideEqFloor/100;
-        else riskyShare=p.glideEqFloor/100+(1-p.glideEqFloor/100)*(yearsToTarget/p.glideStartYears);
+        const glideWealth=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
+        // Starting mix: fixed once per path so the glide never sweeps the basic allocation's bonds into risk.
+        if(glideCeil<0){ const r0=vEq+vBtc+(goldActive?vGold:0), t0=r0+vCons; glideCeil=t0>0 ? r0/t0 : 1; }
+        const riskyShare=NavlogCore.glideRiskyShare({
+          anchor:p.glideAtFire?'fire':'year', floor:p.glideEqFloor/100, ceiling:glideCeil,
+          yearsToTarget:(monthIndex(p.glideTargetYear,1)-i)/12, startYears:p.glideStartYears,
+          progress:glideWealth/(targetBase+commitRemaining[i]), startPct:p.glideStartPct/100,
+          retired, yearsSinceFire:(i-fireMonth[k])/12, riseYears:p.glideRiseYears, riseTo:p.glideRiseTo/100
+        });
 
         const risky=vEq+vBtc+(goldActive?vGold:0);
         const totalRC=risky+vCons;
@@ -3270,7 +3299,7 @@ function buildWorkerSource(){
     'let spare=null, activeRandom=Math.random;',
     'const SAVINGS_BRACKETS='+literal(NavlogCore.SAVINGS_BRACKETS)+';',
     'const SOLIDARITY_EXEMPT='+NavlogCore.SOLIDARITY_EXEMPT+', SOLIDARITY_BRACKETS='+literal(NavlogCore.SOLIDARITY_BRACKETS)+';',
-    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceSettlement:'+NavlogCore.endOfServiceSettlement.toString()+',erpTopUpEUR:'+NavlogCore.erpTopUpEUR.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+',profitShareMarketU:'+NavlogCore.profitShareMarketU.toString()+',childMonthlyCost:'+NavlogCore.childMonthlyCost.toString()+'};',
+    'const NavlogCore={pathRandom:'+NavlogCore.pathRandom.toString()+',progressiveTax:'+NavlogCore.progressiveTax.toString()+',netMonthlyReturn:'+NavlogCore.netMonthlyReturn.toString()+',progressiveSavingsTax:'+NavlogCore.progressiveSavingsTax.toString()+',netAfterSavingsTax:'+NavlogCore.netAfterSavingsTax.toString()+',marginalSavingsTaxRate:'+NavlogCore.marginalSavingsTaxRate.toString()+',beckhamApplies:'+NavlogCore.beckhamApplies.toString()+',wealthTaxBase:'+NavlogCore.wealthTaxBase.toString()+',grossForNetSavings:'+NavlogCore.grossForNetSavings.toString()+',validateAllocation:'+NavlogCore.validateAllocation.toString()+',validateHorizon:'+NavlogCore.validateHorizon.toString()+',validateLumpSums:'+NavlogCore.validateLumpSums.toString()+',solidarityWealthTax:'+NavlogCore.solidarityWealthTax.toString()+',wealthTaxAfterJointLimit:'+NavlogCore.wealthTaxAfterJointLimit.toString()+',inflationRealFactor:'+NavlogCore.inflationRealFactor.toString()+',gratuityDays:'+NavlogCore.gratuityDays.toString()+',endOfServiceSettlement:'+NavlogCore.endOfServiceSettlement.toString()+',erpTopUpEUR:'+NavlogCore.erpTopUpEUR.toString()+',vpwRate:'+NavlogCore.vpwRate.toString()+',floorCeilingWithdrawal:'+NavlogCore.floorCeilingWithdrawal.toString()+',profitShareWeeksDraw:'+NavlogCore.profitShareWeeksDraw.toString()+',profitShareMarketU:'+NavlogCore.profitShareMarketU.toString()+',childMonthlyCost:'+NavlogCore.childMonthlyCost.toString()+',glideRiskyShare:'+NavlogCore.glideRiskyShare.toString()+'};',
     'const gratuityDays=NavlogCore.gratuityDays;',
     // Core helpers that call each other by bare name inside simulation-core.js need the same
     // top-level aliases here, or they throw ReferenceError only inside the worker.
