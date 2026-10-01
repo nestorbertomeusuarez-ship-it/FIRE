@@ -291,23 +291,26 @@
     return { cash: allocation.cash, bonds: allocation.bonds, equities: allocation.equities };
   }
   // Share of (risky + conservative) wealth that should sit in risky assets under the glide path.
+  // `ceiling` is the share the portfolio starts with (default 1): the glide never pushes the mix
+  // above it, so the basic allocation's bonds are left alone until the ramp starts. Never below `floor`.
   // anchor 'year': linear ramp over `startYears` ending at a fixed calendar year (`yearsToTarget`).
   // anchor 'fire': follows `progress` (wealth / FIRE target) before FIRE, holds `floor` at FIRE and
-  // then climbs to `riseTo` over `riseYears` (a U-shaped path); riseYears 0 keeps the floor.
-  function glideRiskyShare({ anchor, floor, yearsToTarget, startYears, progress, startPct, retired, yearsSinceFire, riseYears, riseTo }) {
+  // then climbs to `riseTo` (capped by the ceiling) over `riseYears`; riseYears 0 keeps the floor.
+  function glideRiskyShare({ anchor, floor, ceiling = 1, yearsToTarget, startYears, progress, startPct, retired, yearsSinceFire, riseYears, riseTo }) {
+    const top = Math.max(floor, Math.min(1, ceiling));
     if (anchor !== 'fire') {
-      if (yearsToTarget >= startYears) return 1;
+      if (yearsToTarget >= startYears) return top;
       if (yearsToTarget <= 0) return floor;
-      return floor + (1 - floor) * (yearsToTarget / startYears);
+      return floor + (top - floor) * (yearsToTarget / startYears);
     }
     if (retired) {
       if (!(riseYears > 0)) return floor;
-      const top = Math.max(floor, riseTo);
-      return floor + (top - floor) * Math.min(1, Math.max(0, yearsSinceFire) / riseYears);
+      const riseTop = Math.max(floor, Math.min(top, riseTo));
+      return floor + (riseTop - floor) * Math.min(1, Math.max(0, yearsSinceFire) / riseYears);
     }
     if (progress >= 1) return floor;
-    if (progress <= startPct) return 1;
-    return floor + (1 - floor) * ((1 - progress) / (1 - startPct));
+    if (progress <= startPct) return top;
+    return floor + (top - floor) * ((1 - progress) / (1 - startPct));
   }
   function validateHorizon({ currentAge, endAge, startAge }) {
     if (Number.isFinite(currentAge) && currentAge < 18) throw new RangeError('Current age must be at least 18');

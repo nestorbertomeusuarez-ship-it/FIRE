@@ -2073,6 +2073,7 @@ function simulate(p, paths){
     let vProvMember=0;
     let vGold=goldActive?p.startGold:0, vCons=p.startEq*alloc.bonds/100, vCash=p.startEq*alloc.cash/100, vRE=reActive?p.reValue:0;
     let retired=false, ruinedPath=false, forcedOutPath=false, licenseLossPath=false;
+    let glideCeil=-1;
     // Loss-of-License: absorbing once triggered (never reset), same discipline as
     // ruin. lastSalaryEUR is captured each working month so an income-replacement
     // payout has a real figure to base itself on.
@@ -2639,8 +2640,10 @@ function simulate(p, paths){
       // Glide path: rebalanceo anual entre activos de riesgo (equity+BTC+oro) y la cartera conservadora.
       if(glideActive && !ruinedPath && isSnap){
         const glideWealth=vEq+vBtc+vProv+vGold+vCons+vCash+(reActive && p.reCountsFire?vRE:0);
+        // Starting mix: fixed once per path so the glide never sweeps the basic allocation's bonds into risk.
+        if(glideCeil<0){ const r0=vEq+vBtc+(goldActive?vGold:0), t0=r0+vCons; glideCeil=t0>0 ? r0/t0 : 1; }
         const riskyShare=NavlogCore.glideRiskyShare({
-          anchor:p.glideAtFire?'fire':'year', floor:p.glideEqFloor/100,
+          anchor:p.glideAtFire?'fire':'year', floor:p.glideEqFloor/100, ceiling:glideCeil,
           yearsToTarget:(monthIndex(p.glideTargetYear,1)-i)/12, startYears:p.glideStartYears,
           progress:glideWealth/(targetBase+commitRemaining[i]), startPct:p.glideStartPct/100,
           retired, yearsSinceFire:(i-fireMonth[k])/12, riseYears:p.glideRiseYears, riseTo:p.glideRiseTo/100

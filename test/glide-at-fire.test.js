@@ -52,3 +52,22 @@ test('fire anchor: degenerate start threshold of 100 % still yields a valid shar
   assert.equal(s, 0.5);
   assert.equal(glideRiskyShare({ ...base, startPct: 1, retired: false, progress: 0.99 }), 1);
 });
+
+test('ceiling: the ramp starts from the starting risky share instead of forcing 100 % risky', () => {
+  const year = { anchor: 'year', startYears: 10, floor: 0.5, ceiling: 0.8 };
+  assert.equal(glideRiskyShare({ ...year, yearsToTarget: 12 }), 0.8);
+  assert.ok(Math.abs(glideRiskyShare({ ...year, yearsToTarget: 5 }) - 0.65) < 1e-12);
+  assert.equal(glideRiskyShare({ ...year, yearsToTarget: 0 }), 0.5);
+  const fire = { ...base, ceiling: 0.8 };
+  assert.equal(glideRiskyShare({ ...fire, retired: false, progress: 0.3 }), 0.8);
+  assert.ok(Math.abs(glideRiskyShare({ ...fire, retired: false, progress: 0.9 }) - 0.65) < 1e-12);
+});
+
+test('ceiling: a starting share below the floor is lifted to the floor, never forced under it', () => {
+  assert.equal(glideRiskyShare({ ...base, ceiling: 0.3, retired: false, progress: 0.2 }), 0.5);
+  assert.equal(glideRiskyShare({ ...base, ceiling: 0.3, retired: true, riseYears: 10, yearsSinceFire: 10 }), 0.5);
+});
+
+test('ceiling: the post-FIRE rise never exceeds the starting share', () => {
+  assert.equal(glideRiskyShare({ ...base, ceiling: 0.6, retired: true, riseYears: 10, riseTo: 0.9, yearsSinceFire: 10 }), 0.6);
+});
